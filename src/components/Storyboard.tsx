@@ -1,7 +1,6 @@
 import { useStore } from '../store/useStore'
 import type { Scene } from '../data/types'
 import { computeTimeline, sceneDuration } from '../services/timeline'
-import { SceneTrackBar } from './SceneTrackBar'
 import { ShotRow } from './ShotRow'
 import s from './Storyboard.module.css'
 
@@ -30,8 +29,6 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
           )}
         </span>
       </div>
-
-      <SceneTrackBar scene={scene} readOnly={readOnly} />
 
       <div className={s.scroll}>
         <table className={s.sb}>
