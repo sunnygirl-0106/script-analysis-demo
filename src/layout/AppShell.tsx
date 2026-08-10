@@ -1,15 +1,6 @@
 import type { ReactNode } from 'react'
-import type { Stage } from '../data/types'
 import { useStore } from '../store/useStore'
 import s from './AppShell.module.css'
-
-const STAGES: { key: Stage; label: string }[] = [
-  { key: 'analysis', label: '剧本分析' },
-  { key: 'visual', label: '视觉筹备' },
-  { key: 'studio', label: '拍摄台' },
-]
-
-const STAGE_RANK: Record<Stage, number> = { analysis: 0, visual: 1, studio: 2 }
 
 export function AppShell({ children }: { children: ReactNode }) {
   const project = useStore((st) => st.project)
@@ -24,28 +15,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className={s.wrap}>
       <div className={s.app}>
-        {/* 顶栏：三阶段流程条 + 主题切换 */}
+        {/* 顶栏：Logo + 项目信息 + 主题切换 */}
         <div className={s.topbar}>
           <div className={s.logo}>PhanthyMovie</div>
-          <div className={s.flow}>
-            {STAGES.map((st, i) => {
-              const rank = STAGE_RANK[st.key]
-              const cur = activePage === st.key
-              const done = rank < STAGE_RANK[project.stage]
-              return (
-                <span key={st.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-                  {i > 0 && <span className={s.flowArrow}>→</span>}
-                  <span
-                    className={[s.flowStep, cur ? s.cur : '', done ? s.done : ''].join(' ')}
-                    onClick={() => setPage(st.key)}
-                  >
-                    <span className={s.dot} />
-                    {st.label}
-                  </span>
-                </span>
-              )
-            })}
-          </div>
           <div className={s.right}>
             <span>
               {project.title} · {aspectLabel} · {styleLabel} · ✦ 2000
