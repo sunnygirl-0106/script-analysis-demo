@@ -17,6 +17,8 @@
   --acc-bg: rgba(99, 200, 188, 0.13);
   --acc-line: rgba(99, 200, 188, 0.38);
   --on-acc: #06201d; /* 主色上的文字（深底青绿用深墨） */
+  --row-on-bg: rgba(99, 200, 188, 0.06); /* 展开镜头行：更淡的青绿 */
+  --row-on-line: rgba(99, 200, 188, 0.28);
   --role: #a78bfa;
   --cloth: #ef7fb4;
   --scene: #5ed48a;
@@ -43,6 +45,8 @@
   --acc-bg: #e9f7f5;
   --acc-line: #a8ded7;
   --on-acc: #04201d;
+  --row-on-bg: rgba(13, 148, 136, 0.05);
+  --row-on-line: rgba(13, 148, 136, 0.22);
   --role: #6d4fd8;
   --cloth: #c4327c;
   --scene: #2a8f52;

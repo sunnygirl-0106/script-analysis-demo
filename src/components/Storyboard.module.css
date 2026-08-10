@@ -53,12 +53,12 @@ tr.row:hover td {
   border-color: var(--bg3);
 }
 tr.row.on td {
-  background: var(--acc-bg);
-  border-color: var(--acc-line);
+  background: var(--row-on-bg);
+  border-color: var(--row-on-line);
 }
 tr.row.on + tr.det td {
-  background: var(--acc-bg);
-  border-color: var(--acc-line);
+  background: var(--row-on-bg);
+  border-color: var(--row-on-line);
 }
 
 /* 展开详情行：上提 8px，贴住所属行 */
