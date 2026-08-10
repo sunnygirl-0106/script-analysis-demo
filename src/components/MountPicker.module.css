@@ -59,7 +59,7 @@
   align-items: center;
   justify-content: center;
   font-size: 10px;
-  color: #04201d;
+  color: var(--on-acc);
 }
 .check.on {
   background: var(--acc);

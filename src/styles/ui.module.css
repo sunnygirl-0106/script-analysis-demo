@@ -21,13 +21,13 @@
 .btnPrimary {
   background: var(--acc);
   border-color: var(--acc);
-  color: #04201d;
+  color: var(--on-acc);
   font-weight: 700;
 }
 .btnPrimary:hover {
   filter: brightness(1.08);
   background: var(--acc);
-  color: #04201d;
+  color: var(--on-acc);
 }
 .iconbtn {
   width: 26px;

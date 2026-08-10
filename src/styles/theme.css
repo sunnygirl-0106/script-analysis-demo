@@ -1,21 +1,22 @@
 /* 设计令牌：深 / 浅两套 CSS 变量。顶栏开关切换 document.documentElement.dataset.theme。 */
 
 :root {
-  /* 深色，默认 */
-  --bg0: #07080b;
-  --bg1: #0b0d11;
-  --bg2: #0f1217;
-  --bg3: #141821;
-  --line: #1e222a;
-  --line2: #171a21;
-  --edge: #2b323c;
-  --t1: #e8ebef;
-  --t2: #a8b0b9;
-  --t3: #6f7883;
-  --t4: #4c545e;
-  --acc: #2fe3d0;
-  --acc-bg: #0d2a28;
-  --acc-line: #1f4b48;
+  /* 深色，默认 —— 对齐「剧本分析原型 v0.5-清爽版」的冷调蓝灰 + 紫罗兰主色 */
+  --bg0: #2c2c38; /* 页底 */
+  --bg1: #32323f; /* 应用底 / 主区 */
+  --bg2: #3a3a47; /* 卡片 / 行 */
+  --bg3: #42434f; /* 输入 / chip / 抬起面 */
+  --line: #4a4b59; /* 主分割 */
+  --line2: #3b3c48; /* 次分割 */
+  --edge: #565766; /* hover 描边 */
+  --t1: #eef0f4; /* 标题 */
+  --t2: #d4d7df; /* 正文 */
+  --t3: #969ca7; /* 次要 */
+  --t4: #6a707a; /* 弱 */
+  --acc: #8b5cf6; /* 紫罗兰主色 */
+  --acc-bg: rgba(139, 92, 246, 0.15);
+  --acc-line: rgba(139, 92, 246, 0.5);
+  --on-acc: #ffffff; /* 主色上的文字 */
   --role: #a78bfa;
   --cloth: #ef7fb4;
   --scene: #5ed48a;
@@ -41,6 +42,7 @@
   --acc: #0d9488;
   --acc-bg: #e9f7f5;
   --acc-line: #a8ded7;
+  --on-acc: #04201d;
   --role: #6d4fd8;
   --cloth: #c4327c;
   --scene: #2a8f52;
