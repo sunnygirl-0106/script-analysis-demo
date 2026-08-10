@@ -1,0 +1,47 @@
+.dur {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 26px;
+  padding: 0 4px 0 9px;
+  background: var(--bg3);
+  border: 1px solid transparent;
+  border-radius: var(--rsm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t1);
+  transition: 0.14s;
+}
+.dur:hover {
+  border-color: var(--edge);
+}
+.dur b {
+  font-weight: 400;
+  font-size: 9px;
+  color: var(--t4);
+  margin-right: 2px;
+}
+.step {
+  width: 18px;
+  height: 20px;
+  border-radius: 4px;
+  color: var(--t3);
+  font-size: 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.step:hover {
+  background: var(--bg1);
+  color: var(--acc);
+}
+.ro {
+  cursor: default;
+}
+.why {
+  font-size: 10px;
+  color: var(--t4);
+  margin-top: 5px;
+  line-height: 1.45;
+}

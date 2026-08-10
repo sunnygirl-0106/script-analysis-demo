@@ -1,0 +1,79 @@
+.page {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+}
+.rcol {
+  flex: 1;
+  background: var(--bg1);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.toolbar {
+  height: 52px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--line);
+}
+.tbr {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11.5px;
+  color: var(--t4);
+}
+.seg {
+  display: flex;
+  background: var(--bg3);
+  border: 1px solid var(--line);
+  border-radius: var(--rsm);
+  padding: 2px;
+}
+.seg button {
+  padding: 3px 11px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  color: var(--t3);
+  transition: 0.14s;
+}
+.seg button:hover {
+  color: var(--t1);
+}
+.seg button.on {
+  background: var(--bg1);
+  color: var(--acc);
+  font-weight: 600;
+}
+
+.paneScroll {
+  overflow: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 底栏 */
+.foot {
+  flex: none;
+  border-top: 1px solid var(--line);
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg2);
+  font-size: 11.5px;
+  color: var(--t4);
+}
+.foot .info {
+  flex: 1;
+}
+.foot .info b {
+  color: var(--t2);
+  font-weight: 600;
+}

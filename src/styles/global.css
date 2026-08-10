@@ -1,0 +1,47 @@
+/* reset + 滚动条 + 字体 */
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+body {
+  background: var(--bg0);
+  color: var(--t1);
+  font: 13px/1.7 -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+a {
+  color: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--edge);
+  border-radius: var(--rsm);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--t4);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

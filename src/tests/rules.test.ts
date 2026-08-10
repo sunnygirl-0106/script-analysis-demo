@@ -1,0 +1,208 @@
+// 7 条业务规则的断言。测试里的中文描述就是产品规则本身，不要为了通过测试去改测试。
+import { describe, it, expect } from 'vitest'
+import { seedProject, A } from '../data/seed'
+import { episode2Payload } from '../data/seedEpisode2'
+import type { MountRef, Character, Prop } from '../data/types'
+import { computeTimeline, sceneDuration } from '../services/timeline'
+import { defaultMounts, checkMounts } from '../services/mount'
+import { appendEpisode } from '../services/incremental'
+import { densityShots, applyDensity } from '../services/density'
+import { canEdit, resplitScene } from '../services/lock'
+import { imageGenQueue } from '../services/imageQueue'
+
+// 每个用例都从 seed 深拷贝，互不污染。
+const fresh = () => structuredClone(seedProject)
+
+describe('R1 时长是累计时间轴', () => {
+  it('startAt = 本场前面所有镜时长之和', () => {
+    const p = fresh()
+    const scene = p.scenes.s1!
+    const tl = computeTimeline(scene, p.shots)
+    expect(tl[0]!.startAt).toBe(0)
+    // 逐镜首尾相接
+    for (let i = 1; i < tl.length; i++) {
+      expect(tl[i]!.startAt).toBe(tl[i - 1]!.endAt)
+    }
+  })
+
+  it('改一个镜的时长，后面所有镜 startAt 顺移，场时长跟着变', () => {
+    const p = fresh()
+    const scene = p.scenes.s1!
+    const before = computeTimeline(scene, p.shots)
+    const durBefore = sceneDuration(scene, p.shots)
+
+    // 把第 2 个镜 +3 秒
+    const secondId = scene.shotIds[1]!
+    const delta = 3
+    p.shots[secondId]!.duration += delta
+
+    const after = computeTimeline(scene, p.shots)
+    // 第 3 个及以后的 startAt 各 +3
+    for (let i = 2; i < after.length; i++) {
+      expect(after[i]!.startAt).toBe(before[i]!.startAt + delta)
+    }
+    // 场时长 +3
+    expect(sceneDuration(scene, p.shots)).toBe(durBefore + delta)
+  })
+
+  it('第 1 场初始为 8 镜 · 32 秒', () => {
+    const p = fresh()
+    expect(p.scenes.s1!.shotIds.length).toBe(8)
+    expect(sceneDuration(p.scenes.s1!, p.shots)).toBe(32)
+  })
+})
+
+describe('R2 挂载是引用不是复制', () => {
+  it('改资产名后，挂过它的镜渲染出的标签是新名字', () => {
+    const p = fresh()
+    p.assets[A.suke]!.name = '苏可可'
+    // 任取一个挂了苏可的镜
+    const shot = Object.values(p.shots).find((s) => s.mounts.some((m) => m.assetId === A.suke))!
+    expect(shot).toBeTruthy()
+    const label = p.assets[A.suke]!.name // 界面渲染时用 id 反查名字
+    expect(label).toBe('苏可可')
+  })
+})
+
+describe('R3 追加集与资产去重', () => {
+  it('追加第 2 集后：苏可仍是同一 id，资产总数只 +1', () => {
+    const p = fresh()
+    const beforeCount = Object.keys(p.assets).length
+    const beforeSukeId = p.assets[A.suke]!.id
+
+    const next = appendEpisode(p, episode2Payload)
+
+    expect(next.assets[A.suke]!.id).toBe(beforeSukeId) // 复用旧 id
+    expect(Object.keys(next.assets).length).toBe(beforeCount + 1) // 只多了「快递员」
+    expect(Object.values(next.assets).some((a) => a.name === '快递员')).toBe(true)
+    // 第 2 集里没有新建一个重复的「苏可」
+    expect(Object.values(next.assets).filter((a) => a.name === '苏可').length).toBe(1)
+  })
+
+  it('第 2 集的镜挂载指向复用后的旧 id', () => {
+    const p = fresh()
+    const next = appendEpisode(p, episode2Payload)
+    const ep2Shots = Object.values(next.shots).filter((s) => s.sceneId.startsWith('e2'))
+    const sukeMount = ep2Shots.flatMap((s) => s.mounts).find((m) => m.assetId === A.suke)
+    expect(sukeMount).toBeTruthy() // 指向的是第 1 集的 c_suke，而非临时 id
+    // 临时 id 不应出现在任何挂载里
+    const anyTemp = ep2Shots.flatMap((s) => s.mounts).some((m) => m.assetId === 'c_suke__ep2')
+    expect(anyTemp).toBe(false)
+  })
+
+  it('第 1 集所有 shot 的 mounts 数组完全相等（引用未变）', () => {
+    const p = fresh()
+    const ep1ShotIds = p.episodes[0]!.sceneIds.flatMap((sid) => p.scenes[sid]!.shotIds)
+    const next = appendEpisode(p, episode2Payload)
+    for (const id of ep1ShotIds) {
+      expect(next.shots[id]!.mounts).toBe(p.shots[id]!.mounts) // 同一引用
+    }
+  })
+})
+
+describe('R4 挂载默认值，不是禁令', () => {
+  it('defaultMounts 结果同时包含 character 和 costume', () => {
+    const p = fresh()
+    // 构造一个只挂了角色的镜
+    const shot = structuredClone(p.shots.s1_sh5!)
+    shot.mounts = [{ kind: 'character', assetId: A.suke }]
+    const result = defaultMounts(shot, p.assets)
+    expect(result.some((m: MountRef) => m.kind === 'character')).toBe(true)
+    expect(result.some((m: MountRef) => m.kind === 'costume')).toBe(true)
+  })
+
+  it('只有 character 的组合：checkMounts 返回空数组，不报错', () => {
+    const p = fresh()
+    const mounts: MountRef[] = [{ kind: 'character', assetId: A.suke }]
+    expect(checkMounts(mounts, p.assets)).toEqual([])
+  })
+
+  it('character + costume 都在：checkMounts 返回 1 条 info', () => {
+    const p = fresh()
+    const mounts: MountRef[] = [
+      { kind: 'character', assetId: A.suke },
+      { kind: 'costume', assetId: A.hoodie },
+    ]
+    const hints = checkMounts(mounts, p.assets)
+    expect(hints.length).toBe(1)
+    expect(hints[0]!.level).toBe('info')
+  })
+})
+
+describe('R5 镜头密度', () => {
+  it('同一场：compact 镜数 > standard > loose', () => {
+    const c = densityShots('s1', 'compact').length
+    const s = densityShots('s1', 'standard').length
+    const l = densityShots('s1', 'loose').length
+    expect(c).toBeGreaterThan(s)
+    expect(s).toBeGreaterThan(l)
+  })
+
+  it('三套的场总时长相差不超过 2 秒', () => {
+    const total = (d: 'compact' | 'standard' | 'loose') =>
+      densityShots('s1', d).reduce((sum, sh) => sum + sh.duration, 0)
+    const c = total('compact')
+    const s = total('standard')
+    const l = total('loose')
+    expect(Math.abs(c - s)).toBeLessThanOrEqual(2)
+    expect(Math.abs(s - l)).toBeLessThanOrEqual(2)
+    expect(Math.abs(c - l)).toBeLessThanOrEqual(2)
+  })
+
+  it('applyDensity 返回对应那套的 shotIds', () => {
+    const p = fresh()
+    const ids = applyDensity(p.scenes.s1!, 'compact')
+    expect(ids.length).toBe(densityShots('s1', 'compact').length)
+    expect(ids).toEqual(densityShots('s1', 'compact').map((s) => s.id))
+  })
+})
+
+describe('R6 阶段锁与重拆', () => {
+  it("stage='visual' 时 analysis 不可编辑", () => {
+    const p = fresh()
+    p.stage = 'visual'
+    expect(canEdit(p, 'analysis')).toBe(false)
+    expect(canEdit(p, 'visual')).toBe(true)
+  })
+
+  it("stage='analysis' 时 analysis 可编辑", () => {
+    const p = fresh()
+    expect(canEdit(p, 'analysis')).toBe(true)
+  })
+
+  it('重拆第 1 场后，第 2 场的 shotIds 数组引用未变', () => {
+    const p = fresh()
+    // 先把第 1 场改乱（换成紧凑密度的 id），确认重拆能恢复
+    const s2RefBefore = p.scenes.s2!.shotIds
+    p.scenes.s1!.shotIds = applyDensity(p.scenes.s1!, 'compact')
+    const next = resplitScene(p, 's1')
+    // 第 1 场恢复成初始 8 镜
+    expect(next.scenes.s1!.shotIds.length).toBe(8)
+    expect(next.scenes.s1!.shotIds).toEqual(seedProject.scenes.s1!.shotIds)
+    // 第 2 场引用未变
+    expect(next.scenes.s2!.shotIds).toBe(s2RefBefore)
+  })
+})
+
+describe('R7 不生图开关', () => {
+  it('seed 里 3 个角色有 2 个 skipImageGen，队列里角色数 = 1', () => {
+    const p = fresh()
+    const chars = Object.values(p.assets).filter((a): a is Character => a.kind === 'character')
+    expect(chars.length).toBe(3)
+    expect(chars.filter((c) => c.skipImageGen).length).toBe(2)
+
+    const queue = imageGenQueue(p.assets)
+    const queueChars = queue.filter((a) => a.kind === 'character')
+    expect(queueChars.length).toBe(1)
+  })
+
+  it('minor 道具不进生图队列', () => {
+    const p = fresh()
+    const queue = imageGenQueue(p.assets)
+    const minorProp = Object.values(p.assets).find(
+      (a): a is Prop => a.kind === 'prop' && a.minor,
+    )!
+    expect(minorProp).toBeTruthy()
+    expect(queue.some((a) => a.id === minorProp.id)).toBe(false)
+  })
+})

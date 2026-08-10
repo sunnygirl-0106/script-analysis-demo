@@ -1,0 +1,37 @@
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 34px;
+  transform: translateX(-50%);
+  z-index: 100;
+  max-width: 640px;
+  padding: 11px 18px;
+  border-radius: var(--rlg);
+  background: var(--bg3);
+  border: 1px solid var(--acc-line);
+  color: var(--t1);
+  font-size: 12.5px;
+  line-height: 1.5;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  animation: rise 0.18s ease-out;
+}
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--acc);
+  flex: none;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}

@@ -1,0 +1,61 @@
+.bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line2);
+}
+.cell {
+  border: 1px solid var(--line2);
+  border-radius: var(--rlg);
+  background: var(--bg2);
+  padding: 10px 12px;
+  min-width: 0;
+}
+.head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--t4);
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.dotBgm {
+  background: var(--prop);
+}
+.dotMood {
+  background: var(--cloth);
+}
+.dotDlg {
+  background: var(--scene);
+}
+.text {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--t2);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.7;
+  resize: vertical;
+  min-height: 40px;
+  outline: none;
+  padding: 0;
+  white-space: pre-wrap;
+}
+.text:focus {
+  color: var(--t1);
+}
+.text:disabled {
+  color: var(--t3);
+  cursor: default;
+}
+.text::placeholder {
+  color: var(--t4);
+}

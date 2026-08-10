@@ -1,0 +1,73 @@
+.side {
+  width: 192px;
+  flex: none;
+  background: var(--bg2);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.head {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 11px;
+  color: var(--t4);
+  letter-spacing: 0.6px;
+  border-bottom: 1px solid var(--line2);
+  flex: none;
+}
+.head .rt {
+  margin-left: auto;
+}
+.tree {
+  padding: 10px;
+  overflow: auto;
+  flex: 1;
+}
+.ep {
+  padding: 8px 10px;
+  border-radius: var(--rsm);
+}
+.epTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t2);
+}
+.epSub {
+  font-size: 10.5px;
+  color: var(--t4);
+  margin-top: 1px;
+}
+.sc {
+  margin: 2px 0 2px 8px;
+  padding: 6px 10px;
+  border-radius: var(--rsm);
+  font-size: 11.5px;
+  color: var(--t3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: 0.14s;
+}
+.sc:hover {
+  background: var(--bg3);
+  color: var(--t2);
+}
+.sc.on {
+  background: var(--acc-bg);
+  color: var(--acc);
+  font-weight: 600;
+}
+.sc .d {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--t4);
+}
+.sc.on .d {
+  color: var(--acc);
+}
+.epgap {
+  height: 10px;
+}
