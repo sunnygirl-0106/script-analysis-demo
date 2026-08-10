@@ -1,4 +1,5 @@
 // R4 挂载默认值，不是禁令。纯函数。
+// 规则版本：v1.0（2026-08-10）。断言见 tests/rules.test.ts 的 R4。
 import type { Asset, Costume, MountRef, Shot } from '../data/types'
 
 export interface MountHint {

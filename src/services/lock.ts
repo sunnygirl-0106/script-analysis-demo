@@ -1,4 +1,5 @@
 // R6 阶段锁与重拆。纯函数。
+// 规则版本：v1.0（2026-08-10）。断言见 tests/rules.test.ts 的 R6。
 import type { Project, Shot, Stage } from '../data/types'
 import { initialSceneShots } from '../data/seed'
 

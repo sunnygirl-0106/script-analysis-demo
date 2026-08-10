@@ -1,4 +1,5 @@
 // R1 时长是累计时间轴。纯函数，不 import 任何 React。
+// 规则版本：v1.0（2026-08-10）。断言见 tests/rules.test.ts 的 R1。
 import type { Scene, Shot } from '../data/types'
 
 export interface TimelineEntry {

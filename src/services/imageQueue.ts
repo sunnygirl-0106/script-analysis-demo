@@ -1,4 +1,5 @@
 // R7 不生图开关。纯函数，供 VisualPrep 与测试共用。
+// 规则版本：v1.0（2026-08-10）。断言见 tests/rules.test.ts 的 R7。
 import type { Asset } from '../data/types'
 
 /**

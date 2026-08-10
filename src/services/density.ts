@@ -1,4 +1,5 @@
 // R5 镜头密度。纯函数。
+// 规则版本：v1.0（2026-08-10）。断言见 tests/rules.test.ts 的 R5。
 import type { Scene, Shot, ShotDensity } from '../data/types'
 import { shotPresets } from '../data/shotPresets'
 

@@ -1,4 +1,5 @@
 // R3 追加集与资产去重。纯函数。
+// 规则版本：v1.0（2026-08-10）。断言见 tests/rules.test.ts 的 R3。
 import type { Asset, MountRef, Project, Shot } from '../data/types'
 import type { EpisodePayload } from '../data/seedEpisode2'
 
