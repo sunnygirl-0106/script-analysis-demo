@@ -57,11 +57,6 @@ export function ShotDetail({ shot }: { shot: Shot }) {
       </div>
 
       {hints.length > 0 && <div className={s.hint}>💡 {hints[0]!.text}</div>}
-
-      <div className={s.src}>
-        <div className={s.t}>本镜取材自剧本原文</div>
-        <div className={s.q}>{shot.sourceQuote}</div>
-      </div>
     </div>
   )
 }
