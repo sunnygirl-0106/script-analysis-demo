@@ -14,6 +14,8 @@ interface Props {
 }
 
 // 挂载弹层：可搜索、可勾选、可取消。挂载存 id，即引用。
+// 选项池只有四类资产（角色 / 服装 / 场景 / 道具），没有「素模」条目 ——
+// 素模是视觉筹备内部的中间产物，不建资产、不可挂载。
 export function MountPicker({ shotId, kinds, mounts, disabled }: Props) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')

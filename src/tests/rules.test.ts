@@ -12,13 +12,13 @@
 import { describe, it, expect } from 'vitest'
 import { seedProject, A } from '../data/seed'
 import { episode2Payload } from '../data/seedEpisode2'
-import type { MountRef, Character, Prop } from '../data/types'
+import type { MountRef } from '../data/types'
 import { computeTimeline, sceneDuration } from '../services/timeline'
-import { defaultMounts, checkMounts } from '../services/mount'
+import { defaultMounts } from '../services/mount'
+import { referenceImages } from '../services/reference'
 import { appendEpisode } from '../services/incremental'
 import { densityShots, applyDensity } from '../services/density'
 import { canEdit, resplitScene } from '../services/lock'
-import { imageGenQueue } from '../services/imageQueue'
 
 /** 规则基线版本。整体版本升级时改这里，单条规则/断言的局部变更用行内标记覆盖。 */
 export const RULES_VERSION = 'v1.0' // 2026-08-10 · 对应技术方案 v1.0
@@ -83,21 +83,33 @@ describe('R2 挂载是引用不是复制', () => {
   })
 })
 
-// ── R3 追加集与资产去重 · since v1.0 · updated v1.0 ──
+// ── R3 追加集与资产去重 · since v1.0 · updated v1.1 ──
 describe('R3 追加集与资产去重', () => {
-  it('追加第 2 集后：苏可仍是同一 id，资产总数只 +1', () => {
-    // v1.0
+  it('追加集：重名资产复用旧 id，未命中的按内容照数新建', () => {
+    // v1.1 —— 口径从「资产总数只 +1」改为「新增数由新集内容决定」。
+    // 追加集本来就该新增它自己的资产，把新增数写死成常数是把规则焊在了 seed 上。
     const p = fresh()
     const beforeCount = Object.keys(p.assets).length
     const beforeSukeId = p.assets[A.suke]!.id
 
+    // 期望新增数 = 新集资产里「kind + 归一化名称」未命中已有资产的去重个数
+    const keyOf = (a: { kind: string; name: string }) =>
+      `${a.kind}::${a.name.replace(/\s+/g, '').toLowerCase()}`
+    const existing = new Set(Object.values(p.assets).map(keyOf))
+    const expectedNew = new Set(
+      episode2Payload.assets.filter((a) => !existing.has(keyOf(a))).map(keyOf),
+    ).size
+
     const next = appendEpisode(p, episode2Payload)
 
-    expect(next.assets[A.suke]!.id).toBe(beforeSukeId) // 复用旧 id
-    expect(Object.keys(next.assets).length).toBe(beforeCount + 1) // 只多了「快递员」
-    expect(Object.values(next.assets).some((a) => a.name === '快递员')).toBe(true)
+    expect(next.assets[A.suke]!.id).toBe(beforeSukeId) // 重名 → 复用旧 id，不新建
+    expect(Object.keys(next.assets).length).toBe(beforeCount + expectedNew)
     // 第 2 集里没有新建一个重复的「苏可」
     expect(Object.values(next.assets).filter((a) => a.name === '苏可').length).toBe(1)
+    // 新集带来的资产，无论是角色还是道具，全部都能在库里找到
+    for (const a of episode2Payload.assets) {
+      expect(Object.values(next.assets).some((x) => x.name === a.name)).toBe(true)
+    }
   })
 
   it('第 2 集的镜挂载指向复用后的旧 id', () => {
@@ -123,7 +135,7 @@ describe('R3 追加集与资产去重', () => {
   })
 })
 
-// ── R4 挂载默认值，不是禁令 · since v1.0 · updated v1.0 ──
+// ── R4 挂载默认值，不是禁令 · since v1.0 · updated v1.1 ──
 describe('R4 挂载默认值，不是禁令', () => {
   it('defaultMounts 结果同时包含 character 和 costume', () => {
     // v1.0
@@ -136,23 +148,18 @@ describe('R4 挂载默认值，不是禁令', () => {
     expect(result.some((m: MountRef) => m.kind === 'costume')).toBe(true)
   })
 
-  it('只有 character 的组合：checkMounts 返回空数组，不报错', () => {
-    // v1.0
+  // R4-b：参考图清单 —— 每个已挂角色恰好一张定妆图（角色 + 其服装），素模不单列。
+  it('挂了苏可的镜：referenceImages 里 character 恰好 1 条且携带 costumeId', () => {
+    // v1.1
     const p = fresh()
-    const mounts: MountRef[] = [{ kind: 'character', assetId: A.suke }]
-    expect(checkMounts(mounts, p.assets)).toEqual([])
-  })
-
-  it('character + costume 都在：checkMounts 返回 1 条 info', () => {
-    // v1.0
-    const p = fresh()
-    const mounts: MountRef[] = [
-      { kind: 'character', assetId: A.suke },
-      { kind: 'costume', assetId: A.hoodie },
-    ]
-    const hints = checkMounts(mounts, p.assets)
-    expect(hints.length).toBe(1)
-    expect(hints[0]!.level).toBe('info')
+    const shot = Object.values(p.shots).find((s) => s.mounts.some((mm) => mm.assetId === A.suke))!
+    expect(shot).toBeTruthy()
+    const refs = referenceImages(shot, p.assets)
+    const chars = refs.filter((r) => r.kind === 'character')
+    expect(chars.length).toBe(1)
+    expect(chars[0]!.costumeId).toBe(A.hoodie)
+    // 服装不作为独立参考图出现（已融进定妆图）。
+    expect(refs.some((r) => r.kind === 'costume')).toBe(false)
   })
 })
 
@@ -216,31 +223,5 @@ describe('R6 阶段锁与重拆', () => {
     expect(next.scenes.s1!.shotIds).toEqual(seedProject.scenes.s1!.shotIds)
     // 第 2 场引用未变
     expect(next.scenes.s2!.shotIds).toBe(s2RefBefore)
-  })
-})
-
-// ── R7 不生图开关 · since v1.0 · updated v1.0 ──
-describe('R7 不生图开关', () => {
-  it('seed 里 3 个角色有 2 个 skipImageGen，队列里角色数 = 1', () => {
-    // v1.0
-    const p = fresh()
-    const chars = Object.values(p.assets).filter((a): a is Character => a.kind === 'character')
-    expect(chars.length).toBe(3)
-    expect(chars.filter((c) => c.skipImageGen).length).toBe(2)
-
-    const queue = imageGenQueue(p.assets)
-    const queueChars = queue.filter((a) => a.kind === 'character')
-    expect(queueChars.length).toBe(1)
-  })
-
-  it('minor 道具不进生图队列', () => {
-    // v1.0
-    const p = fresh()
-    const queue = imageGenQueue(p.assets)
-    const minorProp = Object.values(p.assets).find(
-      (a): a is Prop => a.kind === 'prop' && a.minor,
-    )!
-    expect(minorProp).toBeTruthy()
-    expect(queue.some((a) => a.id === minorProp.id)).toBe(false)
   })
 })

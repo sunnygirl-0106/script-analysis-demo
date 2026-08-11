@@ -54,8 +54,6 @@ interface StoreState extends UIState {
   updateSceneTrack: (sceneId: string, patch: Partial<Project['scenes'][string]['track']>) => void
   setDensity: (density: ShotDensity) => void
   appendEpisode2: () => void
-  toggleSkipImageGen: (characterId: string) => void
-  toggleMinorProp: (propId: string) => void
   resplit: (sceneId: string) => void
   setStage: (stage: Stage) => void
 }
@@ -194,32 +192,6 @@ export const useStore = create<StoreState>((set, get) => ({
     const next = appendEpisode(s.project, episode2Payload)
     set({ project: next })
     get().showToast('已追加第 2 集：老角色「苏可」复用，未重复；新角色「快递员」入库')
-  },
-
-  toggleSkipImageGen: (characterId) => {
-    set((s) => {
-      const asset = s.project.assets[characterId]
-      if (asset?.kind !== 'character') return s
-      return {
-        project: {
-          ...s.project,
-          assets: { ...s.project.assets, [characterId]: { ...asset, skipImageGen: !asset.skipImageGen } },
-        },
-      }
-    })
-  },
-
-  toggleMinorProp: (propId) => {
-    set((s) => {
-      const asset = s.project.assets[propId]
-      if (asset?.kind !== 'prop') return s
-      return {
-        project: {
-          ...s.project,
-          assets: { ...s.project.assets, [propId]: { ...asset, minor: !asset.minor } },
-        },
-      }
-    })
   },
 
   resplit: (sceneId) => {

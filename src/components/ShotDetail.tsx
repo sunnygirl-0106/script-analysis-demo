@@ -1,16 +1,12 @@
 import { useStore } from '../store/useStore'
 import type { Shot } from '../data/types'
 import { SHOT_SIZES, CAMERA_MOVES } from '../data/types'
-import { checkMounts } from '../services/mount'
 import { FieldSelect } from './FieldSelect'
 import s from './ShotDetail.module.css'
 
 export function ShotDetail({ shot }: { shot: Shot }) {
-  const assets = useStore((st) => st.project.assets)
   const canEdit = useStore((st) => st.canEditAnalysis())
   const updateField = useStore((st) => st.updateShotField)
-
-  const hints = checkMounts(shot.mounts, assets)
 
   return (
     <div className={s.in}>
@@ -55,8 +51,6 @@ export function ShotDetail({ shot }: { shot: Shot }) {
           <div className={s.c2}>{shot.videoPrompt}</div>
         </div>
       </div>
-
-      {hints.length > 0 && <div className={s.hint}>💡 {hints[0]!.text}</div>}
     </div>
   )
 }

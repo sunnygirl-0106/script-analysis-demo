@@ -1,5 +1,6 @@
 // R3 追加集与资产去重。纯函数。
-// 规则版本：v1.0（2026-08-10）。断言见 tests/rules.test.ts 的 R3。
+// 规则版本：v1.1（2026-08-11）。断言见 tests/rules.test.ts 的 R3。
+// v1.1 变更：追加集的资产新增数由新集内容决定，不再约束为固定数量。
 import type { Asset, MountRef, Project, Shot } from '../data/types'
 import type { EpisodePayload } from '../data/seedEpisode2'
 

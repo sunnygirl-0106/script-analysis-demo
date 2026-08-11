@@ -89,8 +89,8 @@ interface AssetBase {
 export interface Character extends AssetBase {
   kind: 'character'
   role: 'lead' | 'support' | 'extra'
-  skipImageGen: boolean      // ★「这个人不用生图」
 }
+// 服装是独立资产（历史数据兼容）。角色素模是视觉筹备内部中间产物，不建资产、不可挂载。
 export interface Costume extends AssetBase {
   kind: 'costume'
   characterId: string        // 服装挂在人物下面
@@ -99,9 +99,9 @@ export interface Location extends AssetBase {
   kind: 'location'
   timeOfDay: string
 }
+// 删空后只剩 AssetBase 字段，保留 interface 不合并 —— 后续道具还会长字段。
 export interface Prop extends AssetBase {
   kind: 'prop'
-  minor: boolean             // 次要道具，可跳过生图
 }
 
 export type Asset = Character | Costume | Location | Prop

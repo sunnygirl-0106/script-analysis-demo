@@ -52,9 +52,6 @@
   background: var(--bg2);
   padding: 13px 15px;
 }
-.item.excluded {
-  opacity: 0.55;
-}
 .itemHead {
   display: flex;
   align-items: center;
@@ -76,14 +73,18 @@
   color: var(--acc);
   border: 1px solid var(--acc-line);
 }
-.badgeSkip {
-  background: var(--bg3);
-  color: var(--t4);
-}
+
+/* 参考图规格占位：每类形状不同（角色竖长条 ×3 / 服装横向双图 / 场景 16:9 横图 / 道具方图）。 */
 .thumb {
   margin-top: 10px;
-  height: 92px;
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+  justify-content: center;
+}
+.slot {
   border-radius: var(--rsm);
+  border: 1px dashed var(--edge);
   background: repeating-linear-gradient(
     45deg,
     var(--bg3),
@@ -91,11 +92,31 @@
     var(--bg1) 10px,
     var(--bg1) 20px
   );
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  color: var(--t4);
+}
+/* 角色：三视图 —— 三根竖长条 */
+.shapeChar {
+  height: 100px;
+}
+.shapeChar .slot {
+  width: 26px;
+}
+/* 服装：正背两面 —— 横向双图 */
+.shapeCostume {
+  height: 88px;
+}
+.shapeCostume .slot {
+  width: 60px;
+}
+/* 场景：横版空镜 —— 16:9 横图 */
+.shapeScene .slot {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 92px;
+}
+/* 道具：产品图 —— 方图 */
+.shapeProp .slot {
+  width: 84px;
+  height: 84px;
 }
 .desc {
   margin-top: 9px;

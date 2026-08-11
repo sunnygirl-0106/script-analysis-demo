@@ -1,11 +1,7 @@
 // R4 挂载默认值，不是禁令。纯函数。
-// 规则版本：v1.0（2026-08-10）。断言见 tests/rules.test.ts 的 R4。
+// 规则版本：v1.1（2026-08-11）。断言见 tests/rules.test.ts 的 R4。
+// v1.1 变更：素模不是可挂载对象，挂角色恒定带出一张定妆图，互斥提示删除。
 import type { Asset, Costume, MountRef, Shot } from '../data/types'
-
-export interface MountHint {
-  level: 'info'
-  text: string
-}
 
 function costumesOf(characterId: string, assets: Record<string, Asset>): Costume[] {
   return Object.values(assets).filter(
@@ -29,26 +25,4 @@ export function defaultMounts(shot: Shot, assets: Record<string, Asset>): MountR
     }
   }
   return result
-}
-
-/**
- * 不禁止任何组合。只在「同时挂了角色素模 + 该角色的服装」时返回一条 info 级提示。
- * 提示不阻断。
- */
-export function checkMounts(mounts: MountRef[], assets: Record<string, Asset>): MountHint[] {
-  const hints: MountHint[] = []
-  const mountedIds = new Set(mounts.map((m) => m.assetId))
-
-  for (const mref of mounts) {
-    const asset = assets[mref.assetId]
-    if (asset?.kind !== 'character') continue
-    const hasCostume = costumesOf(asset.id, assets).some((c) => mountedIds.has(c.id))
-    if (hasCostume) {
-      hints.push({
-        level: 'info',
-        text: `「${asset.name}」的角色素模与定妆图同时挂载，两张参考图可能互相干扰，建议只留定妆图。`,
-      })
-    }
-  }
-  return hints
 }

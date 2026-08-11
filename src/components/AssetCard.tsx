@@ -17,8 +17,6 @@ function apprText(a: Asset) {
 export function AssetCard({ asset }: { asset: Asset }) {
   const [showPrompt, setShowPrompt] = useState(false)
   const assets = useStore((st) => st.project.assets)
-  const toggleSkip = useStore((st) => st.toggleSkipImageGen)
-  const toggleMinor = useStore((st) => st.toggleMinorProp)
 
   const costumes =
     asset.kind === 'character'
@@ -31,19 +29,15 @@ export function AssetCard({ asset }: { asset: Asset }) {
         <span className={s.nm}>{asset.name}</span>
         {asset.kind === 'character' && <span className={s.tg}>{roleLabel(asset.role)}</span>}
         {asset.kind === 'location' && <span className={s.tg}>{asset.timeOfDay}</span>}
-        {asset.kind === 'character' && asset.skipImageGen ? (
-          <span className={[s.rt, s.voice].join(' ')}>仅声音 · 已排除生图</span>
-        ) : (
-          <span className={s.rt}>{apprText(asset)}</span>
-        )}
+        <span className={s.rt}>{apprText(asset)}</span>
       </div>
 
       <div className={s.bio}>{asset.description}</div>
 
-      {/* 角色：列出服装 + 不生图开关 */}
-      {asset.kind === 'character' && (
+      {/* 角色：列出服装（谁穿哪件的关系视图）*/}
+      {asset.kind === 'character' && costumes.length > 0 && (
         <>
-          {costumes.length > 0 && <div className={s.hr} />}
+          <div className={s.hr} />
           {costumes.map((c) => (
             <div className={s.wr} key={c.id}>
               <span className={[ui.chip, chipClass('costume')].join(' ')}>
@@ -53,19 +47,7 @@ export function AssetCard({ asset }: { asset: Asset }) {
               <span className={s.rt}>{apprText(c)}</span>
             </div>
           ))}
-          <div className={s.toggle} onClick={() => toggleSkip(asset.id)} title="切换是否进入生图队列">
-            <span className={[s.switch, asset.skipImageGen ? s.on : ''].join(' ')} />
-            {asset.skipImageGen ? '这个人不用生图（已跳过）' : '纳入生图队列'}
-          </div>
         </>
-      )}
-
-      {/* 道具：次要道具可跳过生图 */}
-      {asset.kind === 'prop' && (
-        <div className={s.toggle} onClick={() => toggleMinor(asset.id)} title="切换是否为次要道具">
-          <span className={[s.switch, asset.minor ? s.on : ''].join(' ')} />
-          {asset.minor ? '次要道具（跳过生图）' : '纳入生图队列'}
-        </div>
       )}
 
       {/* 生图提示词折叠 */}

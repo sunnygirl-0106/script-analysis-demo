@@ -1,6 +1,7 @@
 // 第 2 集：专供「追加集」演示，初始不加载。
-// 关键点：既含老角色「苏可」（应被去重复用旧 id），又含新角色「快递员」（应新建）。
-// 追加后全剧资产净增 1（只多了快递员）。
+// 关键点：既含老角色「苏可」（应被去重复用旧 id），又含新增资产（应新建）。
+// 新集该带什么资产就带什么 —— 净增数量由内容决定，不是一个写死的常数。
+// 本集新增：角色「快递员」+ 道具「退货包裹」。
 import type { Episode, Scene, Shot, Asset } from './types'
 import { A, m } from './seed'
 
@@ -8,25 +9,37 @@ import { A, m } from './seed'
 const T = {
   suke: 'c_suke__ep2', // 老角色（临时 id，会被 appendEpisode 重定向到 c_suke）
   courier: 'c_courier', // 新角色
+  parcel: 'p_parcel', // 新道具：这一集才出现的退货包裹
 } as const
 
 // 第 2 集带来的资产（其余场景 / 道具 / 服装直接复用第 1 集的既有 id）。
+// 追加集不设「只能新增几个」的上限：这一集出现了新道具就建新道具。
 export const ep2Assets: Asset[] = [
   {
-    id: T.suke, kind: 'character', role: 'lead', skipImageGen: false,
+    id: T.suke, kind: 'character', role: 'lead',
     name: '苏可', // 与第 1 集同名 → 归一化后命中，复用旧 id
     description: '24 岁，资深宅家爱好者 / 资深吃货。第 2 集里她还得应付上门取件的快递员。',
     imagePrompt: '（与第 1 集同一角色，复用既有设定板）',
     appearances: [{ episodeNo: 2, sceneNo: 1 }, { episodeNo: 2, sceneNo: 2 }],
   },
   {
-    id: T.courier, kind: 'character', role: 'extra', skipImageGen: true,
+    id: T.courier, kind: 'character', role: 'extra',
     name: '快递员',
     description: '男，约 30 岁。上门取退货件，敲门催得急，全程只闻其声。',
-    imagePrompt: '（仅声音出演，不进入生图队列）',
+    imagePrompt: '一张高精度、干净极简的角色基础视觉资产设定板。纯白背景，横版构图，三视图（正面 / 左侧 / 背面全身站姿）。30 岁上下东亚男性，中等身材略壮实，短发，面相憨直、透着赶时间的急躁。素色快递工装短袖配工装裤，腰挂扫描枪，胸前挂无字工牌，无任何品牌标识。中性棚拍光，无遮挡，完整人物不裁切。',
+    appearances: [{ episodeNo: 2, sceneNo: 2 }],
+  },
+  {
+    id: T.parcel, kind: 'prop',
+    name: '退货包裹',
+    description: '浅棕色瓦楞纸箱，缠着透明胶带，箱面贴一张白色面单。第 2 集里被苏可从门缝塞出去。',
+    imagePrompt: '纯白背景产品图，浅棕色瓦楞纸箱，缠透明胶带，正面贴一张白色空白面单，45° 俯视，写实，无品牌标识。',
     appearances: [{ episodeNo: 2, sceneNo: 2 }],
   },
 ]
+
+/** 第 2 集自带的新道具，需手工构造 MountRef —— seed 的 m() 只认得第 1 集的资产。 */
+const parcelMount = { kind: 'prop', assetId: T.parcel } as const
 
 type ShotSeed = Omit<Shot, 'id' | 'sceneId' | 'no'>
 
@@ -76,7 +89,7 @@ const ep2s2Shots: ShotSeed[] = [
     imagePrompt: '全景。苏可从门缝把退货包裹塞出去，飞速关门，全程不露正脸。',
     cameraMove: '手持', dialogue: '无', sfx: '门轴与关门声',
     videoPrompt: '{0-2s} 门缝递出包裹。{2-4s} 飞速关门。',
-    mounts: m(A.suke, A.hoodie, A.entry),
+    mounts: [...m(A.suke, A.hoodie, A.entry), parcelMount],
     sourceQuote: '（第 2 集续写）她从门缝塞出包裹，飞速关门。',
   },
 ]

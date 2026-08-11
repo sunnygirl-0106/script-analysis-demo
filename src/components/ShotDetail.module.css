@@ -47,16 +47,6 @@
   line-height: 1.95;
   color: var(--t2);
 }
-.hint {
-  margin: 10px 13px 0;
-  padding: 8px 11px;
-  border-radius: var(--rsm);
-  background: var(--acc-bg);
-  border: 1px solid var(--acc-line);
-  color: var(--acc);
-  font-size: 11px;
-  line-height: 1.5;
-}
 .src {
   margin-top: 14px;
   border: 1px solid var(--line2);
