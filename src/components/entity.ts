@@ -21,3 +21,13 @@ export const KIND_LABEL: Record<AssetKind, string> = {
   location: '场景',
   prop: '道具',
 }
+
+// 与 theme.css 的四类实体色保持一致，供 JS 内联样式（挂载弹层等）取用。
+export const KIND_COLOR: Record<AssetKind, string> = {
+  character: '#a78bfa',
+  costume: '#f472b6',
+  location: '#34d399',
+  prop: '#fbbf24',
+}
+
+export const KIND_ORDER: AssetKind[] = ['character', 'costume', 'location', 'prop']

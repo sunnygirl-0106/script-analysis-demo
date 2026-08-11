@@ -1,6 +1,6 @@
 .tabs {
   display: flex;
-  gap: 22px;
+  gap: 24px;
   height: 100%;
   align-items: center;
 }
@@ -12,28 +12,19 @@
   font-size: 12.5px;
   color: var(--t3);
   cursor: pointer;
-  transition: 0.14s;
+  transition: color 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
   background: none;
 }
 .tab:hover {
-  color: var(--t2);
+  color: var(--t1);
 }
 .tab.on {
   color: var(--t1);
   font-weight: 600;
 }
-.tab.on::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 2px;
-  background: var(--acc);
-}
 .count {
   font-style: normal;
   font-size: 10.5px;
-  color: var(--t4);
+  color: var(--t5);
   margin-left: 5px;
 }

@@ -47,6 +47,25 @@
   line-height: 1.95;
   color: var(--t2);
 }
+/* 提示词整段渲染（画面列）：一大段话 + 淡字禁止行 */
+.flowWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.flowBody {
+  font-size: 12px;
+  line-height: 1.85;
+  color: #dce0e5;
+  text-wrap: pretty;
+}
+.flowForbid {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #7c848f;
+  text-wrap: pretty;
+}
+
 /* 提示词分段渲染 */
 .psWrap {
   display: flex;

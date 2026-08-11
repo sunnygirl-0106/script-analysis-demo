@@ -15,8 +15,6 @@ export function ScriptAnalysis() {
   const project = useStore((st) => st.project)
   const sceneId = useStore((st) => st.selectedSceneId)
   const activeTab = useStore((st) => st.activeTab)
-  const viewMode = useStore((st) => st.viewMode)
-  const setViewMode = useStore((st) => st.setViewMode)
   const readOnly = !useStore((st) => st.canEditAnalysis())
   const resplit = useStore((st) => st.resplit)
   const setStage = useStore((st) => st.setStage)
@@ -43,14 +41,6 @@ export function ScriptAnalysis() {
           <div className={s.tbr}>
             {activeTab === 'shot' && (
               <>
-                <div className={s.seg}>
-                  <button className={viewMode === 'brief' ? s.on : ''} onClick={() => setViewMode('brief')}>
-                    速览
-                  </button>
-                  <button className={viewMode === 'dual' ? s.on : ''} onClick={() => setViewMode('dual')}>
-                    对照
-                  </button>
-                </div>
                 <DensitySwitch disabled={readOnly} />
                 <button className={ui.btn} disabled={readOnly} onClick={() => resplit(sceneId)}>
                   重拆本场

@@ -4,30 +4,34 @@
   background: transparent;
   border: 1px solid var(--line);
   color: var(--t3);
-  padding: 4.5px 11px;
-  border-radius: var(--rsm);
+  padding: 5px 13px;
+  border-radius: var(--rpill);
   font-size: 11.5px;
-  transition: 0.14s;
+  transition: 0.24s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 .btn:hover {
   border-color: var(--edge);
   color: var(--t1);
   background: var(--bg3);
+  transform: translateY(-1px);
 }
 .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  transform: none;
 }
 .btnPrimary {
-  background: var(--acc);
-  border-color: var(--acc);
-  color: var(--on-acc);
-  font-weight: 700;
+  background: transparent;
+  border: 1px solid var(--acc-line);
+  color: var(--acc);
+  font-weight: 600;
 }
-.btnPrimary:hover {
-  filter: brightness(1.08);
-  background: var(--acc);
-  color: var(--on-acc);
+.btnPrimary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(148, 206, 220, 0.22);
+  background: var(--acc-bg);
+  border-color: var(--acc);
+  color: #cdeef5;
 }
 .btnDanger {
   background: var(--prop-bg);
@@ -43,77 +47,76 @@
 .iconbtn {
   width: 26px;
   height: 26px;
-  border-radius: var(--rsm);
+  border-radius: var(--rpill);
   color: var(--t4);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  transition: 0.14s;
+  transition: 0.16s;
 }
 .iconbtn:hover {
   background: var(--bg3);
   color: var(--t1);
 }
 
-/* 实体 chip：淡色底 + 同色文字，前置 6px 圆点 */
+/* 实体 chip：中性胶囊底 + 同色圆点（对齐参考稿）。 */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 22px;
-  padding: 0 9px;
-  background: var(--bg3);
-  border: 1px solid transparent;
-  border-radius: var(--rsm);
+  height: 24px;
+  padding: 0 6px 0 9px;
+  background: #272c33;
+  border: 1px solid #333941;
+  border-radius: var(--rpill);
   font-size: 11.5px;
   color: var(--t2);
   white-space: nowrap;
-  transition: 0.14s;
+  transition: border-color 0.2s cubic-bezier(0.22, 0.61, 0.36, 1), background 0.2s;
   cursor: default;
 }
 .chip .odot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   flex: none;
-  background: currentColor;
+  background: var(--dot, currentColor);
 }
 .chipRole {
-  background: var(--role-bg);
-  color: var(--role);
+  --dot: var(--role);
 }
 .chipCloth {
-  background: var(--cloth-bg);
-  color: var(--cloth);
+  --dot: var(--cloth);
 }
 .chipScene {
-  background: var(--scene-bg);
-  color: var(--scene);
+  --dot: var(--scene);
 }
 .chipProp {
-  background: var(--prop-bg);
-  color: var(--prop);
-}
-.chipRemovable {
-  cursor: pointer;
-}
-.chipRemovable:hover {
-  filter: brightness(1.12);
+  --dot: var(--prop);
 }
 .chipX {
-  font-size: 12px;
-  opacity: 0.55;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  color: var(--t5);
+  font-size: 9px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-left: 1px;
+  transition: all 0.18s;
 }
 .chipX:hover {
-  opacity: 1;
+  background: #464e58;
+  color: var(--t1);
 }
 .chipAdd {
   background: transparent;
   border: 1px dashed var(--edge);
   color: var(--t4);
-  width: 22px;
+  width: 24px;
   padding: 0;
   justify-content: center;
   cursor: pointer;
@@ -122,9 +125,11 @@
   border-color: var(--acc);
   color: var(--acc);
   border-style: solid;
+  background: var(--acc-bg);
 }
 .chipNone {
   background: transparent;
+  border-color: transparent;
   color: var(--t4);
   padding-left: 0;
   cursor: default;
@@ -136,14 +141,14 @@
   align-items: center;
   gap: 6px;
   height: 24px;
-  padding: 0 8px;
+  padding: 0 10px;
   background: var(--bg3);
   border: 1px solid transparent;
-  border-radius: var(--rsm);
+  border-radius: var(--rpill);
   font-size: 11.5px;
   color: var(--t1);
   cursor: pointer;
-  transition: 0.14s;
+  transition: 0.16s;
 }
 .fkey {
   font-style: normal;
