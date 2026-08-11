@@ -1,0 +1,127 @@
+/* 复用 ScriptImportDialog.module.css 的 overlay / dialog / title / actions；这里只补重拆特有的块。 */
+.sub {
+  font-size: 12px;
+  color: var(--t4);
+  margin-top: -8px;
+  margin-bottom: 14px;
+}
+.presetNote {
+  padding: 9px 12px;
+  border-radius: var(--rsm);
+  background: var(--bg3);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--t4);
+  margin-bottom: 14px;
+}
+.groupTitle {
+  font-size: 12px;
+  color: var(--t3);
+  letter-spacing: 0.3px;
+  margin-bottom: 9px;
+}
+.opts {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--line2);
+  border-radius: var(--rlg);
+  background: var(--bg1);
+  cursor: pointer;
+  transition: 0.14s;
+}
+.opt:hover {
+  border-color: var(--edge);
+}
+.optOn {
+  border-color: var(--acc-line);
+  background: var(--acc-bg);
+}
+.optDisabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+.optDisabled:hover {
+  border-color: var(--line2);
+}
+.opt input {
+  flex: none;
+}
+.optLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t1);
+  min-width: 52px;
+}
+.optCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--t2);
+  font-variant-numeric: tabular-nums;
+  min-width: 64px;
+}
+.optHint {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--t4);
+}
+.badge {
+  padding: 1px 7px;
+  border-radius: var(--rsm);
+  background: var(--acc-bg);
+  color: var(--acc);
+  border: 1px solid var(--acc-line);
+  font-size: 9.5px;
+  font-weight: 600;
+}
+.countInput {
+  width: 46px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--rsm);
+  background: var(--bg3);
+  color: var(--t1);
+  font-size: 12px;
+  font-family: inherit;
+  text-align: center;
+}
+.countInput:disabled {
+  opacity: 0.5;
+}
+.warn {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: var(--rsm);
+  background: rgba(163, 137, 78, 0.14);
+  border: 1px solid rgba(200, 163, 92, 0.35);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: #d9b978;
+}
+.impact {
+  margin-top: 14px;
+  padding: 11px 13px;
+  border: 1px solid var(--line2);
+  border-radius: var(--rlg);
+  background: var(--bg1);
+  font-size: 11.5px;
+  line-height: 1.85;
+  color: var(--t3);
+}
+.impactTitle {
+  font-size: 10.5px;
+  color: var(--t4);
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}

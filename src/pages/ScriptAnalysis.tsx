@@ -1,11 +1,13 @@
+import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { EpisodeTree } from '../components/EpisodeTree'
 import { ScriptPanel } from '../components/ScriptPanel'
 import { TabBar } from '../components/TabBar'
 import { AssetGrid } from '../components/AssetGrid'
 import { Storyboard } from '../components/Storyboard'
-import { DensitySwitch } from '../components/DensitySwitch'
 import { ScriptImportDialog } from '../components/ScriptImportDialog'
+import { ResplitSceneDialog } from '../components/ResplitSceneDialog'
+import { ConfirmStageDialog } from '../components/ConfirmStageDialog'
 import { sceneDuration } from '../services/timeline'
 import ui from '../styles/ui.module.css'
 import s from './ScriptAnalysis.module.css'
@@ -16,8 +18,10 @@ export function ScriptAnalysis() {
   const sceneId = useStore((st) => st.selectedSceneId)
   const activeTab = useStore((st) => st.activeTab)
   const readOnly = !useStore((st) => st.canEditAnalysis())
-  const resplit = useStore((st) => st.resplit)
-  const setStage = useStore((st) => st.setStage)
+
+  const [importOpen, setImportOpen] = useState(false)
+  const [resplitOpen, setResplitOpen] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const scene = project.scenes[sceneId]
 
@@ -40,14 +44,13 @@ export function ScriptAnalysis() {
           <TabBar scene={scene} />
           <div className={s.tbr}>
             {activeTab === 'shot' && (
-              <>
-                <DensitySwitch disabled={readOnly} />
-                <button className={ui.btn} disabled={readOnly} onClick={() => resplit(sceneId)}>
-                  重拆本场
-                </button>
-              </>
+              <button className={ui.btn} disabled={readOnly} onClick={() => setResplitOpen(true)}>
+                重拆本场
+              </button>
             )}
-            <ScriptImportDialog disabled={readOnly} />
+            <button className={ui.btn} disabled={readOnly} onClick={() => setImportOpen(true)}>
+              导入剧本
+            </button>
           </div>
         </div>
 
@@ -65,11 +68,22 @@ export function ScriptAnalysis() {
             <b>{shotTotal} 镜</b> · 约 {durTotal}s　　{counts.character} 角色 / {counts.costume} 服装 /{' '}
             {counts.location} 场景 / {counts.prop} 道具
           </div>
-          <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={() => setStage('visual')}>
+          <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={() => setConfirmOpen(true)}>
             进入视觉筹备 →
           </button>
         </div>
       </div>
+
+      <ScriptImportDialog
+        open={importOpen}
+        scope="project"
+        defaultMode="append"
+        onClose={() => setImportOpen(false)}
+      />
+      {resplitOpen && scene && (
+        <ResplitSceneDialog sceneId={scene.id} onClose={() => setResplitOpen(false)} />
+      )}
+      {confirmOpen && <ConfirmStageDialog onClose={() => setConfirmOpen(false)} />}
     </div>
   )
 }

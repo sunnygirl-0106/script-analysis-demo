@@ -23,6 +23,24 @@
 .count {
   white-space: nowrap;
 }
+/* 场级设定入口：低调 ghost 小按钮，与 .count 同一视觉层级 */
+.settingsBtn {
+  flex: none;
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--rpill);
+  background: transparent;
+  color: var(--t4);
+  font-size: 11.5px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: 0.18s;
+}
+.settingsBtn:hover {
+  border-color: var(--edge);
+  color: var(--t2);
+  background: var(--bg3);
+}
 .readout {
   margin-left: auto;
   display: inline-flex;
@@ -86,6 +104,13 @@
 }
 .segOn {
   background: var(--acc);
+}
+/* 长镜头段：顶部一道黄边，不用 hover 就能一眼看出哪几段偏长 */
+.segLong {
+  box-shadow: inset 0 2px 0 0 #d9b978;
+}
+.segLong.segOn {
+  box-shadow: inset 0 2px 0 0 #f0d9a6;
 }
 .segDiv {
   position: absolute;

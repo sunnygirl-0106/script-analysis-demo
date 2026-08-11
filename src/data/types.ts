@@ -9,7 +9,7 @@ export interface Project {
   title: string
   aspect: '16:9' | '9:16'
   style: 'realistic' | 'cinematic'
-  shotDensity: ShotDensity
+  defaultDensity: ShotDensity     // 新场 / 重拆本集的默认颗粒度。单场当前颗粒度存在 Scene.density
   stage: Stage                    // 走到哪个阶段，决定前面的能不能改
   episodes: Episode[]
   scenes: Record<string, Scene>   // 扁平存，靠 id 引用
@@ -33,14 +33,14 @@ export interface Scene {
   timeOfDay: string
   rawText: string         // 剧本原文，只读，界面上不给编辑入口
   shotIds: string[]
+  density: ShotDensity    // ★ 本场当前的拆解颗粒度，重拆时写入
   track: SceneTrack       // ★ 场级信息
 }
 
 /** ★ 场这一层自己的东西。这些内容跨镜，挂在单个镜上没有意义 */
 export interface SceneTrack {
-  bgm: string             // 配乐建议
-  mood: string            // 这场的情绪走向
-  fullDialogue: string    // 完整台词，连起来才能配音
+  mood: string            // 情绪走向
+  bgm: string             // 配乐建议 —— 只作为拍摄台整场配乐生成的输入，不下发到镜
 }
 
 export interface Shot {

@@ -108,20 +108,20 @@ function buildScene(
     }
     return id
   })
-  return { id: sceneId, episodeId: 'e2', no, name, location, timeOfDay, rawText, shotIds, track }
+  return { id: sceneId, episodeId: 'e2', no, name, location, timeOfDay, rawText, shotIds, density: 'standard', track }
 }
 
 const ep2Shots: Record<string, Shot> = {}
 const ep2s1 = buildScene(
   'e2s1', 1, '客厅沙发', '客厅', '当天下午',
   '当天下午 · 客厅沙发\n\n挂断妈妈的视频后，苏可瘫软在沙发里。手机再次震动，是快递上门取件的提醒。她万般不情愿地爬起身。',
-  { bgm: '慵懒的午后小调，被提醒音打断。', mood: '劫后余生的松弛 → 又被打扰的无奈。', fullDialogue: '（本场无对白）' },
+  { mood: '劫后余生的松弛 → 又被打扰的无奈。', bgm: '慵懒的午后小调，被提醒音打断。' },
   ep2s1Shots, ep2Shots,
 )
 const ep2s2 = buildScene(
   'e2s2', 2, '玄关取件', '玄关', '紧接上场',
   '紧接上场 · 玄关\n\n快递员在门外催促取件。苏可从门缝把退货包裹塞出去，飞速关门，全程社恐不露脸。',
-  { bgm: '带点滑稽的紧张短音。', mood: '社恐式的应付，速战速决。', fullDialogue: '快递员（门外喊声）：取件的！退货件在家吗？下楼我可就走了啊！' },
+  { mood: '社恐式的应付，速战速决。', bgm: '带点滑稽的紧张短音。' },
   ep2s2Shots, ep2Shots,
 )
 

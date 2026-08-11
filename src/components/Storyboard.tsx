@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore'
 import type { Scene } from '../data/types'
 import { computeTimeline, sceneDuration } from '../services/timeline'
 import { SceneTimeline } from './SceneTimeline'
+import { SceneSettingsDrawer } from './SceneSettingsDrawer'
 import { ShotRow } from './ShotRow'
 import s from './Storyboard.module.css'
 
@@ -21,6 +22,7 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
 
   return (
     <div className={s.pane}>
+      <SceneSettingsDrawer />
       <SceneTimeline scene={scene} shots={shots} activeId={hoverId} onHover={setHoverId} />
       {readOnly && <div className={s.lockNote}>🔒 已进入视觉筹备，剧本分析只读</div>}
 
