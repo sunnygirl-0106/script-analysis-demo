@@ -29,6 +29,17 @@
   background: var(--acc);
   color: var(--on-acc);
 }
+.btnDanger {
+  background: var(--prop-bg);
+  border-color: var(--prop);
+  color: var(--prop);
+  font-weight: 700;
+}
+.btnDanger:hover:not(:disabled) {
+  filter: brightness(1.08);
+  background: var(--prop-bg);
+  color: var(--prop);
+}
 .iconbtn {
   width: 26px;
   height: 26px;

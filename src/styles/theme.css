@@ -1,7 +1,7 @@
-/* 设计令牌：深 / 浅两套 CSS 变量。顶栏开关切换 document.documentElement.dataset.theme。 */
+/* 设计令牌：深色一套 CSS 变量。 */
 
 :root {
-  /* 深色，默认 —— 对齐「剧本分析原型 v0.5-清爽版」的冷调蓝灰 + 紫罗兰主色 */
+  /* 深色 —— 对齐「剧本分析原型 v0.5-清爽版」的冷调蓝灰 + 紫罗兰主色 */
   --bg0: #2c2c38; /* 页底 */
   --bg1: #32323f; /* 应用底 / 主区 */
   --bg2: #3a3a47; /* 卡片 / 行 */
@@ -27,42 +27,10 @@
   /* 圆角：容器 / 控件两档 */
   --rlg: 10px;
   --rsm: 7px;
-}
 
-:root[data-theme='light'] {
-  --bg0: #f5f6f8;
-  --bg1: #ffffff;
-  --bg2: #ffffff;
-  --bg3: #f2f4f6;
-  --line: #e5e8ec;
-  --line2: #eef0f3;
-  --edge: #d4d9df;
-  --t1: #16191d;
-  --t2: #5a626c;
-  --t3: #8b939d;
-  --t4: #a8afb8;
-  --acc: #0d9488;
-  --acc-bg: #e9f7f5;
-  --acc-line: #a8ded7;
-  --on-acc: #04201d;
-  --row-on-bg: rgba(13, 148, 136, 0.05);
-  --row-on-line: rgba(13, 148, 136, 0.22);
-  --role: #6d4fd8;
-  --cloth: #c4327c;
-  --scene: #2a8f52;
-  --prop: #a97313;
-}
-
-/* 实体色 → chip 淡底（rgba，随主色统一）。用变量便于两套主题各自成立。 */
-:root {
+  /* 实体色 → chip 淡底（rgba，随主色统一）。 */
   --role-bg: rgba(167, 139, 250, 0.16);
   --cloth-bg: rgba(239, 127, 180, 0.15);
   --scene-bg: rgba(94, 212, 138, 0.15);
   --prop-bg: rgba(232, 176, 74, 0.15);
-}
-:root[data-theme='light'] {
-  --role-bg: rgba(109, 79, 216, 0.1);
-  --cloth-bg: rgba(196, 50, 124, 0.1);
-  --scene-bg: rgba(42, 143, 82, 0.1);
-  --prop-bg: rgba(169, 115, 19, 0.12);
 }

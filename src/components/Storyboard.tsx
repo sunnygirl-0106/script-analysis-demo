@@ -22,10 +22,8 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
           {scene.shotIds.length} 镜 · {total}s
         </span>
         <span className={s.rt}>
-          {readOnly ? (
+          {readOnly && (
             <span className={s.lockNote}>🔒 已进入视觉筹备，剧本分析只读</span>
-          ) : (
-            <span>画面提示词 → 生关键帧　·　视频提示词 → 生视频</span>
           )}
         </span>
       </div>

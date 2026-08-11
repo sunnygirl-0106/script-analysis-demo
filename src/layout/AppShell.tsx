@@ -1,12 +1,59 @@
 import type { ReactNode } from 'react'
 import { useStore } from '../store/useStore'
+import type { Stage } from '../data/types'
 import s from './AppShell.module.css'
+
+// 左侧导航图标（内联 line icon，跟随 currentColor）
+const icons: Record<string, ReactNode> = {
+  quick: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <path d="M4 11.5 12 5l8 6.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6 10.5V19h12v-8.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  analysis: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <rect x="4" y="4" width="7" height="7" rx="1.2" />
+      <rect x="13" y="4" width="7" height="7" rx="1.2" />
+      <rect x="4" y="13" width="7" height="7" rx="1.2" />
+      <rect x="13" y="13" width="7" height="7" rx="1.2" />
+    </svg>
+  ),
+  assets: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <circle cx="7" cy="6" r="2.2" />
+      <circle cx="17" cy="6" r="2.2" />
+      <circle cx="12" cy="18" r="2.2" />
+      <path d="M7 8.2v3.3a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V8.2M12 13.5v2.3" strokeLinecap="round" />
+    </svg>
+  ),
+  studio: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <rect x="4" y="5" width="16" height="14" rx="2" />
+      <path d="M10 9.2 15 12l-5 2.8V9.2Z" strokeLinejoin="round" />
+    </svg>
+  ),
+  models: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <circle cx="9" cy="9" r="3" />
+      <path d="M3.5 19c.6-3 2.9-4.6 5.5-4.6s4.9 1.6 5.5 4.6" strokeLinecap="round" />
+      <path d="M16 6.2A3 3 0 0 1 16 12M17.5 14.6c1.9.5 3.3 1.9 3.7 4.4" strokeLinecap="round" />
+    </svg>
+  ),
+}
+
+type NavKey = 'quick' | 'analysis' | 'assets' | 'studio' | 'models'
+const navItems: { key: NavKey; label: string; page?: Stage }[] = [
+  { key: 'quick', label: '快捷创作' },
+  { key: 'analysis', label: '剧本分析', page: 'analysis' },
+  { key: 'assets', label: '项目资产库' },
+  { key: 'studio', label: '拍摄台', page: 'studio' },
+  { key: 'models', label: '模型对话广场' },
+]
 
 export function AppShell({ children }: { children: ReactNode }) {
   const project = useStore((st) => st.project)
-  const theme = useStore((st) => st.theme)
   const activePage = useStore((st) => st.activePage)
-  const toggleTheme = useStore((st) => st.toggleTheme)
   const setPage = useStore((st) => st.setPage)
 
   const aspectLabel = project.aspect === '16:9' ? '16:9 横屏' : '9:16 竖屏'
@@ -15,53 +62,58 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className={s.wrap}>
       <div className={s.app}>
-        {/* 顶栏：Logo + 项目信息 + 主题切换 */}
+        {/* 顶栏：Logo + 账户区 */}
         <div className={s.topbar}>
-          <div className={s.logo}>PhanthyMovie</div>
+          <div className={s.logo}>
+            <img className={s.logoMark} src="/logo.svg" alt="PhanthyMovie" />
+            PhanthyMovie
+          </div>
           <div className={s.right}>
-            <span>
-              {project.title} · {aspectLabel} · {styleLabel} · ✦ 2000
+            <span className={s.recharge}>充值中心</span>
+            <span className={s.credits}>✦ 10</span>
+            <span className={s.bell}>
+              🔔<i className={s.badge}>1</i>
             </span>
-            <button className={s.themeBtn} onClick={toggleTheme}>
-              {theme === 'dark' ? '☀ 浅色' : '🌙 深色'}
-            </button>
+            <span className={s.avatar} />
           </div>
         </div>
 
         <div className={s.body}>
           {/* 左侧一级导航 */}
           <div className={s.nav}>
-            <div className={s.navItem}>
-              快捷
-              <br />
-              创作
+            <div className={s.proj}>
+              <div className={s.projTitle}>
+                <span className={s.back}>‹</span>
+                {project.title}
+              </div>
+              <div className={s.chips}>
+                <span className={s.chip}>{aspectLabel}</span>
+                <span className={s.chip}>{styleLabel}</span>
+              </div>
             </div>
-            <div
-              className={[s.navItem, activePage === 'analysis' ? s.on : ''].join(' ')}
-              onClick={() => setPage('analysis')}
-            >
-              剧本
-              <br />
-              分析
+
+            <div className={s.modeCard}>
+              <div className={s.modeLabel}>当前模式</div>
+              <div className={s.modeRow}>
+                <b>工作流</b>
+                <span className={s.modeSwitch}>切换模式</span>
+              </div>
             </div>
-            <div
-              className={[s.navItem, activePage === 'visual' ? s.on : ''].join(' ')}
-              onClick={() => setPage('visual')}
-            >
-              视觉
-              <br />
-              筹备
-            </div>
-            <div
-              className={[s.navItem, activePage === 'studio' ? s.on : ''].join(' ')}
-              onClick={() => setPage('studio')}
-            >
-              拍摄台
-            </div>
-            <div className={s.navItem}>
-              模型
-              <br />
-              广场
+
+            <div className={s.navList}>
+              {navItems.map((it) => {
+                const on = it.page != null && it.page === activePage
+                return (
+                  <div
+                    key={it.key}
+                    className={[s.navItem, on ? s.on : ''].join(' ')}
+                    onClick={it.page ? () => setPage(it.page!) : undefined}
+                  >
+                    <span className={s.navIcon}>{icons[it.key]}</span>
+                    {it.label}
+                  </div>
+                )
+              })}
             </div>
           </div>
 

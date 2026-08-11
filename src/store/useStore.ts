@@ -4,13 +4,13 @@ import type { MountRef, Project, Shot, ShotDensity, Stage } from '../data/types'
 import { seedProject } from '../data/seed'
 import { episode2Payload } from '../data/seedEpisode2'
 import { appendEpisode } from '../services/incremental'
+import { replaceScript as replaceScriptSvc, type ScriptPayload } from '../services/replace'
 import { applyDensity, densityShots, hasDensityPresets } from '../services/density'
 import { canEdit, resplitScene } from '../services/lock'
 import { sceneDuration } from '../services/timeline'
 
 export type Tab = 'character' | 'costume' | 'location' | 'prop' | 'shot'
 export type ViewMode = 'brief' | 'dual'
-export type Theme = 'dark' | 'light'
 
 export interface Toast {
   id: number
@@ -18,7 +18,6 @@ export interface Toast {
 }
 
 interface UIState {
-  theme: Theme
   activePage: Stage
   selectedSceneId: string
   activeTab: Tab
@@ -37,7 +36,6 @@ interface StoreState extends UIState {
   countShotsOf: (assetId: string) => number
 
   // ── UI 动作 ──
-  toggleTheme: () => void
   setPage: (page: Stage) => void
   selectScene: (sceneId: string) => void
   setTab: (tab: Tab) => void
@@ -55,6 +53,7 @@ interface StoreState extends UIState {
   updateSceneTrack: (sceneId: string, patch: Partial<Project['scenes'][string]['track']>) => void
   setDensity: (density: ShotDensity) => void
   appendEpisode2: () => void
+  replaceScript: (payload: ScriptPayload) => void
   resplit: (sceneId: string) => void
   setStage: (stage: Stage) => void
 }
@@ -63,7 +62,6 @@ let toastSeq = 0
 
 export const useStore = create<StoreState>((set, get) => ({
   project: structuredClone(seedProject),
-  theme: 'dark',
   activePage: 'analysis',
   selectedSceneId: 's1',
   activeTab: 'shot',
@@ -79,7 +77,6 @@ export const useStore = create<StoreState>((set, get) => ({
     Object.values(get().project.shots).filter((sh) => sh.mounts.some((mo) => mo.assetId === assetId))
       .length,
 
-  toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
   setPage: (activePage) => set({ activePage }),
   selectScene: (sceneId) => set({ selectedSceneId: sceneId, expandedShotId: null }),
   setTab: (activeTab) => set({ activeTab }),
@@ -197,6 +194,22 @@ export const useStore = create<StoreState>((set, get) => ({
     const next = appendEpisode(s.project, episode2Payload)
     set({ project: next })
     get().showToast('已追加第 2 集：老角色「苏可」复用，未重复；新角色「快递员」入库')
+  },
+
+  replaceScript: (payload) => {
+    if (!get().canEditAnalysis()) return
+    const s = get()
+    const oldEp = s.project.episodes.length
+    const oldShots = Object.keys(s.project.shots).length
+    const next = replaceScriptSvc(s.project, payload)
+    const firstScene = next.episodes[0]?.sceneIds[0] ?? ''
+    set({
+      project: next,
+      selectedSceneId: firstScene,
+      expandedShotId: null,
+      activeTab: 'shot',
+    })
+    get().showToast(`已覆盖导入「${payload.title}」：原 ${oldEp} 集 ${oldShots} 镜已丢弃`)
   },
 
   resplit: (sceneId) => {

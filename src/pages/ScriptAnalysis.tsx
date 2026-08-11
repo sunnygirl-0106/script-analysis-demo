@@ -5,7 +5,7 @@ import { TabBar } from '../components/TabBar'
 import { AssetGrid } from '../components/AssetGrid'
 import { Storyboard } from '../components/Storyboard'
 import { DensitySwitch } from '../components/DensitySwitch'
-import { AddEpisodeDialog } from '../components/AddEpisodeDialog'
+import { ScriptImportDialog } from '../components/ScriptImportDialog'
 import { sceneDuration } from '../services/timeline'
 import ui from '../styles/ui.module.css'
 import s from './ScriptAnalysis.module.css'
@@ -57,7 +57,7 @@ export function ScriptAnalysis() {
                 </button>
               </>
             )}
-            <AddEpisodeDialog disabled={readOnly} />
+            <ScriptImportDialog disabled={readOnly} />
           </div>
         </div>
 

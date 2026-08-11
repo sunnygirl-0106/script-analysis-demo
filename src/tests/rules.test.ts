@@ -17,6 +17,8 @@ import { computeTimeline, sceneDuration } from '../services/timeline'
 import { defaultMounts } from '../services/mount'
 import { referenceImages } from '../services/reference'
 import { appendEpisode } from '../services/incremental'
+import { replaceScript } from '../services/replace'
+import { altScriptPayload } from '../data/seedAltScript'
 import { densityShots, applyDensity } from '../services/density'
 import { canEdit, resplitScene } from '../services/lock'
 
@@ -223,5 +225,37 @@ describe('R6 阶段锁与重拆', () => {
     expect(next.scenes.s1!.shotIds).toEqual(seedProject.scenes.s1!.shotIds)
     // 第 2 场引用未变
     expect(next.scenes.s2!.shotIds).toBe(s2RefBefore)
+  })
+})
+
+// ── R8 剧本导入两种模式 · since v1.1 · updated v1.1 ──
+describe('R8 剧本导入两种模式', () => {
+  it('覆盖后旧 id 全部消失', () => {
+    // v1.1
+    const p = fresh()
+    expect(p.assets[A.suke]).toBeTruthy() // 覆盖前旧 id 存在
+    expect(p.shots.s1_sh1).toBeTruthy()
+    const next = replaceScript(p, altScriptPayload)
+    expect(next.assets[A.suke]).toBeUndefined()
+    expect(next.shots.s1_sh1).toBeUndefined()
+  })
+
+  it('覆盖后回到 analysis 可编辑状态', () => {
+    // v1.1
+    const p = fresh()
+    p.stage = 'visual' // 即便覆盖前已推进，覆盖后也回到 analysis
+    const next = replaceScript(p, altScriptPayload)
+    expect(next.stage).toBe('analysis')
+    expect(canEdit(next, 'analysis')).toBe(true)
+  })
+
+  it('覆盖保留项目级设置 id / title / aspect / style', () => {
+    // v1.1
+    const p = fresh()
+    const next = replaceScript(p, altScriptPayload)
+    expect(next.id).toBe(p.id)
+    expect(next.title).toBe(p.title)
+    expect(next.aspect).toBe(p.aspect)
+    expect(next.style).toBe(p.style)
   })
 })
