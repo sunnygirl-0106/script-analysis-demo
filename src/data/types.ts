@@ -93,7 +93,7 @@ export interface Character extends AssetBase {
 // 服装是独立资产（历史数据兼容）。角色素模是视觉筹备内部中间产物，不建资产、不可挂载。
 export interface Costume extends AssetBase {
   kind: 'costume'
-  characterId: string        // 服装挂在人物下面
+  characterId: string        // 服装挂在角色下面
 }
 export interface Location extends AssetBase {
   kind: 'location'

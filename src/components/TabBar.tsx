@@ -9,7 +9,8 @@ export function TabBar({ scene }: { scene: Scene | undefined }) {
 
   const count = (fn: (kind: string) => boolean) => Object.values(assets).filter((a) => fn(a.kind)).length
   const tabs: { key: Tab; label: string; n: number }[] = [
-    { key: 'character', label: '人物', n: count((k) => k === 'character') },
+    { key: 'character', label: '角色', n: count((k) => k === 'character') },
+    { key: 'costume', label: '服装', n: count((k) => k === 'costume') },
     { key: 'location', label: '场景', n: count((k) => k === 'location') },
     { key: 'prop', label: '道具', n: count((k) => k === 'prop') },
     { key: 'shot', label: '分镜脚本', n: scene?.shotIds.length ?? 0 },

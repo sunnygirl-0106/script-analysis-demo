@@ -124,6 +124,12 @@ tr.det.empty td {
   min-width: 0;
   align-items: center;
 }
+/* 空类目占位：保留柱子对齐 */
+.dash {
+  color: var(--t4);
+  font-size: 12px;
+  line-height: 22px;
+}
 
 /* 内容列：标题 / 参数 / 描述 三级 */
 .brief {

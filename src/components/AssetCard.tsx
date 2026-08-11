@@ -28,6 +28,9 @@ export function AssetCard({ asset }: { asset: Asset }) {
       <div className={s.h}>
         <span className={s.nm}>{asset.name}</span>
         {asset.kind === 'character' && <span className={s.tg}>{roleLabel(asset.role)}</span>}
+        {asset.kind === 'costume' && (
+          <span className={s.tg}>属于 · {assets[asset.characterId]?.name ?? '（未知）'}</span>
+        )}
         {asset.kind === 'location' && <span className={s.tg}>{asset.timeOfDay}</span>}
         <span className={s.rt}>{apprText(asset)}</span>
       </div>

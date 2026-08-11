@@ -8,9 +8,10 @@ import { ShotDetail } from './ShotDetail'
 import ui from '../styles/ui.module.css'
 import s from './Storyboard.module.css'
 
-// 资产分三组对齐：角色（含服装）/ 场景 / 道具。
+// 资产分四组对齐：角色 / 服装 / 场景 / 道具。四根柱子必须始终对齐，某类为空显示「—」。
 const GROUPS: { label: string; kinds: AssetKind[] }[] = [
-  { label: '角色', kinds: ['character', 'costume'] },
+  { label: '角色', kinds: ['character'] },
+  { label: '服装', kinds: ['costume'] },
   { label: '场景', kinds: ['location'] },
   { label: '道具', kinds: ['prop'] },
 ]
@@ -57,6 +58,7 @@ export function ShotRow({ shot, expanded, viewMode, readOnly }: Props) {
                       {nameOf(m)}
                     </span>
                   ))}
+                  {items.length === 0 && <span className={s.dash}>—</span>}
                   <MountPicker shotId={shot.id} kinds={g.kinds} mounts={shot.mounts} disabled={readOnly} />
                 </span>
               </div>

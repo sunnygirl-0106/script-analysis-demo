@@ -8,7 +8,7 @@ import { applyDensity, densityShots, hasDensityPresets } from '../services/densi
 import { canEdit, resplitScene } from '../services/lock'
 import { sceneDuration } from '../services/timeline'
 
-export type Tab = 'character' | 'location' | 'prop' | 'shot'
+export type Tab = 'character' | 'costume' | 'location' | 'prop' | 'shot'
 export type ViewMode = 'brief' | 'dual'
 export type Theme = 'dark' | 'light'
 

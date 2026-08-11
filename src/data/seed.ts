@@ -21,7 +21,7 @@ export const A = {
 } as const
 
 const assetList: Asset[] = [
-  // ── 人物 ──
+  // ── 角色 ──
   {
     id: A.suke, kind: 'character', role: 'lead',
     name: '苏可',
@@ -43,7 +43,7 @@ const assetList: Asset[] = [
     imagePrompt: '一张高精度、干净极简的角色基础视觉资产设定板。纯白背景，横版构图，三视图（正面 / 左侧 / 背面全身站姿）。25 岁上下东亚男性，瘦高，短寸头，皮肤偏黑，神情匆忙不耐。骑手工装冲锋衣配束脚长裤，斜挎单肩包，头盔提在手上（不戴），无任何品牌标识与文字。中性棚拍光，无遮挡，完整人物不裁切。',
     appearances: [{ episodeNo: 1, sceneNo: 1 }],
   },
-  // ── 服装（挂在人物下）──
+  // ── 服装（挂在角色下）──
   {
     id: A.hoodie, kind: 'costume', characterId: A.suke,
     name: '宽松连帽卫衣',

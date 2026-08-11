@@ -64,6 +64,7 @@ export function ScriptAnalysis() {
         <div className={s.paneScroll}>
           {activeTab === 'shot' && scene && <Storyboard scene={scene} readOnly={readOnly} />}
           {activeTab === 'character' && <AssetGrid kind="character" />}
+          {activeTab === 'costume' && <AssetGrid kind="costume" />}
           {activeTab === 'location' && <AssetGrid kind="location" />}
           {activeTab === 'prop' && <AssetGrid kind="prop" />}
         </div>
@@ -71,8 +72,8 @@ export function ScriptAnalysis() {
         <div className={s.foot}>
           <div className={s.info}>
             全剧 <b>{project.episodes.length} 集</b> · <b>{Object.keys(project.scenes).length} 场</b> ·{' '}
-            <b>{shotTotal} 镜</b> · 约 {durTotal}s　　{counts.character} 人物 / {counts.location} 场景 /{' '}
-            {counts.prop} 道具 / {counts.costume} 组着装
+            <b>{shotTotal} 镜</b> · 约 {durTotal}s　　{counts.character} 角色 / {counts.costume} 服装 /{' '}
+            {counts.location} 场景 / {counts.prop} 道具
           </div>
           <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={() => setStage('visual')}>
             进入视觉筹备 →
