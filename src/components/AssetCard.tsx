@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import type { Asset, Character, Costume } from '../data/types'
 import { chipClass } from './entity'
+import { AppearanceSummary } from './AppearanceSummary'
 import ui from '../styles/ui.module.css'
 import s from './AssetGrid.module.css'
 
@@ -9,14 +10,10 @@ function roleLabel(role: Character['role']) {
   return role === 'lead' ? '主角' : role === 'support' ? '配角' : '龙套'
 }
 
-function apprText(a: Asset) {
-  if (a.appearances.length === 0) return '未在任何镜头出现'
-  return a.appearances.map((ap) => `${ap.episodeNo}集${ap.sceneNo}场`).join(' · ')
-}
-
 export function AssetCard({ asset }: { asset: Asset }) {
   const [showPrompt, setShowPrompt] = useState(false)
   const assets = useStore((st) => st.project.assets)
+  const countShotsOf = useStore((st) => st.countShotsOf)
 
   const costumes =
     asset.kind === 'character'
@@ -32,12 +29,12 @@ export function AssetCard({ asset }: { asset: Asset }) {
           <span className={s.tg}>属于 · {assets[asset.characterId]?.name ?? '（未知）'}</span>
         )}
         {asset.kind === 'location' && <span className={s.tg}>{asset.timeOfDay}</span>}
-        <span className={s.rt}>{apprText(asset)}</span>
+        <AppearanceSummary appearances={asset.appearances} shotCount={countShotsOf(asset.id)} />
       </div>
 
       <div className={s.bio}>{asset.description}</div>
 
-      {/* 角色：列出服装（谁穿哪件的关系视图）*/}
+      {/* 角色：列出服装（谁穿哪件的关系视图），出场用紧凑版只显示「N 场」*/}
       {asset.kind === 'character' && costumes.length > 0 && (
         <>
           <div className={s.hr} />
@@ -47,7 +44,7 @@ export function AssetCard({ asset }: { asset: Asset }) {
                 <span className={ui.odot} />
                 {c.name}
               </span>
-              <span className={s.rt}>{apprText(c)}</span>
+              <AppearanceSummary appearances={c.appearances} shotCount={countShotsOf(c.id)} compact />
             </div>
           ))}
         </>

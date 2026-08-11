@@ -48,6 +48,49 @@
   font-size: 10.5px;
   color: var(--t4);
 }
+/* 出场位置：默认摘要一行，可展开明细（高度上限 + 滚动）。沿用 .rt 灰度，不新增颜色。 */
+.apprRow {
+  margin-left: auto;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  min-width: 0;
+}
+.apprToggle {
+  font-size: 10.5px;
+  color: var(--t4);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.14s;
+}
+.apprToggle:hover {
+  color: var(--acc);
+}
+.apprDetail {
+  max-height: 160px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 9px;
+  border: 1px solid var(--line2);
+  border-radius: var(--rsm);
+  background: var(--bg1);
+}
+.apprLine {
+  display: flex;
+  gap: 10px;
+  font-size: 10.5px;
+  color: var(--t4);
+  white-space: nowrap;
+}
+.apprLine b {
+  flex: none;
+  width: 48px;
+  font-weight: 400;
+  color: var(--t3);
+}
 .bio {
   margin-top: 9px;
   font-size: 12px;

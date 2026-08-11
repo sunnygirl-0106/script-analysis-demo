@@ -34,6 +34,7 @@ interface StoreState extends UIState {
   // ── 派生便捷读取 ──
   currentScene: () => Project['scenes'][string] | undefined
   canEditAnalysis: () => boolean
+  countShotsOf: (assetId: string) => number
 
   // ── UI 动作 ──
   toggleTheme: () => void
@@ -73,6 +74,10 @@ export const useStore = create<StoreState>((set, get) => ({
 
   currentScene: () => get().project.scenes[get().selectedSceneId],
   canEditAnalysis: () => canEdit(get().project, 'analysis'),
+  // 遍历 shots 数「挂了该资产」的镜数。挂载会变，所以按需反查，不往 Appearance 里塞字段。
+  countShotsOf: (assetId) =>
+    Object.values(get().project.shots).filter((sh) => sh.mounts.some((mo) => mo.assetId === assetId))
+      .length,
 
   toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
   setPage: (activePage) => set({ activePage }),
