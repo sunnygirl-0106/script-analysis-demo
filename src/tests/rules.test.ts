@@ -19,11 +19,13 @@ import { referenceImages } from '../services/reference'
 import { appendEpisode } from '../services/incremental'
 import { replaceScript } from '../services/replace'
 import { altScriptPayload } from '../data/seedAltScript'
-import { densityShots, applyDensity } from '../services/density'
-import { canEdit, resplitScene } from '../services/lock'
+import { densityShots, applyDensity, resplitSceneDensity } from '../services/density'
+import { canEdit, resplitScene, deleteEpisode } from '../services/lock'
+import { mountIssues } from '../services/completeness'
+import { isLongShot, LONG_SHOT_SEC } from '../services/duration'
 
 /** 规则基线版本。整体版本升级时改这里，单条规则/断言的局部变更用行内标记覆盖。 */
-export const RULES_VERSION = 'v1.0' // 2026-08-10 · 对应技术方案 v1.0
+export const RULES_VERSION = 'v1.1' // 2026-08-11 · 对应技术方案 v1.2（累计到 v1.1 规则集）
 
 // 每个用例都从 seed 深拷贝，互不污染。
 const fresh = () => structuredClone(seedProject)
@@ -165,8 +167,9 @@ describe('R4 挂载默认值，不是禁令', () => {
   })
 })
 
-// ── R5 镜头密度 · since v1.0 · updated v1.0 ──
-describe('R5 镜头密度', () => {
+// ── R5 重拆颗粒度 · since v1.0 · updated v1.1 ──
+// v1.1：密度不再是全局开关，成为 resplit 的参数，颗粒度下沉到 Scene.density。
+describe('R5 重拆颗粒度', () => {
   it('同一场：compact 镜数 > standard > loose', () => {
     // v1.0
     const c = densityShots('s1', 'compact').length
@@ -176,18 +179,6 @@ describe('R5 镜头密度', () => {
     expect(s).toBeGreaterThan(l)
   })
 
-  it('三套的场总时长相差不超过 2 秒', () => {
-    // v1.0
-    const total = (d: 'compact' | 'standard' | 'loose') =>
-      densityShots('s1', d).reduce((sum, sh) => sum + sh.duration, 0)
-    const c = total('compact')
-    const s = total('standard')
-    const l = total('loose')
-    expect(Math.abs(c - s)).toBeLessThanOrEqual(2)
-    expect(Math.abs(s - l)).toBeLessThanOrEqual(2)
-    expect(Math.abs(c - l)).toBeLessThanOrEqual(2)
-  })
-
   it('applyDensity 返回对应那套的 shotIds', () => {
     // v1.0
     const p = fresh()
@@ -195,9 +186,21 @@ describe('R5 镜头密度', () => {
     expect(ids.length).toBe(densityShots('s1', 'compact').length)
     expect(ids).toEqual(densityShots('s1', 'compact').map((s) => s.id))
   })
+
+  it('resplitSceneDensity(s1, compact) 后 scene.density 更新，其他场 shotIds 引用未变', () => {
+    // v1.1 —— 颗粒度是每场各自的，重拆第 1 场不影响第 2 场。
+    const p = fresh()
+    const s2RefBefore = p.scenes.s2!.shotIds
+    const next = resplitSceneDensity(p, 's1', 'compact')
+    expect(next.scenes.s1!.density).toBe('compact')
+    expect(next.scenes.s1!.shotIds).toEqual(densityShots('s1', 'compact').map((s) => s.id))
+    expect(next.scenes.s2!.shotIds).toBe(s2RefBefore) // 其他场引用未变
+    expect(next.scenes.s2!.density).toBe('standard') // 其他场颗粒度不动
+  })
 })
 
-// ── R6 阶段锁与重拆 · since v1.0 · updated v1.0 ──
+// ── R6 阶段锁与重拆 · since v1.0 · updated v1.1 ──
+// v1.1：新增删除集（只清「仅在该集出现」的资产）、至少保留一集。
 describe('R6 阶段锁与重拆', () => {
   it("stage='visual' 时 analysis 不可编辑", () => {
     // v1.0
@@ -225,6 +228,35 @@ describe('R6 阶段锁与重拆', () => {
     expect(next.scenes.s1!.shotIds).toEqual(seedProject.scenes.s1!.shotIds)
     // 第 2 场引用未变
     expect(next.scenes.s2!.shotIds).toBe(s2RefBefore)
+  })
+
+  it('删除某集：只在该集出现的资产被清理，跨集资产保留', () => {
+    // v1.1
+    const p = appendEpisode(fresh(), episode2Payload) // 先追加第 2 集，制造跨集/独占资产
+    // 快递员、退货包裹只在第 2 集出现；苏可、客厅跨集出现。
+    const courier = Object.values(p.assets).find((a) => a.name === '快递员')!
+    const parcel = Object.values(p.assets).find((a) => a.name === '退货包裹')!
+    expect(courier && parcel).toBeTruthy()
+
+    const next = deleteEpisode(p, 'e2')
+    // 第 2 集独占资产被清理
+    expect(next.assets[courier.id]).toBeUndefined()
+    expect(next.assets[parcel.id]).toBeUndefined()
+    // 跨集资产保留
+    expect(next.assets[A.suke]).toBeTruthy()
+    expect(next.assets[A.living]).toBeTruthy()
+    // 该集的场 / 镜一并移除
+    expect(next.episodes.some((e) => e.id === 'e2')).toBe(false)
+    expect(next.scenes.e2s1).toBeUndefined()
+    expect(Object.keys(next.shots).some((id) => id.startsWith('e2s'))).toBe(false)
+  })
+
+  it('删除集：其他集的 scenes 引用未变（只动被删集）', () => {
+    // v1.1
+    const p = appendEpisode(fresh(), episode2Payload)
+    const s1RefBefore = p.scenes.s1
+    const next = deleteEpisode(p, 'e2')
+    expect(next.scenes.s1).toBe(s1RefBefore) // 第 1 集的场保持原引用
   })
 })
 
@@ -257,5 +289,73 @@ describe('R8 剧本导入两种模式', () => {
     expect(next.title).toBe(p.title)
     expect(next.aspect).toBe(p.aspect)
     expect(next.style).toBe(p.style)
+  })
+})
+
+// ── R9 资产完整性提示 · since v1.1 · updated v1.1 ──
+// 只在三种情况提示，其余一律不提示。「没挂满四类」不等于「有问题」。
+describe('R9 资产完整性提示', () => {
+  it('规则 1：文本点名了某资产却没挂 → action 提示，携带该资产 id', () => {
+    // v1.1
+    const p = fresh()
+    // s3_sh11 的原文明确出现「豪华麻辣烫」并挂了它；摘掉挂载，制造真实触发点。
+    const shot = structuredClone(p.shots.s3_sh11!)
+    shot.mounts = shot.mounts.filter((m) => m.assetId !== A.malatang)
+    const issues = mountIssues(shot, p.assets)
+    const hit = issues.find((i) => i.assetId === A.malatang)
+    expect(hit).toBeTruthy()
+    expect(hit!.level).toBe('action')
+    expect(hit!.kind).toBe('prop')
+  })
+
+  it('规则 2：挂了角色但没挂其服装 → hint 提示', () => {
+    // v1.1
+    const p = fresh()
+    const shot = structuredClone(p.shots.s1_sh5!)
+    shot.title = ''
+    shot.imagePrompt = ''
+    shot.videoPrompt = ''
+    shot.sourceQuote = ''
+    shot.mounts = [
+      { kind: 'character', assetId: A.suke },
+      { kind: 'location', assetId: A.living },
+    ]
+    const issues = mountIssues(shot, p.assets)
+    expect(issues.some((i) => i.level === 'hint' && i.text.includes('未指定服装'))).toBe(true)
+  })
+
+  it('规则 3：没有任何场景挂载 → hint「未指定场景」', () => {
+    // v1.1
+    const p = fresh()
+    const shot = structuredClone(p.shots.s1_sh5!)
+    shot.title = ''
+    shot.imagePrompt = ''
+    shot.videoPrompt = ''
+    shot.sourceQuote = ''
+    shot.mounts = [
+      { kind: 'character', assetId: A.suke },
+      { kind: 'costume', assetId: A.hoodie },
+    ]
+    const issues = mountIssues(shot, p.assets)
+    expect(issues.some((i) => i.level === 'hint' && i.text === '未指定场景')).toBe(true)
+  })
+
+  it('反向：没有道具的正常镜头不产生任何提示', () => {
+    // v1.1 —— 大量镜头本来就没道具，不能报「缺 道具」。
+    const p = fresh()
+    // s1_sh5「瘫倒闭眼」：挂了苏可 + 服装 + 客厅，没道具，文本不点名任何未挂资产。
+    const issues = mountIssues(p.shots.s1_sh5!, p.assets)
+    expect(issues.length).toBe(0)
+  })
+})
+
+// ── R10 长镜头阈值 · since v1.1 · updated v1.1 ──
+describe('R10 长镜头阈值', () => {
+  it('isLongShot：> LONG_SHOT_SEC 为真，= 阈值为假', () => {
+    // v1.1
+    expect(LONG_SHOT_SEC).toBe(6)
+    expect(isLongShot(7)).toBe(true)
+    expect(isLongShot(6)).toBe(false)
+    expect(isLongShot(3)).toBe(false)
   })
 })

@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import type { Scene, Shot } from '../data/types'
+import { useStore } from '../store/useStore'
 import { computeTimeline, sceneDuration } from '../services/timeline'
+import { isLongShot } from '../services/duration'
 import s from './SceneTimeline.module.css'
 
 function fmt(sec: number): string {
@@ -19,6 +21,7 @@ interface Props {
 // ★ 时间轴：把本场每个镜按时长画成一条分段进度条 + 时间刻度 + 当前镜读数。
 // 对齐《新版ui.html》参考稿顶部时间轴。高亮仅随悬停出现。
 export function SceneTimeline({ scene, shots, activeId, onHover }: Props) {
+  const openSettings = useStore((st) => st.openSceneSettings)
   const total = sceneDuration(scene, shots)
   const timeline = computeTimeline(scene, shots)
 
@@ -54,6 +57,9 @@ export function SceneTimeline({ scene, shots, activeId, onHover }: Props) {
         <span className={s.count}>
           {scene.shotIds.length} 镜 · 全场 {fmt(total)}
         </span>
+        <button className={s.settingsBtn} onClick={openSettings} title="情绪走向 / 配乐建议">
+          ⚙ 场级设定
+        </button>
         <span className={[s.readout, active ? s.on : ''].join(' ')}>
           <i className={s.dot} />
           <span className={s.rLabel}>
@@ -71,12 +77,15 @@ export function SceneTimeline({ scene, shots, activeId, onHover }: Props) {
           const shot = shots[entry.shotId]
           if (!shot) return null
           const on = activeId === entry.shotId
+          const longCls = isLongShot(shot.duration) ? s.segLong : ''
           return (
             <div
               key={entry.shotId}
-              className={[s.seg, on ? s.segOn : i % 2 ? s.segAlt : ''].join(' ')}
+              className={[s.seg, on ? s.segOn : i % 2 ? s.segAlt : '', longCls].join(' ')}
               style={{ flex: shot.duration }}
-              title={`镜 ${String(shot.no).padStart(2, '0')} · ${fmt(entry.startAt)} → ${fmt(entry.endAt)} · ${shot.duration}s`}
+              title={`镜 ${String(shot.no).padStart(2, '0')} · ${fmt(entry.startAt)} → ${fmt(entry.endAt)} · ${shot.duration}s${
+                isLongShot(shot.duration) ? ' · 较长，可能需分段生成' : ''
+              }`}
               onMouseEnter={() => onHover(entry.shotId)}
               onMouseLeave={() => onHover(null)}
             >

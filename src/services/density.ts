@@ -1,6 +1,7 @@
-// R5 镜头密度。纯函数。
-// 规则版本：v1.0（2026-08-10）。断言见 tests/rules.test.ts 的 R5。
-import type { Scene, Shot, ShotDensity } from '../data/types'
+// R5 重拆颗粒度。纯函数。
+// 规则版本：v1.1（2026-08-11）。断言见 tests/rules.test.ts 的 R5。
+// v1.1 变更：密度不再是全局开关，成为 resplit 的参数，颗粒度下沉到 Scene.density。
+import type { Project, Scene, Shot, ShotDensity } from '../data/types'
 import { shotPresets } from '../data/shotPresets'
 
 /**
@@ -26,4 +27,26 @@ export function applyDensity(scene: Scene, density: ShotDensity): string[] {
   const preset = densityShots(scene.id, density)
   if (preset.length === 0) return scene.shotIds // 无预设，保持原样
   return preset.map((s) => s.id)
+}
+
+/**
+ * 按指定颗粒度重拆某场：替换本场镜、写入 scene.density，其他场一律不动（shotIds 引用保持）。
+ * 供 store.resplit / resplitEpisode 复用；纯函数，便于 R5 断言。
+ */
+export function resplitSceneDensity(project: Project, sceneId: string, density: ShotDensity): Project {
+  const scene = project.scenes[sceneId]
+  if (!scene) return project
+  const presetShots = densityShots(sceneId, density)
+  const newIds = applyDensity(scene, density)
+  const removed = new Set(scene.shotIds)
+  const nextShots: Record<string, Shot> = {}
+  for (const [id, sh] of Object.entries(project.shots)) {
+    if (!removed.has(id)) nextShots[id] = sh
+  }
+  for (const sh of presetShots) nextShots[sh.id] = structuredClone(sh)
+  return {
+    ...project,
+    scenes: { ...project.scenes, [sceneId]: { ...scene, shotIds: newIds, density } },
+    shots: nextShots,
+  }
 }

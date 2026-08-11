@@ -2,12 +2,12 @@ import type { MouseEvent } from 'react'
 import { useStore } from '../store/useStore'
 import type { AssetKind, Costume, MountRef, Shot } from '../data/types'
 import { chipClass, KIND_LABEL } from './entity'
+import { mountIssues } from '../services/completeness'
+import { isLongShot } from '../services/duration'
 import { MountPicker } from './MountPicker'
 import { PromptSections } from './PromptSections'
 import ui from '../styles/ui.module.css'
 import s from './Storyboard.module.css'
-
-const KINDS: AssetKind[] = ['character', 'costume', 'location', 'prop']
 
 function fmt(sec: number): string {
   return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`
@@ -25,6 +25,8 @@ interface Props {
 export function ShotRow({ shot, startAt, endAt, active, readOnly, onHover }: Props) {
   const assets = useStore((st) => st.project.assets)
   const removeMount = useStore((st) => st.removeMount)
+  const addMount = useStore((st) => st.addMount)
+  const showToast = useStore((st) => st.showToast)
   const setDuration = useStore((st) => st.setShotDuration)
 
   const nameOf = (m: MountRef) => assets[m.assetId]?.name ?? '（已删除）'
@@ -60,7 +62,19 @@ export function ShotRow({ shot, startAt, endAt, active, readOnly, onHover }: Pro
     ] as { label: string; kind: AssetKind; items: MountRef[] }[]
   ).filter((r) => r.items.length > 0)
 
-  const missing = KINDS.filter((k) => !shot.mounts.some((m) => m.kind === k)).map((k) => KIND_LABEL[k])
+  const issues = mountIssues(shot, assets)
+  const long = isLongShot(shot.duration)
+  const longWarn = (
+    <div className={s.longWarn} title="该镜时长较长，部分视频模型可能需要分段生成。">
+      ⚠ 较长
+    </div>
+  )
+  const takeIssue = (assetId: string, kind: AssetKind, name: string) => (e: MouseEvent) => {
+    e.stopPropagation()
+    if (readOnly) return
+    addMount(shot.id, { kind, assetId })
+    showToast(`已挂载「${name}」`)
+  }
 
   return (
     <div
@@ -74,17 +88,23 @@ export function ShotRow({ shot, startAt, endAt, active, readOnly, onHover }: Pro
           {String(shot.no).padStart(2, '0')}
         </div>
         {readOnly ? (
-          <div className={s.durStatic}>{shot.duration}s</div>
+          <>
+            <div className={s.durStatic}>{shot.duration}s</div>
+            {long && longWarn}
+          </>
         ) : (
-          <div className={[s.stepper, active ? s.stepperOn : ''].join(' ')}>
-            <button className={s.stepBtn} onClick={(e) => step(e, -1)} title="减少 1s">
-              −
-            </button>
-            <span className={s.durVal}>{shot.duration}s</span>
-            <button className={s.stepBtn} onClick={(e) => step(e, 1)} title="增加 1s">
-              +
-            </button>
-          </div>
+          <>
+            <div className={[s.stepper, active ? s.stepperOn : ''].join(' ')}>
+              <button className={s.stepBtn} onClick={(e) => step(e, -1)} title="减少 1s">
+                −
+              </button>
+              <span className={s.durVal}>{shot.duration}s</span>
+              <button className={s.stepBtn} onClick={(e) => step(e, 1)} title="增加 1s">
+                +
+              </button>
+            </div>
+            {long && longWarn}
+          </>
         )}
         <div className={s.tcRange}>
           {fmt(startAt)} → {fmt(endAt)}
@@ -134,7 +154,23 @@ export function ShotRow({ shot, startAt, endAt, active, readOnly, onHover }: Pro
 
           <div className={s.assetActions}>
             <MountPicker shotId={shot.id} mounts={shot.mounts} disabled={readOnly} />
-            {missing.length > 0 && <span className={s.missing}>缺 {missing.join(' / ')}</span>}
+            {issues.map((iss, i) =>
+              iss.level === 'action' && iss.assetId && iss.kind ? (
+                <button
+                  key={`a${i}`}
+                  className={s.issueAction}
+                  disabled={readOnly}
+                  onClick={takeIssue(iss.assetId, iss.kind, assets[iss.assetId]?.name ?? '')}
+                  title="点击直接挂载"
+                >
+                  {iss.text}
+                </button>
+              ) : (
+                <span key={`h${i}`} className={s.issueHint}>
+                  {iss.text}
+                </span>
+              ),
+            )}
           </div>
         </div>
       </div>
