@@ -24,6 +24,7 @@ interface UIState {
   scriptOpen: boolean
   expandedShotId: string | null
   viewMode: ViewMode
+  navCollapsed: boolean
   toast: Toast | null
 }
 
@@ -36,6 +37,7 @@ interface StoreState extends UIState {
   countShotsOf: (assetId: string) => number
 
   // ── UI 动作 ──
+  toggleNav: () => void
   setPage: (page: Stage) => void
   selectScene: (sceneId: string) => void
   setTab: (tab: Tab) => void
@@ -68,6 +70,7 @@ export const useStore = create<StoreState>((set, get) => ({
   scriptOpen: false,
   expandedShotId: 's1_sh1',
   viewMode: 'brief',
+  navCollapsed: false,
   toast: null,
 
   currentScene: () => get().project.scenes[get().selectedSceneId],
@@ -77,6 +80,7 @@ export const useStore = create<StoreState>((set, get) => ({
     Object.values(get().project.shots).filter((sh) => sh.mounts.some((mo) => mo.assetId === assetId))
       .length,
 
+  toggleNav: () => set((s) => ({ navCollapsed: !s.navCollapsed })),
   setPage: (activePage) => set({ activePage }),
   selectScene: (sceneId) => set({ selectedSceneId: sceneId, expandedShotId: null }),
   setTab: (activeTab) => set({ activeTab }),

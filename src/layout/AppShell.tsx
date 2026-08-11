@@ -55,6 +55,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const project = useStore((st) => st.project)
   const activePage = useStore((st) => st.activePage)
   const setPage = useStore((st) => st.setPage)
+  const navCollapsed = useStore((st) => st.navCollapsed)
+  const toggleNav = useStore((st) => st.toggleNav)
 
   const aspectLabel = project.aspect === '16:9' ? '16:9 横屏' : '9:16 竖屏'
   const styleLabel = project.style === 'realistic' ? '写实' : '电影感'
@@ -80,7 +82,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className={s.body}>
           {/* 左侧一级导航 */}
-          <div className={s.nav}>
+          <div className={[s.nav, navCollapsed ? s.collapsed : ''].join(' ')}>
             <div className={s.proj}>
               <div className={s.projTitle}>
                 <span className={s.back}>‹</span>
@@ -110,11 +112,20 @@ export function AppShell({ children }: { children: ReactNode }) {
                     onClick={it.page ? () => setPage(it.page!) : undefined}
                   >
                     <span className={s.navIcon}>{icons[it.key]}</span>
-                    {it.label}
+                    <span className={s.navText}>{it.label}</span>
                   </div>
                 )
               })}
             </div>
+
+            <button
+              className={s.collapseBtn}
+              onClick={toggleNav}
+              title={navCollapsed ? '展开侧栏' : '收起侧栏'}
+              aria-label={navCollapsed ? '展开侧栏' : '收起侧栏'}
+            >
+              {navCollapsed ? '›' : '‹'}
+            </button>
           </div>
 
           <div className={s.content}>{children}</div>
