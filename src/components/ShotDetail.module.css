@@ -47,6 +47,38 @@
   line-height: 1.95;
   color: var(--t2);
 }
+/* 提示词分段渲染 */
+.psWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.psRow {
+  font-size: 12px;
+  line-height: 1.85;
+}
+.psTag {
+  font-size: 10.5px;
+  color: var(--t4);
+  margin-right: 5px;
+}
+.psBody {
+  color: var(--t2);
+}
+.psForbid {
+  font-size: 10.5px;
+  color: var(--t4);
+  background: transparent;
+  border: 1px solid var(--line2);
+  border-radius: var(--rsm);
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: 0.14s;
+}
+.psForbid:hover {
+  border-color: var(--edge);
+  color: var(--t2);
+}
 .src {
   margin-top: 14px;
   border: 1px solid var(--line2);

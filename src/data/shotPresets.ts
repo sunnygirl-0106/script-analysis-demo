@@ -3,6 +3,7 @@
 // 只给第 1 场（s1）做三套，其他场复用「标准」（即 seed 里的原镜）。
 import type { Shot, ShotDensity } from './types'
 import { A, m, seedProject } from './seed'
+import { PROMPTS } from './prompts'
 
 // 标准套 = seed 第 1 场的 8 镜，直接引用，避免重复维护。
 const standardS1: Shot[] = seedProject.scenes.s1!.shotIds.map(
@@ -36,7 +37,14 @@ const looseS1Seeds: PresetSeed[] = [
 ]
 
 function withIds(sceneId: string, prefix: string, seeds: PresetSeed[]): Shot[] {
-  return seeds.map((s, i) => ({ ...s, id: `${sceneId}_${prefix}${i + 1}`, sceneId, no: i + 1 }))
+  return seeds.map((s, i) => {
+    const id = `${sceneId}_${prefix}${i + 1}`
+    return {
+      ...s, id, sceneId, no: i + 1,
+      imagePrompt: PROMPTS[id]?.image ?? s.imagePrompt,
+      videoPrompt: PROMPTS[id]?.video ?? s.videoPrompt,
+    }
+  })
 }
 
 // 每个场 → 每种密度 → 完整 Shot[]。缺失的密度在 density.ts 里回退到标准。

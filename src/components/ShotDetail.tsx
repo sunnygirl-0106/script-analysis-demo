@@ -2,6 +2,7 @@ import { useStore } from '../store/useStore'
 import type { Shot } from '../data/types'
 import { SHOT_SIZES, CAMERA_MOVES } from '../data/types'
 import { FieldSelect } from './FieldSelect'
+import { PromptSections } from './PromptSections'
 import s from './ShotDetail.module.css'
 
 export function ShotDetail({ shot }: { shot: Shot }) {
@@ -28,7 +29,7 @@ export function ShotDetail({ shot }: { shot: Shot }) {
             <FieldSelect label="镜头" value={shot.lens} options={[shot.lens]} readOnly onChange={() => {}} />
             <FieldSelect label="光影" value={shot.lighting} options={[shot.lighting]} readOnly onChange={() => {}} />
           </div>
-          <div className={s.c2}>{shot.imagePrompt}</div>
+          <div className={s.c2}><PromptSections text={shot.imagePrompt} /></div>
         </div>
 
         {/* 视频提示词 → 生视频 */}
@@ -48,7 +49,7 @@ export function ShotDetail({ shot }: { shot: Shot }) {
             <FieldSelect label="对白" value={shot.dialogue} options={[shot.dialogue]} readOnly onChange={() => {}} />
             <FieldSelect label="音效" value={shot.sfx} options={[shot.sfx]} readOnly onChange={() => {}} />
           </div>
-          <div className={s.c2}>{shot.videoPrompt}</div>
+          <div className={s.c2}><PromptSections text={shot.videoPrompt} /></div>
         </div>
       </div>
     </div>

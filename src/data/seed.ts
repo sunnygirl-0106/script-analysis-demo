@@ -1,6 +1,7 @@
 // 第 1 集：《最后的尊严》3 场 25 镜 + 全部资产。
 // 内容全部取材自剧本原文，不用 lorem —— 原型的说服力全在这。
 import type { Project, Scene, Shot, Asset, MountRef } from './types'
+import { PROMPTS } from './prompts'
 
 // ── 资产 id（全剧唯一，供挂载引用）──
 export const A = {
@@ -385,7 +386,12 @@ function buildScene(
 ): Scene {
   const shotIds = seeds.map((s, i) => {
     const id = `${sceneId}_sh${i + 1}`
-    shotStore[id] = { ...s, id, sceneId, no: i + 1 }
+    // 逐镜提示词在生成点统一注入；PROMPTS 缺条目时回退到 seed 里的一句话提示词。
+    shotStore[id] = {
+      ...s, id, sceneId, no: i + 1,
+      imagePrompt: PROMPTS[id]?.image ?? s.imagePrompt,
+      videoPrompt: PROMPTS[id]?.video ?? s.videoPrompt,
+    }
     return id
   })
   return { id: sceneId, episodeId: 'e1', no, name, location, timeOfDay, rawText, shotIds, track }

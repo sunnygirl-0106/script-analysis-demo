@@ -4,6 +4,7 @@
 // 本集新增：角色「快递员」+ 道具「退货包裹」。
 import type { Episode, Scene, Shot, Asset } from './types'
 import { A, m } from './seed'
+import { PROMPTS } from './prompts'
 
 // 第 2 集内部临时 id：苏可用临时 id，交给 appendEpisode 按名称去重后重指向旧 id。
 const T = {
@@ -100,7 +101,11 @@ function buildScene(
 ): Scene {
   const shotIds = seeds.map((s, i) => {
     const id = `${sceneId}_sh${i + 1}`
-    shotStore[id] = { ...s, id, sceneId, no: i + 1 }
+    shotStore[id] = {
+      ...s, id, sceneId, no: i + 1,
+      imagePrompt: PROMPTS[id]?.image ?? s.imagePrompt,
+      videoPrompt: PROMPTS[id]?.video ?? s.videoPrompt,
+    }
     return id
   })
   return { id: sceneId, episodeId: 'e2', no, name, location, timeOfDay, rawText, shotIds, track }
