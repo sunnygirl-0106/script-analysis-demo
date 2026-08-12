@@ -3,7 +3,7 @@ import { useStore } from '../store/useStore'
 import type { AssetKind } from '../data/types'
 import { AssetRow } from './AssetRow'
 import { AssetOverviewBar, type AssetSort } from './AssetOverviewBar'
-import { PromptDrawer } from './PromptDrawer'
+import { PromptDialog } from './PromptDialog'
 import s from './AssetList.module.css'
 
 // 资产条目流（单列横向 row，区别于资产库的方图网格，决策 6.1）。四类共用，按 kind 分支渲染。
@@ -35,7 +35,7 @@ export function AssetList({ kind }: { kind: AssetKind }) {
           <AssetRow key={a.id} asset={a} onOpenPrompt={setPromptAsset} />
         ))}
       </div>
-      {promptAsset && <PromptDrawer assetId={promptAsset} onClose={() => setPromptAsset(null)} />}
+      {promptAsset && <PromptDialog assetId={promptAsset} onClose={() => setPromptAsset(null)} />}
     </div>
   )
 }
