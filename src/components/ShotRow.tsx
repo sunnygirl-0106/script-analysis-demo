@@ -1,6 +1,6 @@
 import type { MouseEvent } from 'react'
 import { useStore } from '../store/useStore'
-import type { AssetKind, Costume, MountRef, Shot } from '../data/types'
+import type { Look, MountableKind, MountRef, Shot } from '../data/types'
 import { chipClass, KIND_LABEL } from './entity'
 import { mountIssues } from '../services/completeness'
 import { isLongShot } from '../services/duration'
@@ -41,7 +41,7 @@ export function ShotRow({ shot, startAt, endAt, active, alt, open, readOnly, onH
     e.stopPropagation()
     if (!readOnly) removeMount(shot.id, assetId)
   }
-  const takeIssue = (assetId: string, kind: AssetKind) => (e: MouseEvent) => {
+  const takeIssue = (assetId: string, kind: MountableKind) => (e: MouseEvent) => {
     e.stopPropagation()
     if (!readOnly) addMount(shot.id, { kind, assetId })
   }
@@ -52,26 +52,14 @@ export function ShotRow({ shot, startAt, endAt, active, alt, open, readOnly, onH
     onToggle(shot.id)
   }
 
-  // 关联资产分组：角色带服装小字，服装（游离）/场景/道具走标签行。
-  const characters = shot.mounts.filter((m) => m.kind === 'character')
-  const mountedCostumeIds = new Set(shot.mounts.filter((m) => m.kind === 'costume').map((m) => m.assetId))
-  const costumeOwner = (charId: string) =>
-    [...mountedCostumeIds]
-      .map((id) => assets[id] as Costume | undefined)
-      .filter((c): c is Costume => !!c && c.characterId === charId)
-      .map((c) => c.name)
-  const ownedCostumeIds = new Set(
-    characters.flatMap((m) =>
-      [...mountedCostumeIds].filter((cid) => (assets[cid] as Costume | undefined)?.characterId === m.assetId),
-    ),
-  )
-  const orphanCostumes = shot.mounts.filter((m) => m.kind === 'costume' && !ownedCostumeIds.has(m.assetId))
+  // 关联资产分组：着装角色（人物参考）走 cast 卡；角色兜底（未指定着装）加琥珀告警；场景 / 道具走标签行。
+  const looks = shot.mounts.filter((m) => m.kind === 'look')
+  const charFallbacks = shot.mounts.filter((m) => m.kind === 'character')
   const rows = (
     [
-      { label: KIND_LABEL.costume, kind: 'costume', items: orphanCostumes },
       { label: KIND_LABEL.location, kind: 'location', items: shot.mounts.filter((m) => m.kind === 'location') },
       { label: KIND_LABEL.prop, kind: 'prop', items: shot.mounts.filter((m) => m.kind === 'prop') },
-    ] as { label: string; kind: AssetKind; items: MountRef[] }[]
+    ] as { label: string; kind: MountableKind; items: MountRef[] }[]
   ).filter((r) => r.items.length > 0)
 
   const issues = mountIssues(shot, assets)
@@ -135,15 +123,35 @@ export function ShotRow({ shot, startAt, endAt, active, alt, open, readOnly, onH
       {/* ② 关联资产 */}
       <div className={s.cAsset}>
         <div className={s.assetStack}>
-          {characters.map((m) => {
+          {looks.map((m) => {
+            const look = assets[m.assetId] as Look | undefined
+            const chName = look ? assets[look.characterId]?.name ?? '未知角色' : '（已删除）'
+            const cos = look ? look.costumeIds.map((id) => assets[id]?.name).filter(Boolean) : []
+            return (
+              <div className={s.cast} key={m.assetId}>
+                <span className={s.avatar}>{chName.slice(0, 1)}</span>
+                <span className={s.castMeta}>
+                  <span className={s.castName}>{chName}</span>
+                  <span className={s.castCostume}>{cos.length ? cos.join(' · ') : '默认着装'}</span>
+                </span>
+                {!readOnly && (
+                  <button className={s.castX} onClick={remove(m.assetId)} title="移除挂载">
+                    ✕
+                  </button>
+                )}
+              </div>
+            )
+          })}
+          {charFallbacks.map((m) => {
             const name = nameOf(m)
-            const wardrobe = costumeOwner(m.assetId)
             return (
               <div className={s.cast} key={m.assetId}>
                 <span className={s.avatar}>{name.slice(0, 1)}</span>
                 <span className={s.castMeta}>
                   <span className={s.castName}>{name}</span>
-                  <span className={s.castCostume}>{wardrobe.length ? wardrobe.join(' · ') : '未指定服装'}</span>
+                  <span className={s.castCostume} style={{ color: 'var(--amber)' }} title="AI 只拆出了人、没给着装，页面出琥珀告警">
+                    ⚠ 未指定着装
+                  </span>
                 </span>
                 {!readOnly && (
                   <button className={s.castX} onClick={remove(m.assetId)} title="移除挂载">

@@ -1,21 +1,21 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../store/useStore'
-import type { Asset, AssetKind, MountRef } from '../data/types'
-import { KIND_COLOR, KIND_LABEL, KIND_ORDER } from './entity'
+import type { Asset, MountableKind, MountRef } from '../data/types'
+import { KIND_COLOR, KIND_LABEL, MOUNT_KINDS } from './entity'
 import s from './MountPicker.module.css'
 
 interface Props {
   shotId: string
   mounts: MountRef[]
   disabled?: boolean
-  kinds?: AssetKind[]
+  kinds?: MountableKind[]
 }
 
-// 每个资产右侧的说明文字：角色→戏份，服装→归属角色，场景→时段。
+// 每个资产右侧的说明文字：着装角色→所属角色，场景→时段。服装不参与挂载（决策 3b）。
 function noteOf(a: Asset, assets: Record<string, Asset>): string {
   if (a.kind === 'character') return a.role === 'lead' ? '主角' : a.role === 'support' ? '配角' : '龙套'
-  if (a.kind === 'costume') return assets[a.characterId]?.name ?? '通用'
+  if (a.kind === 'look') return assets[a.characterId]?.name ?? ''
   if (a.kind === 'location') return a.timeOfDay
   return ''
 }
@@ -27,7 +27,7 @@ const POP_MAX_H = 380
 //
 // 弹层走 portal 挂到 body：分镜表的行是固定高度且 overflow 受限的网格单元，
 // 绝对定位的弹层会被祖先裁掉，所以这里改用 fixed 定位 + 实时测算触发器位置。
-export function MountPicker({ shotId, mounts, disabled, kinds = KIND_ORDER }: Props) {
+export function MountPicker({ shotId, mounts, disabled, kinds = MOUNT_KINDS }: Props) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
@@ -126,7 +126,7 @@ export function MountPicker({ shotId, mounts, disabled, kinds = KIND_ORDER }: Pr
             <div className={s.searchBox}>
               <input
                 className={s.search}
-                placeholder="搜索角色 / 服装 / 场景 / 道具…"
+                placeholder="搜索着装角色 / 场景 / 道具…"
                 value={q}
                 autoFocus
                 onChange={(e) => setQ(e.target.value)}
@@ -146,7 +146,7 @@ export function MountPicker({ shotId, mounts, disabled, kinds = KIND_ORDER }: Pr
                         key={a.id}
                         className={[s.opt, on ? s.optOn : ''].join(' ')}
                         onClick={() =>
-                          on ? removeMount(shotId, a.id) : addMount(shotId, { kind: a.kind, assetId: a.id })
+                          on ? removeMount(shotId, a.id) : addMount(shotId, { kind: g.kind, assetId: a.id })
                         }
                       >
                         <span className={[s.check, on ? s.checkOn : ''].join(' ')}>{on ? '✓' : ''}</span>

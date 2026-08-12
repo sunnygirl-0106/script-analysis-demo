@@ -6,8 +6,22 @@ import { episode2Payload } from '../data/seedEpisode2'
 import { appendEpisode } from '../services/incremental'
 import { replaceScript as replaceScriptSvc, type ScriptPayload } from '../services/replace'
 import { densityShots, hasDensityPresets, resplitSceneDensity } from '../services/density'
-import { canEdit, deleteEpisode as deleteEpisodeSvc, resplitScene } from '../services/lock'
+import { deleteEpisode as deleteEpisodeSvc, resplitScene } from '../services/lock'
+import { can } from '../services/capability'
+import { buildUsageIndex, type AssetUsage } from '../services/appearanceIndex'
+import { deliverFirstBatch } from '../services/staleness'
 import { sceneDuration } from '../services/timeline'
+
+// 出场索引：按 project 引用记忆化。project 是不可变替换的，引用变才重算（决策 2.3）。
+let _idxProject: Project | null = null
+let _idx: Record<string, AssetUsage> = {}
+function usageIndexOf(project: Project): Record<string, AssetUsage> {
+  if (_idxProject !== project) {
+    _idxProject = project
+    _idx = buildUsageIndex(project)
+  }
+  return _idx
+}
 
 export type Tab = 'character' | 'costume' | 'location' | 'prop' | 'shot'
 
@@ -37,7 +51,7 @@ interface StoreState extends UIState {
 
   // ── 派生便捷读取 ──
   currentScene: () => Project['scenes'][string] | undefined
-  canEditAnalysis: () => boolean
+  usageIndex: () => Record<string, AssetUsage>
   countShotsOf: (assetId: string) => number
 
   // ── UI 动作 ──
@@ -51,12 +65,15 @@ interface StoreState extends UIState {
   showToast: (text: string) => void
   dismissToast: () => void
 
-  // ── 数据动作（受阶段锁约束）──
+  // ── 数据动作（受能力矩阵 can(project, cap) 约束）──
   updateShotField: (shotId: string, field: keyof Shot, value: string) => void
   setShotDuration: (shotId: string, duration: number) => void
   addMount: (shotId: string, mount: MountRef) => void
   removeMount: (shotId: string, assetId: string) => void
   updateSceneTrack: (sceneId: string, patch: Partial<Project['scenes'][string]['track']>) => void
+  updateAssetPrompt: (assetId: string, text: string) => void
+  renameAsset: (assetId: string, name: string) => void
+  toggleAssetExcluded: (assetId: string) => void
   appendEpisode2: () => void
   replaceScript: (payload: ScriptPayload) => void
   replaceEpisode: (episodeId: string) => void
@@ -90,11 +107,9 @@ export const useStore = create<StoreState>((set, get) => ({
   toast: null,
 
   currentScene: () => get().project.scenes[get().selectedSceneId],
-  canEditAnalysis: () => canEdit(get().project, 'analysis'),
-  // 遍历 shots 数「挂了该资产」的镜数。挂载会变，所以按需反查，不往 Appearance 里塞字段。
-  countShotsOf: (assetId) =>
-    Object.values(get().project.shots).filter((sh) => sh.mounts.some((mo) => mo.assetId === assetId))
-      .length,
+  usageIndex: () => usageIndexOf(get().project),
+  // 镜数读派生索引（含 look 向角色 / 服装的向上聚合），不再每次遍历 shots。
+  countShotsOf: (assetId) => usageIndexOf(get().project)[assetId]?.shotCount ?? 0,
 
   toggleNav: () => set((s) => ({ navCollapsed: !s.navCollapsed })),
   setPage: (activePage) => set({ activePage }),
@@ -111,7 +126,7 @@ export const useStore = create<StoreState>((set, get) => ({
   dismissToast: () => set({ toast: null }),
 
   updateShotField: (shotId, field, value) => {
-    if (!get().canEditAnalysis()) return
+    if (!can(get().project, 'editShotFields')) return
     set((s) => {
       const shot = s.project.shots[shotId]
       if (!shot) return s
@@ -122,7 +137,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   setShotDuration: (shotId, duration) => {
-    if (!get().canEditAnalysis()) return
+    if (!can(get().project, 'editShotFields')) return
     const s = get()
     const shot = s.project.shots[shotId]
     if (!shot) return
@@ -140,7 +155,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   addMount: (shotId, mount) => {
-    if (!get().canEditAnalysis()) return
+    if (!can(get().project, 'editMounts')) return
     set((s) => {
       const shot = s.project.shots[shotId]
       if (!shot || shot.mounts.some((m) => m.assetId === mount.assetId)) return s
@@ -150,7 +165,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   removeMount: (shotId, assetId) => {
-    if (!get().canEditAnalysis()) return
+    if (!can(get().project, 'editMounts')) return
     set((s) => {
       const shot = s.project.shots[shotId]
       if (!shot) return s
@@ -160,7 +175,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   updateSceneTrack: (sceneId, patch) => {
-    if (!get().canEditAnalysis()) return
+    if (!can(get().project, 'editSceneTrack')) return
     set((s) => {
       const scene = s.project.scenes[sceneId]
       if (!scene) return s
@@ -173,8 +188,52 @@ export const useStore = create<StoreState>((set, get) => ({
     })
   },
 
+  // 改提示词 → promptRevision + 1（决策 4.2）。进入视觉筹备后仍可改（editPrompt 恒为 true）。
+  updateAssetPrompt: (assetId, text) => {
+    if (!can(get().project, 'editPrompt')) return
+    set((s) => {
+      const a = s.project.assets[assetId]
+      if (!a || a.imagePrompt === text) return s
+      return {
+        project: {
+          ...s.project,
+          assets: {
+            ...s.project.assets,
+            [assetId]: { ...a, imagePrompt: text, promptRevision: a.promptRevision + 1 },
+          },
+        },
+      }
+    })
+  },
+
+  // 改资产名 / 别名。名称真相源在进入资产库后移交下游，故 editAssetName 仅 analysis 阶段可用。
+  renameAsset: (assetId, name) => {
+    if (!can(get().project, 'editAssetName')) return
+    const trimmed = name.trim()
+    if (!trimmed) return
+    set((s) => {
+      const a = s.project.assets[assetId]
+      if (!a || a.name === trimmed) return s
+      return {
+        project: { ...s.project, assets: { ...s.project.assets, [assetId]: { ...a, name: trimmed } } },
+      }
+    })
+  },
+
+  // 切换「不出图」。出图队列一旦开跑，排除与否由资产库处理，故 toggleExcluded 仅 analysis 阶段可用。
+  toggleAssetExcluded: (assetId) => {
+    if (!can(get().project, 'toggleExcluded')) return
+    set((s) => {
+      const a = s.project.assets[assetId]
+      if (!a) return s
+      return {
+        project: { ...s.project, assets: { ...s.project.assets, [assetId]: { ...a, excluded: !a.excluded } } },
+      }
+    })
+  },
+
   appendEpisode2: () => {
-    if (!get().canEditAnalysis()) return
+    if (!can(get().project, 'editScript')) return
     const s = get()
     if (s.project.episodes.some((e) => e.id === 'e2')) {
       get().showToast('第 2 集已经追加过了')
@@ -186,7 +245,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   replaceScript: (payload) => {
-    if (!get().canEditAnalysis()) return
+    if (!can(get().project, 'editScript')) return
     const s = get()
     const oldEp = s.project.episodes.length
     const oldShots = Object.keys(s.project.shots).length
@@ -199,7 +258,7 @@ export const useStore = create<StoreState>((set, get) => ({
   // 替换本集：语义诚实地实现为「删除本集 + 追加新集」。演示只有一套「新集」内容（第 2 集），
   // 若它已存在则不替换，如实告知，避免删了却补不上。
   replaceEpisode: (episodeId) => {
-    if (!get().canEditAnalysis()) return
+    if (!can(get().project, 'editScript')) return
     const s = get()
     const proj = s.project
     const ep = proj.episodes.find((e) => e.id === episodeId)
@@ -220,7 +279,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   deleteEpisode: (episodeId) => {
-    if (!get().canEditAnalysis()) return
+    if (!can(get().project, 'editScript')) return
     const s = get()
     const proj = s.project
     if (proj.episodes.length <= 1) {
@@ -239,7 +298,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   resplit: (sceneId, opts) => {
-    if (!get().canEditAnalysis()) return
+    if (!can(get().project, 'editScript')) return
     const s = get()
     const scene = s.project.scenes[sceneId]
     if (!scene) return
@@ -273,7 +332,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   resplitEpisode: (episodeId, opts) => {
-    if (!get().canEditAnalysis()) return
+    if (!can(get().project, 'editScript')) return
     const s = get()
     let proj = s.project
     const ep = proj.episodes.find((e) => e.id === episodeId)
@@ -305,7 +364,11 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   setStage: (stage) => {
-    set((s) => ({ project: { ...s.project, stage }, activePage: stage }))
-    if (stage === 'visual') get().showToast('已进入视觉筹备：剧本分析整个置灰只读')
+    set((s) => {
+      // 进入视觉筹备：把第一批资产的 deliveredRevision 对齐到 promptRevision（决策 6.7）。
+      const project = stage === 'visual' ? deliverFirstBatch({ ...s.project, stage }) : { ...s.project, stage }
+      return { project, activePage: stage }
+    })
+    if (stage === 'visual') get().showToast('已进入视觉筹备：提示词与剧本仍可修改，绑定关系不可改')
   },
 }))

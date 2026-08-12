@@ -2,7 +2,7 @@
 // 关键点：既含老角色「苏可」（应被去重复用旧 id），又含新增资产（应新建）。
 // 新集该带什么资产就带什么 —— 净增数量由内容决定，不是一个写死的常数。
 // 本集新增：角色「快递员」+ 道具「退货包裹」。
-import type { Episode, Scene, Shot, Asset } from './types'
+import type { Episode, Scene, Shot, Asset, Look, MountRef } from './types'
 import { A, m } from './seed'
 import { PROMPTS } from './prompts'
 
@@ -12,6 +12,7 @@ const T = {
   courier: 'c_courier', // 新角色
   parcel: 'p_parcel', // 新道具：这一集才出现的退货包裹
   courierCostume: 'cos_courier', // 新服装：快递员工装，与角色素模分开生成再融合
+  courierLook: 'lk_courier_costume', // 新着装角色：快递员穿工装的定妆图
 } as const
 
 // 第 2 集带来的资产（其余场景 / 道具 / 服装直接复用第 1 集的既有 id）。
@@ -20,14 +21,12 @@ export const ep2Assets: Asset[] = [
   {
     id: T.suke, kind: 'character', role: 'lead',
     name: '苏可', // 与第 1 集同名 → 归一化后命中，复用旧 id
-    description: '24 岁，资深宅家爱好者 / 资深吃货。第 2 集里她还得应付上门取件的快递员。',
     imagePrompt: '（与第 1 集同一角色，复用既有设定板）',
-    appearances: [{ episodeNo: 2, sceneNo: 1 }, { episodeNo: 2, sceneNo: 2 }],
+    promptRevision: 0,
   },
   {
     id: T.courier, kind: 'character', role: 'extra',
     name: '快递员', aliases: ['快递'],
-    description: `男，约 30 岁，上门取退货件。第 2 集里他接替外卖员成为新的「门外的声音」：「取件的！退货件在家吗？下楼我可就走了啊！」—— 同样的机制，同样的把苏可从瘫软状态里薅起来。他比外卖员更壮实、更沉默，催单时靠的是提高音量而不是语速。他的存在是为了证明一件事：苏可的社交危机是循环的，解除了一次还有下一次。`,
     imagePrompt: `【生成规格】角色素模基础视觉资产设定板 · 纯白无缝背景 · 16:9 横版构图 · 三视图并排（正面 / 左侧 90° 正侧 / 背面全身站姿），三视图人物等高等比、脚底落在同一条水平线上 · 人物占画面高度 85%，头顶与脚尖各留约 5% 余量 · 相机为等效 85mm 中长焦、平视、无透视畸变 · 无投影落到背景 · 完整人物不裁切。
 【体型】30 岁上下东亚男性，身高约 175cm，中等身材略壮实：肩宽且厚，斜方肌发达，胸廓宽，腰腹有一点自然的中年发福但不明显，小臂结实、前臂肌肉线条清晰，大腿粗壮。这是「常年搬箱子搬出来的」实用型体型，不是健身房的雕刻感。站姿踏实，双脚略分开与肩同宽或更宽，重心居中压实，双手自然垂在身侧。
 【面部】方圆脸，颧弓宽，面颊有肉，下颌角明显但被脂肪柔化，下巴短而方；眼裂偏小，眼神直接不闪躲，眼袋轻微；眉毛短而粗、眉形平；鼻梁不高，鼻头宽厚，鼻翼外扩；嘴唇偏厚，唇形宽，嘴角平直。面相憨直、不带心机，但眉眼之间透着赶时间的急躁。眼神平视镜头。
@@ -39,12 +38,11 @@ export const ep2Assets: Asset[] = [
 【光线】中性棚拍柔光。主光为正面偏上 45° 的大面积柔光箱，两侧各一盏等强度补光；色温 5500K，显色准确；全场无强阴影、无投影落到背景上；白背景纯净不发灰。
 【质感】高细节写实渲染，真人摄影质感；皮肤的油光与胡茬、硬发质、针织面料三种质感层次分明；轻微自然锐度，无过度锐化。
 【禁止】画面内字幕、水印、logo、色卡、标注文字；快递工装、扫描枪、工牌、腰包等任何戏服与配件；第二个人物入画；三视图之间人物比例、发型或五官不一致；手指数量错误或肢体变形；把人物做得过于凶恶（像打手）或过于喜剧化（像小品演员）；肌肉过于夸张；背景出现地面、阴影或渐变。`,
-    appearances: [{ episodeNo: 2, sceneNo: 2 }],
+    promptRevision: 0,
   },
   {
-    id: T.courierCostume, kind: 'costume', characterId: T.courier,
+    id: T.courierCostume, kind: 'costume',
     name: '快递工装', aliases: ['快递服'],
-    description: `快递员的工装：藏青哑光短袖工装、同色工装长裤、腰挂条码扫描枪、胸前一枚空白工牌。和骑手工装是一组对照 —— 那套靠亮黄喊出存在感，这套靠藏青把自己隐进背景里。工牌与扫描枪必须是完全空白的：没有姓名、没有编号、没有二维码、没有公司标识。这既是不蹭品牌，也是因为模型一旦被要求写字，八成会生出一串看不懂的乱码，反而毁掉整张图。`,
     imagePrompt: `【生成规格】服装资产平铺图 · 纯白无缝背景 · 16:9 横版构图 · 上下两排：上排为工装短袖正面 / 背面平铺（左右并排），下排为工装长裤、手持条码扫描枪与空白工牌（从左到右） · 顶部垂直俯拍、镜头轴线垂直于台面、无透视畸变 · 无人物、无人台、无模特、无衣架。
 【款式版型】素色快递工装短袖：翻领 POLO 式领口、三粒扣半开门襟、宽松直筒版型、胸围宽松量约 16cm、袖口平直无罗纹、衣长到胯、下摆平直开衩。工装长裤：中腰、直筒、裤长到脚踝、腰头有六个裤袢，两侧各有一个带袋盖的大立体贴袋，膝盖处有一道横向拼接线与轻微的立体余量。手持条码扫描枪：枪形握把式，长约 18cm，配一枚黑色腰挂皮扣。工牌：长方形，约 9×6cm，配一根黑色织带挂绳。
 【颜色材质】主体为中性哑光藏青蓝（接近 Pantone 539C），领口与袖口各有一道宽 0.8cm 的浅灰细条。面料是耐磨的涤棉混纺工装布（涤 65% / 棉 35%），表面有细密的平织纹理，硬挺、不垂坠、完全不反光。扫描枪为深灰工程塑料，表面为细磨砂、握把处有防滑纹，顶端有一小块深红色的取景窗玻璃。工牌为白色亚克力，边角圆润，表面有一层薄的哑光。
@@ -54,12 +52,11 @@ export const ep2Assets: Asset[] = [
 【光线】中性棚拍柔光。顶部一盏大面积柔光箱作为主光，四周补光均匀；色温 5500K，显色准确，藏青不得偏紫或偏黑；保留工装布的平织纹理与深灰明线的层次；扫描枪的磨砂塑料有柔和的带状高光、不刺眼；背景纯白不发灰、无投影。
 【质感】高细节写实产品摄影质感；涤棉工装布的硬挺织纹、工程塑料的磨砂、亚克力的哑光三种肌理清晰可辨；轻微自然锐度，无过度锐化。
 【禁止】画面内字幕、水印；任何快递公司的名称、logo、配色标识、条码、二维码、姓名、工号；工牌或扫描枪上出现任何文字与图形；人物、人台、模特、假人、衣架；把工装做成军装、保安制服或工程服；反光面料、皮革感；扫描枪做成玩具感或科幻武器感；崭新平整的电商商品图感；配件缺失或部分出画。`,
-    appearances: [{ episodeNo: 2, sceneNo: 2 }],
+    promptRevision: 0,
   },
   {
     id: T.parcel, kind: 'prop',
     name: '退货包裹', aliases: ['包裹', '退货件'],
-    description: `第 2 集的麦高芬。它是苏可必须开门的唯一理由 —— 她刚从亲妈视频里九死一生地爬出来，快递员就在门外催「下楼我可就走了啊」。这个箱子一看就是「拆开又原样封回去」的：胶带是二次缠的、缠得不整齐，箱角被压塌，还留着撕过旧标签的胶痕。面单必须完全空白，一是不蹭快递公司，二是模型一旦被要求写字八成会生出乱码。`,
     imagePrompt: `【生成规格】道具产品图 · 纯白无缝背景 · 16:9 横版构图 · 主图为 45° 俯视（占画面 55%），右侧附一张正面平视小图（占画面 20%，交代箱体比例与面单位置） · 等效 85mm、无透视畸变 · 极淡的接触影。
 【形态】中等大小的长方体瓦楞纸箱，约 35×25×20cm。箱型整体规整，但因为是二次打包而略有变形：左前方一个箱角被压得有点塌陷，顶盖的两片折页没有完全对齐、中间留出一道约 5mm 的错缝，箱体侧面有一处浅浅的凹陷。
 【材质颜色】浅棕色单层瓦楞纸（B 楞），表面能看到粗糙的纸浆纤维、细微的斑点与浅浅的瓦楞压痕；完全哑光、不反光；箱体边角与压塌处露出一点白色的瓦楞芯与起毛的纸边。
@@ -69,14 +66,22 @@ export const ep2Assets: Asset[] = [
 【光线】中性棚拍柔光。主光为顶部偏右 45° 的柔光箱，左侧一盏低强度补光；额外从画面左侧打一盏低角度擦光，突出瓦楞纸的纤维质感、压痕与胶带的褶皱起伏；色温 5500K；透明胶带的反光收成柔和的带状，不刺眼；背景纯白不发灰、无投影。
 【质感】高细节写实产品摄影质感；瓦楞纸的粗糙纤维、OPP 胶带的半透明塑料光泽、面单纸的哑光平整三种质感层次分明；轻微自然锐度，无过度锐化。
 【禁止】画面内字幕、水印；任何快递公司的名称、logo、配色标识、条码、二维码、姓名、地址、电话；面单上出现任何文字或图形（哪怕是模糊的乱码）；纸箱做成崭新挺括、边角锐利的商品包装；胶带缠得整齐美观；箱子做成礼盒、彩印箱或塑料周转箱；人物、手部入画。`,
-    appearances: [{ episodeNo: 2, sceneNo: 2 }],
+    promptRevision: 0,
   },
+  // 着装角色：快递员穿工装。绑定关系永久只读（决策 1b）。imagePrompt 为 demo 占位。
+  {
+    id: T.courierLook, kind: 'look',
+    name: '快递员 · 快递工装',
+    characterId: T.courier, costumeIds: [T.courierCostume],
+    imagePrompt: '【着装融合】快递员 · 快递工装：把快递员素模与藏青快递工装融合成穿好衣服的定妆图，人物一致性以角色素模为准、服装以工装资产为准。',
+    promptRevision: 0,
+  } as Look,
 ]
 
-/** 第 2 集自带的新资产，需手工构造 MountRef —— seed 的 m() 只认得第 1 集的资产。 */
-const parcelMount = { kind: 'prop', assetId: T.parcel } as const
-const courierMount = { kind: 'character', assetId: T.courier } as const
-const courierCostumeMount = { kind: 'costume', assetId: T.courierCostume } as const
+/** 第 2 集自带的新资产，需手工构造 MountRef —— seed 的 m() 只认得第 1 集的资产。
+ *  服装不参与挂载（决策 3b），快递员挂的是着装角色 look，不是「角色 + 服装」两条。 */
+const parcelMount: MountRef = { kind: 'prop', assetId: T.parcel }
+const courierLookMount: MountRef = { kind: 'look', assetId: T.courierLook }
 
 type ShotSeed = Omit<Shot, 'id' | 'sceneId' | 'no'>
 
@@ -117,7 +122,7 @@ const ep2s2Shots: ShotSeed[] = [
     imagePrompt: '中景。玄关门被敲响，苏可迟疑地站在门后。',
     cameraMove: '定镜', dialogue: '快递员（门外喊声）', sfx: '急促的敲门声',
     videoPrompt: '{0-4s} 定镜对门。画外音（快递员）：「取件的！退货件在家吗？下楼我可就走了啊！」',
-    mounts: [...m(A.suke, A.hoodie, A.entry), courierMount, courierCostumeMount],
+    mounts: [...m(A.suke, A.hoodie, A.entry), courierLookMount],
     sourceQuote: '（第 2 集续写）快递员：「取件的！退货件在家吗？」',
   },
   {
@@ -126,7 +131,7 @@ const ep2s2Shots: ShotSeed[] = [
     imagePrompt: '全景。苏可从门缝把退货包裹塞出去，飞速关门，全程不露正脸。',
     cameraMove: '手持', dialogue: '无', sfx: '门轴与关门声',
     videoPrompt: '{0-2s} 门缝递出包裹。{2-4s} 飞速关门。',
-    mounts: [...m(A.suke, A.hoodie, A.entry), courierMount, courierCostumeMount, parcelMount],
+    mounts: [...m(A.suke, A.hoodie, A.entry), courierLookMount, parcelMount],
     sourceQuote: '（第 2 集续写）她从门缝塞出包裹，飞速关门。',
   },
 ]

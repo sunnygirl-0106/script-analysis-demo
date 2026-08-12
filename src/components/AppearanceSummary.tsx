@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Appearance } from '../data/types'
 import { summarizeAppearances } from '../services/appearance'
-import s from './AssetGrid.module.css'
+import s from './AssetList.module.css'
 
 interface Props {
   appearances: Appearance[]

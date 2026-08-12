@@ -14,11 +14,18 @@
   margin-top: 14px;
   padding: 9px 12px;
   border-radius: var(--rsm);
-  background: rgba(163, 137, 78, 0.14);
-  border: 1px solid rgba(200, 163, 92, 0.35);
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-line);
   font-size: 12px;
   line-height: 1.6;
-  color: #d9b978;
+  color: var(--amber);
+  font-weight: 600;
+}
+.subWarn {
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.85;
 }
 .desc {
   margin-top: 14px;

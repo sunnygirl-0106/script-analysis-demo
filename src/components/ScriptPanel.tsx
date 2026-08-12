@@ -8,6 +8,7 @@ const kindClass: Record<AssetKind, string> = {
   costume: s.cloth!,
   location: s.scene!,
   prop: s.prop!,
+  look: s.role!, // 着装角色沿用角色紫（原文里一般不会命中 look 名，仅为类型完备）
 }
 
 // 用每个资产的「编目名 + 剧本别名」把原文里的实体高亮。

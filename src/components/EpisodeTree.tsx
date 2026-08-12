@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useStore } from '../store/useStore'
 import { useClickOutside } from '../hooks/useClickOutside'
+import { can } from '../services/capability'
 import { sceneDuration } from '../services/timeline'
 import { ScriptImportDialog } from './ScriptImportDialog'
 import { ResplitEpisodeDialog } from './ResplitEpisodeDialog'
@@ -20,7 +21,8 @@ export function EpisodeTree() {
   const selectedSceneId = useStore((st) => st.selectedSceneId)
   const selectScene = useStore((st) => st.selectScene)
   const deleteEpisode = useStore((st) => st.deleteEpisode)
-  const readOnly = !useStore((st) => st.canEditAnalysis())
+  const usageIndex = useStore((st) => st.usageIndex())
+  const readOnly = !useStore((st) => can(st.project, 'editScript'))
 
   const [menuEp, setMenuEp] = useState<string | null>(null)
   const [dialog, setDialog] = useState<Dialog>(null)
@@ -36,9 +38,10 @@ export function EpisodeTree() {
     ? (() => {
         const scenes = delEp.sceneIds.map((id) => project.scenes[id]).filter(Boolean)
         const shots = scenes.reduce((n, sc) => n + sc!.shotIds.length, 0)
-        const onlyInEp = Object.values(project.assets).filter(
-          (a) => a.appearances.length > 0 && a.appearances.every((ap) => ap.episodeNo === delEp.no),
-        ).length
+        const onlyInEp = Object.values(project.assets).filter((a) => {
+          const apps = usageIndex[a.id]?.appearances ?? []
+          return apps.length > 0 && apps.every((ap) => ap.episodeNo === delEp.no)
+        }).length
         return { scenes: scenes.length, shots, onlyInEp }
       })()
     : null

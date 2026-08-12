@@ -8,8 +8,9 @@ export function TabBar({ scene }: { scene: Scene | undefined }) {
   const assets = useStore((st) => st.project.assets)
 
   const count = (fn: (kind: string) => boolean) => Object.values(assets).filter((a) => fn(a.kind)).length
-  const tabs: { key: Tab; label: string; n: number }[] = [
-    { key: 'character', label: '角色', n: count((k) => k === 'character') },
+  const lookCount = count((k) => k === 'look') // 着装角色计入角色 tab 的副计数
+  const tabs: { key: Tab; label: string; n: number; sub?: number }[] = [
+    { key: 'character', label: '角色', n: count((k) => k === 'character'), sub: lookCount },
     { key: 'costume', label: '服装', n: count((k) => k === 'costume') },
     { key: 'location', label: '场景', n: count((k) => k === 'location') },
     { key: 'prop', label: '道具', n: count((k) => k === 'prop') },
@@ -26,6 +27,7 @@ export function TabBar({ scene }: { scene: Scene | undefined }) {
         >
           {t.label}
           <i className={s.count}>{t.n}</i>
+          {t.sub ? <i className={s.count} title="着装角色">+{t.sub}</i> : null}
         </button>
       ))}
     </div>

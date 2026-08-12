@@ -3,11 +3,12 @@ import { useStore } from '../store/useStore'
 import { EpisodeTree } from '../components/EpisodeTree'
 import { ScriptPanel } from '../components/ScriptPanel'
 import { TabBar } from '../components/TabBar'
-import { AssetGrid } from '../components/AssetGrid'
+import { AssetList } from '../components/AssetList'
 import { Storyboard } from '../components/Storyboard'
 import { ScriptImportDialog } from '../components/ScriptImportDialog'
 import { ResplitSceneDialog } from '../components/ResplitSceneDialog'
 import { ConfirmStageDialog } from '../components/ConfirmStageDialog'
+import { can } from '../services/capability'
 import { sceneDuration } from '../services/timeline'
 import ui from '../styles/ui.module.css'
 import s from './ScriptAnalysis.module.css'
@@ -17,7 +18,8 @@ export function ScriptAnalysis() {
   const project = useStore((st) => st.project)
   const sceneId = useStore((st) => st.selectedSceneId)
   const activeTab = useStore((st) => st.activeTab)
-  const readOnly = !useStore((st) => st.canEditAnalysis())
+  // 分镜编辑不再整页锁死；能否改镜头字段 / 挂载由能力矩阵决定（analysis 阶段恒可编辑）。
+  const readOnly = !useStore((st) => can(st.project, 'editShotFields'))
 
   const [importOpen, setImportOpen] = useState(false)
   const [resplitOpen, setResplitOpen] = useState(false)
@@ -32,6 +34,7 @@ export function ScriptAnalysis() {
     location: Object.values(project.assets).filter((a) => a.kind === 'location').length,
     prop: Object.values(project.assets).filter((a) => a.kind === 'prop').length,
     costume: Object.values(project.assets).filter((a) => a.kind === 'costume').length,
+    look: Object.values(project.assets).filter((a) => a.kind === 'look').length,
   }
 
   return (
@@ -56,17 +59,17 @@ export function ScriptAnalysis() {
 
         <div className={s.paneScroll}>
           {activeTab === 'shot' && scene && <Storyboard scene={scene} readOnly={readOnly} />}
-          {activeTab === 'character' && <AssetGrid kind="character" />}
-          {activeTab === 'costume' && <AssetGrid kind="costume" />}
-          {activeTab === 'location' && <AssetGrid kind="location" />}
-          {activeTab === 'prop' && <AssetGrid kind="prop" />}
+          {activeTab === 'character' && <AssetList kind="character" />}
+          {activeTab === 'costume' && <AssetList kind="costume" />}
+          {activeTab === 'location' && <AssetList kind="location" />}
+          {activeTab === 'prop' && <AssetList kind="prop" />}
         </div>
 
         <div className={s.foot}>
           <div className={s.info}>
             全剧 <b>{project.episodes.length} 集</b> · <b>{Object.keys(project.scenes).length} 场</b> ·{' '}
-            <b>{shotTotal} 镜</b> · 约 {durTotal}s　　{counts.character} 角色 / {counts.costume} 服装 /{' '}
-            {counts.location} 场景 / {counts.prop} 道具
+            <b>{shotTotal} 镜</b> · 约 {durTotal}s　　{counts.character} 角色（{counts.look} 着装角色）/{' '}
+            {counts.costume} 服装 / {counts.location} 场景 / {counts.prop} 道具
           </div>
           <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={() => setConfirmOpen(true)}>
             进入视觉筹备 →

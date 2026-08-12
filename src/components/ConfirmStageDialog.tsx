@@ -1,39 +1,42 @@
 import { useMemo } from 'react'
 import { useStore } from '../store/useStore'
-import { mountIssues } from '../services/completeness'
-import { sceneDuration } from '../services/timeline'
+import { FIRST_BATCH_KINDS } from '../data/types'
+import { KIND_LABEL } from './entity'
 import ui from '../styles/ui.module.css'
 import d from './ScriptImportDialog.module.css'
 import s from './ConfirmStageDialog.module.css'
 
-// ★ 「进入视觉筹备」前置确认：把当前拆解结果摊开给用户看一眼，重量由弹窗承担，按钮保持轻。
+// ★ 「进入资产生产」前置确认 = 出图账单（决策 5a / 6.7）。
+// 只报第一批的数 + 「着装角色不在本批」一句，不列具体的着装组合明细。
 export function ConfirmStageDialog({ onClose }: { onClose: () => void }) {
   const project = useStore((st) => st.project)
   const setStage = useStore((st) => st.setStage)
 
-  const stat = useMemo(() => {
-    const scenes = Object.values(project.scenes)
-    const shot = scenes.reduce((n, sc) => n + sc.shotIds.length, 0)
-    const dur = scenes.reduce((n, sc) => n + sceneDuration(sc, project.shots), 0)
+  const bill = useMemo(() => {
+    const firstKinds = new Set<string>(FIRST_BATCH_KINDS)
     const assets = Object.values(project.assets)
-    // 有「未挂载」动作提示（规则 1）的镜数。
-    const flagged = Object.values(project.shots).filter((sh) =>
-      mountIssues(sh, project.assets).some((iss) => iss.level === 'action'),
-    ).length
+    const base = assets.filter((a) => firstKinds.has(a.kind))
+    const inBatch = base.filter((a) => !a.excluded)
+    const excluded = base.filter((a) => a.excluded)
+    const countIn = (k: string) => inBatch.filter((a) => a.kind === k).length
+    // 已排除按类目汇总，如「1 项道具」。
+    const exclByKind = FIRST_BATCH_KINDS
+      .map((k) => ({ k, n: excluded.filter((a) => a.kind === k).length }))
+      .filter((x) => x.n > 0)
+      .map((x) => `${x.n} 项${KIND_LABEL[x.k]}`)
     return {
-      ep: project.episodes.length,
-      scene: scenes.length,
-      shot,
-      dur,
-      character: assets.filter((a) => a.kind === 'character').length,
-      costume: assets.filter((a) => a.kind === 'costume').length,
-      location: assets.filter((a) => a.kind === 'location').length,
-      prop: assets.filter((a) => a.kind === 'prop').length,
-      flagged,
+      total: inBatch.length,
+      character: countIn('character'),
+      costume: countIn('costume'),
+      location: countIn('location'),
+      prop: countIn('prop'),
+      excludedText: exclByKind.join(' · '),
+      lookCount: assets.filter((a) => a.kind === 'look').length,
     }
   }, [project])
 
   const confirm = () => {
+    // 进入 = setStage('visual')（同时给第一批资产写 deliveredRevision = promptRevision，决策 6.7）。
     setStage('visual')
     onClose()
   }
@@ -41,33 +44,30 @@ export function ConfirmStageDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className={d.overlay} onClick={onClose}>
       <div className={d.dialog} onClick={(e) => e.stopPropagation()}>
-        <div className={d.title}>确认剧本拆解结果</div>
+        <div className={d.title}>即将进入资产生产</div>
 
-        <div className={s.lead}>当前剧本已拆解为：</div>
+        <div className={s.lead}>本批将生成 <b>{bill.total}</b> 项</div>
         <div className={s.stat}>
-          {stat.ep} 集 · {stat.scene} 场 · {stat.shot} 镜 · 约 {stat.dur} 秒
+          角色素模 {bill.character} · 服装 {bill.costume} · 场景 {bill.location} · 道具 {bill.prop}
         </div>
-        <div className={s.stat}>
-          {stat.character} 个角色 · {stat.costume} 套服装 · {stat.location} 个场景 · {stat.prop} 个道具
-        </div>
+        {bill.excludedText && <div className={s.desc}>（已排除 {bill.excludedText}）</div>}
 
-        {stat.flagged > 0 && (
+        {bill.lookCount > 0 && (
           <div className={s.warn}>
-            ⚠ {stat.flagged} 个镜头存在未挂载的资产提示，建议确认后再进入。
+            着装角色 {bill.lookCount} 项不在本批
+            <div className={s.subWarn}>需素模与服装出图并确认后再生成</div>
           </div>
         )}
 
         <div className={s.desc}>
-          确认后将以当前剧本拆解结果进入视觉筹备。剧本分析将切换为只读；如果之后返回修改，受影响的后续生成结果可能需要重新生成。
+          进入后仍可修改提示词与剧本。
+          <br />
+          角色与服装的绑定关系不可更改。
         </div>
 
         <div className={d.actions}>
-          <button className={ui.btn} onClick={onClose}>
-            继续检查
-          </button>
-          <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={confirm}>
-            确认并进入
-          </button>
+          <button className={ui.btn} onClick={onClose}>返回检查</button>
+          <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={confirm}>开始生成</button>
         </div>
       </div>
     </div>

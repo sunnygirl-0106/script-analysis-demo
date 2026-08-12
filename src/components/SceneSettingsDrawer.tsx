@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useStore } from '../store/useStore'
+import { can } from '../services/capability'
 import { sceneDuration } from '../services/timeline'
 import s from './SceneSettingsDrawer.module.css'
 
@@ -16,7 +17,7 @@ export function SceneSettingsDrawer() {
   const scene = useStore((st) => st.project.scenes[sceneId])
   const shots = useStore((st) => st.project.shots)
   const updateTrack = useStore((st) => st.updateSceneTrack)
-  const readOnly = !useStore((st) => st.canEditAnalysis())
+  const readOnly = !useStore((st) => can(st.project, 'editSceneTrack'))
 
   useEffect(() => {
     if (!open) return
