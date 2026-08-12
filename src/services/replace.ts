@@ -1,5 +1,4 @@
-// R8（覆盖分支）剧本导入之「覆盖重来」。纯函数。
-// 规则版本：v1.1（2026-08-11）。断言见 tests/rules.test.ts 的 R8。
+// 剧本导入之「覆盖重来」。纯函数。
 import type { Asset, Episode, Project, Scene, Shot } from '../data/types'
 
 /** 一份完整的新剧本载荷（覆盖导入用；title 仅用于 toast，不写回 project）。 */

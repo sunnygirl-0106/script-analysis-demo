@@ -1,6 +1,4 @@
-// R5 重拆颗粒度。纯函数。
-// 规则版本：v1.1（2026-08-11）。断言见 tests/rules.test.ts 的 R5。
-// v1.1 变更：密度不再是全局开关，成为 resplit 的参数，颗粒度下沉到 Scene.density。
+// 重拆颗粒度。纯函数。密度是 resplit 的参数，颗粒度下沉到 Scene.density。
 import type { Project, Scene, Shot, ShotDensity } from '../data/types'
 import { shotPresets } from '../data/shotPresets'
 
@@ -31,7 +29,7 @@ export function applyDensity(scene: Scene, density: ShotDensity): string[] {
 
 /**
  * 按指定颗粒度重拆某场：替换本场镜、写入 scene.density，其他场一律不动（shotIds 引用保持）。
- * 供 store.resplit / resplitEpisode 复用；纯函数，便于 R5 断言。
+ * 供 store.resplit / resplitEpisode 复用；纯函数。
  */
 export function resplitSceneDensity(project: Project, sceneId: string, density: ShotDensity): Project {
   const scene = project.scenes[sceneId]

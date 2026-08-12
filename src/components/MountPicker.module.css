@@ -35,11 +35,12 @@
 }
 
 .pop {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 41;
+  position: fixed;
+  z-index: 60;
   width: 300px;
+  max-height: 380px;
+  display: flex;
+  flex-direction: column;
   background: #20242a;
   border: 1px solid #3f464f;
   border-radius: 14px;
@@ -47,6 +48,7 @@
   overflow: hidden;
 }
 .searchBox {
+  flex: none;
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
 }
@@ -66,7 +68,8 @@
   border-color: var(--acc);
 }
 .list {
-  max-height: 290px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 6px;
 }
@@ -126,6 +129,7 @@
   text-align: center;
 }
 .foot {
+  flex: none;
   padding: 9px 12px;
   border-top: 1px solid var(--line);
   font-size: 10.5px;

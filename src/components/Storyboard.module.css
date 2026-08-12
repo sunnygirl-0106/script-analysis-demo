@@ -22,14 +22,15 @@
   overflow: auto;
 }
 .grid {
-  min-width: 1240px;
+  min-width: 1120px;
 }
 
-/* 5 列模板：镜号·时长 / 关联资产 / 镜头 / 画面提示词 / 视频提示词 */
+/* 4 列模板：镜头·时长 / 关联资产 / 画面提示词 / 视频提示词
+   画面与视频两列等宽，占据主要横向空间。 */
 .header,
 .row {
   display: grid;
-  grid-template-columns: 112px 250px 232px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 200px 240px minmax(340px, 1fr) minmax(340px, 1fr);
 }
 
 /* ── 表头（吸顶）── */
@@ -49,29 +50,76 @@
   display: flex;
   align-items: center;
 }
-.hCell:nth-child(2),
-.hCell:nth-child(3) {
+.hCell:nth-child(2) {
   padding: 8px 14px;
 }
 
-/* ── 行 ── */
+/* ── 行：固定高度的「摘要行」。全文在下方展开的 ShotDetail 里，不在格内滚动 ── */
 .row {
+  height: 176px;
+  cursor: pointer;
   border-bottom: 1px solid #262b31;
   background: #1e2127;
   cursor: default;
   transition: background 0.24s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-/* 斑马纹：奇偶行中性色不同（对齐参考稿 zebra） */
-.row:nth-child(odd) {
+/* Grid 子项统一允许收缩并裁掉溢出，长文本不得继续撑高行 */
+.row > * {
+  min-height: 0;
+  overflow: hidden;
+}
+/* 斑马纹：展开面板是行的兄弟节点，会打乱 nth-child，所以由 JS 传 alt 显式指定 */
+.rowAlt {
   background: #1b1e23;
 }
 .rowOn {
   background: var(--row-on-bg) !important;
 }
+/* 展开态：左侧一道主色，和下方详情面板连成一块 */
+.rowOpen {
+  background: #1a2126 !important;
+  box-shadow: inset 3px 0 0 var(--acc-line);
+}
 
-/* ① 镜号 · 时长 */
+/* ① 镜头 · 时长 */
 .cNo {
-  padding: 14px 10px 16px 16px;
+  padding: 14px 12px 16px 16px;
+}
+.noLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.caret {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  color: var(--t5);
+  font-size: 11px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.22, 0.61, 0.36, 1), color 0.16s, background 0.16s;
+}
+.caret:hover {
+  color: var(--acc);
+  background: #2e343b;
+}
+.caretOn {
+  transform: rotate(90deg);
+  color: var(--acc);
+}
+
+/* 镜头标题：进入第一列，允许自然换行 */
+.shotTitle {
+  margin-top: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t1);
+  line-height: 1.45;
+  text-wrap: pretty;
 }
 .noPill {
   display: inline-flex;
@@ -160,9 +208,11 @@
   letter-spacing: 0.2px;
 }
 
-/* ② 关联资产 */
+/* ② 关联资产：极端情况下资产超过行高时独立滚动，不裁掉资产 */
 .cAsset {
   padding: 13px 14px 15px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .assetStack {
   display: flex;
@@ -284,54 +334,24 @@
   color: var(--t5);
 }
 
-/* ③ 镜头 */
-.cShot {
-  padding: 13px 14px 15px;
-}
-.shotTitle {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--t1);
-  line-height: 1.5;
-  text-wrap: pretty;
-}
-.tagRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 9px;
-}
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2.5px 9px;
-  border-radius: var(--rpill);
-  background: #252a30;
-  border: 1px solid #383f47;
-  font-size: 10.5px;
-  color: #dce0e5;
-  white-space: nowrap;
-}
-.tagKey {
-  color: var(--t4);
-}
-.audioLine {
-  font-size: 10.5px;
-  color: #8e96a1;
-  margin-top: 8px;
-  text-wrap: pretty;
-}
-
-/* ④ 画面提示词 / ⑤ 视频提示词：同结构，等高 */
+/* ③ 画面提示词 / ④ 视频提示词：行内只给摘要
+   底部渐隐用 mask 而不是叠一层写死颜色的 ::after —— 行底色有普通/斑马/悬停/展开
+   四种，任何写死的渐变色都会在其中三种上露出色带。mask 是把像素本身变透明，
+   底色是什么都对。 */
 .cPrompt {
-  padding: 13px 16px 15px;
+  padding: 13px 16px 0;
+}
+.promptClamp {
+  height: 100%;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent 100%);
 }
 
 /* 收尾行 */
 .tail {
   display: grid;
-  grid-template-columns: 112px 1fr;
+  grid-template-columns: 200px 1fr;
 }
 .tailNo {
   padding: 12px 10px 14px 16px;

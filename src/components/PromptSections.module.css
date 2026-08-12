@@ -1,119 +1,45 @@
-.in {
-  padding: 2px 16px 18px;
-}
-.dgrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-@media (max-width: 1180px) {
-  .dgrid {
-    grid-template-columns: 1fr;
-  }
-}
-.dbox {
-  border: 1px solid var(--line2);
-  border-radius: var(--rlg);
-  background: var(--bg1);
-  overflow: hidden;
-}
-.dbox .h {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 13px;
-  border-bottom: 1px solid var(--line2);
-}
-.dbox .h b {
-  font-size: 11.5px;
-  color: var(--t2);
-  font-weight: 600;
-}
-.dbox .h em {
-  font-style: normal;
-  font-size: 10px;
-  color: var(--t4);
-  margin-left: auto;
-}
-.fl {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 11px 13px 0;
-}
-.c2 {
-  padding: 11px 13px 13px;
-  font-size: 12px;
-  line-height: 1.95;
-  color: var(--t2);
-}
-/* 提示词整段渲染（画面列）：一大段话 + 淡字禁止行 */
-.flowWrap {
+/* 提示词完整分段渲染：内容全部展示，不折叠、不裁切 */
+.full {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
 }
-.flowBody {
+
+/* 视频提示词开头的时间码段（无标签）：轻量、等宽数字、保留换行 */
+.tc {
+  font-size: 11px;
+  line-height: 1.75;
+  color: #8a929d;
+  white-space: pre-line;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+  padding-bottom: 2px;
+  border-bottom: 1px dashed #2c313a;
+  margin-bottom: 1px;
+}
+
+/* 每个段落：标签稍浅稍加粗，正文自然换行连续阅读 */
+.seg {
+  margin: 0;
   font-size: 12px;
   line-height: 1.85;
   color: #dce0e5;
   text-wrap: pretty;
 }
-.flowForbid {
-  font-size: 11px;
-  line-height: 1.7;
-  color: #7c848f;
-  text-wrap: pretty;
+.segTag {
+  color: #9aa2ad;
+  font-weight: 600;
+  margin-right: 3px;
+}
+.segBody {
+  color: #dce0e5;
 }
 
-/* 提示词分段渲染 */
-.psWrap {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* 【禁止】：完整显示，仅用较淡文字弱化，不折叠不隐藏 */
+.segForbid .segTag {
+  color: #79818c;
+  font-weight: 600;
 }
-.psRow {
-  font-size: 12px;
-  line-height: 1.85;
-}
-.psTag {
-  font-size: 10.5px;
-  color: var(--t4);
-  margin-right: 5px;
-}
-.psBody {
-  color: var(--t2);
-}
-.psForbid {
-  font-size: 10.5px;
-  color: var(--t4);
-  background: transparent;
-  border: 1px solid var(--line2);
-  border-radius: var(--rsm);
-  padding: 2px 8px;
-  cursor: pointer;
-  transition: 0.14s;
-}
-.psForbid:hover {
-  border-color: var(--edge);
-  color: var(--t2);
-}
-.src {
-  margin-top: 14px;
-  border: 1px solid var(--line2);
-  border-left: 2px solid var(--acc-line);
-  border-radius: 0 var(--rlg) var(--rlg) 0;
-  background: var(--bg1);
-  padding: 11px 14px;
-}
-.src .t {
-  font-size: 10.5px;
-  color: var(--t4);
-  letter-spacing: 0.5px;
-  margin-bottom: 5px;
-}
-.src .q {
-  font-size: 12px;
-  line-height: 1.9;
-  color: var(--t2);
+.segForbid .segBody {
+  color: #868e99;
 }

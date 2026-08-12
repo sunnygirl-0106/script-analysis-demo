@@ -1,55 +1,30 @@
-import { useState } from 'react'
 import { parsePromptSections } from '../services/promptFormat'
 import s from './PromptSections.module.css'
 
-// 分段渲染一条提示词。
-// flow=true：合并成一整段话（对齐参考稿画面列），【禁止】另起一行淡字；
-// flow=false：逐段渲染，段标签灰字；【禁止】默认折叠。
-export function PromptSections({
-  text,
-  flow,
-  dropTags,
-}: {
-  text: string
-  flow?: boolean
-  dropTags?: string[]
-}) {
-  const [showForbid, setShowForbid] = useState(false)
+// 完整分段渲染一条提示词：内容全部展示，不过滤、不裁切、不折叠。
+// - 段标签（【主体】【表演】【台词】…）稍浅稍加粗，正文自然换行；
+// - 视频提示词开头的时间码段（无标签）作为轻量时间码文本，保留换行；
+// - 【禁止】用较淡文字完整显示，不折叠不隐藏。
+export function PromptSections({ text }: { text: string }) {
   const sections = parsePromptSections(text)
 
-  if (flow) {
-    const forbid = sections.find((sec) => sec.tag === '禁止')
-    const drop = new Set(['禁止', ...(dropTags ?? [])])
-    const body = sections
-      .filter((sec) => !drop.has(sec.tag))
-      .map((sec) => sec.body)
-      .join('')
-    return (
-      <div className={s.flowWrap}>
-        <div className={s.flowBody}>{body}</div>
-        {forbid && <div className={s.flowForbid}>禁止 · {forbid.body}</div>}
-      </div>
-    )
-  }
-
   return (
-    <div className={s.psWrap}>
+    <div className={s.full}>
       {sections.map((sec, i) => {
-        if (sec.tag === '禁止') {
+        if (!sec.tag) {
+          // 引导段：视频提示词的时间码行，保留换行的轻量文本。
           return (
-            <div className={s.psRow} key={i}>
-              <button className={s.psForbid} onClick={() => setShowForbid((v) => !v)}>
-                {showForbid ? '▾' : '▸'} 【禁止】
-              </button>
-              {showForbid && <div className={s.psBody}>{sec.body}</div>}
+            <div className={s.tc} key={i}>
+              {sec.body}
             </div>
           )
         }
+        const forbid = sec.tag === '禁止'
         return (
-          <div className={s.psRow} key={i}>
-            {sec.tag && <span className={s.psTag}>【{sec.tag}】</span>}
-            <span className={s.psBody}>{sec.body}</span>
-          </div>
+          <p className={[s.seg, forbid ? s.segForbid : ''].join(' ')} key={i}>
+            <span className={s.segTag}>【{sec.tag}】</span>
+            <span className={s.segBody}>{sec.body}</span>
+          </p>
         )
       })}
     </div>

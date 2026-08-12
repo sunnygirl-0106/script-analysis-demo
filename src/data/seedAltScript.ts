@@ -25,35 +25,35 @@ const altAssets: Asset[] = [
   },
   {
     id: X.courier, kind: 'character', role: 'extra',
-    name: '快递员',
-    description: '男，约 30 岁。上门取退货件，敲门催得急，全程只闻其声。',
+    name: '快递员', aliases: ['快递'],
+    description: '男，约 30 岁。上门取退货件，敲门催得急。',
     imagePrompt: '一张高精度、干净极简的角色基础视觉资产设定板。纯白背景，横版构图，三视图（正面 / 左侧 / 背面全身站姿）。30 岁上下东亚男性，中等身材略壮实，短发，面相憨直。素色快递工装短袖配工装裤，腰挂扫描枪，胸前挂无字工牌，无任何品牌标识。中性棚拍光，无遮挡，完整人物不裁切。',
     appearances: [{ episodeNo: 1, sceneNo: 2 }],
   },
   {
     id: X.hoodie, kind: 'costume', characterId: X.suke,
-    name: '宽松连帽卫衣',
+    name: '宽松连帽卫衣', aliases: ['连帽卫衣', '卫衣'],
     description: '超级宽松的米灰连帽卫衣，居家慵懒感。',
     imagePrompt: '纯白背景，米灰色超宽松连帽卫衣平铺 / 挂拍，帽子自然垂落，棉质柔软有褶皱，正背两面，无人物。',
     appearances: [{ episodeNo: 1, sceneNo: 1 }, { episodeNo: 1, sceneNo: 2 }],
   },
   {
     id: X.living, kind: 'location', timeOfDay: '日 / 内',
-    name: '客厅',
+    name: '客厅', aliases: ['房间'],
     description: '米色布艺沙发居中的客厅，窗帘紧闭偏冷调。',
     imagePrompt: '现代都市公寓客厅，横版空镜。米色布艺三人沙发，散落抱枕，冷白 4000K，写实电影感，35mm 广角，无人物。',
     appearances: [{ episodeNo: 1, sceneNo: 1 }],
   },
   {
     id: X.entry, kind: 'location', timeOfDay: '日 / 内',
-    name: '玄关',
+    name: '玄关', aliases: ['门口'],
     description: '客厅通往大门的玄关，鞋柜、猫眼、门锁，光线偏暗。',
     imagePrompt: '公寓入户玄关，横版空镜。木质鞋柜、防盗门、门上猫眼，暖白顶灯偏暗，写实电影感，35mm，无人物。',
     appearances: [{ episodeNo: 1, sceneNo: 2 }],
   },
   {
     id: X.parcel, kind: 'prop',
-    name: '退货包裹',
+    name: '退货包裹', aliases: ['包裹', '退货件'],
     description: '浅棕色瓦楞纸箱，缠透明胶带，贴一张白色面单，被苏可从门缝塞出去。',
     imagePrompt: '纯白背景产品图，浅棕色瓦楞纸箱，缠透明胶带，正面贴一张白色空白面单，45° 俯视，写实，无品牌标识。',
     appearances: [{ episodeNo: 1, sceneNo: 2 }],
@@ -100,12 +100,12 @@ const altS2Seeds: AltShotSeed[] = [
   {
     promptKey: 'e2s2_sh1', title: '快递员敲门 · 门外催促', duration: 4,
     shotSize: '中景', lens: '35mm f/2.8', lighting: '玄关暖白偏暗', cameraMove: '定镜', dialogue: '快递员（门外喊声）', sfx: '急促的敲门声',
-    mounts: mm(X.suke, X.hoodie, X.entry), sourceQuote: '（退货风波）快递员：「取件的！退货件在家吗？」',
+    mounts: mm(X.suke, X.courier, X.hoodie, X.entry), sourceQuote: '（退货风波）快递员：「取件的！退货件在家吗？」',
   },
   {
     promptKey: 'e2s2_sh2', title: '递出包裹 · 飞速关门', duration: 4,
     shotSize: '全景', lens: '24mm f/4.0', lighting: '玄关暖白偏暗', cameraMove: '手持', dialogue: '无', sfx: '门轴与关门声',
-    mounts: mm(X.suke, X.hoodie, X.entry, X.parcel), sourceQuote: '（退货风波）她从门缝塞出包裹，飞速关门。',
+    mounts: mm(X.suke, X.courier, X.hoodie, X.entry, X.parcel), sourceQuote: '（退货风波）她从门缝塞出包裹，飞速关门。',
   },
 ]
 

@@ -18,15 +18,17 @@ interface Props {
   startAt: number
   endAt: number
   active: boolean
+  alt: boolean
+  open: boolean
   readOnly: boolean
   onHover: (id: string | null) => void
+  onToggle: (id: string) => void
 }
 
-export function ShotRow({ shot, startAt, endAt, active, readOnly, onHover }: Props) {
+export function ShotRow({ shot, startAt, endAt, active, alt, open, readOnly, onHover, onToggle }: Props) {
   const assets = useStore((st) => st.project.assets)
-  const removeMount = useStore((st) => st.removeMount)
   const addMount = useStore((st) => st.addMount)
-  const showToast = useStore((st) => st.showToast)
+  const removeMount = useStore((st) => st.removeMount)
   const setDuration = useStore((st) => st.setShotDuration)
 
   const nameOf = (m: MountRef) => assets[m.assetId]?.name ?? '（已删除）'
@@ -38,6 +40,16 @@ export function ShotRow({ shot, startAt, endAt, active, readOnly, onHover }: Pro
   const remove = (assetId: string) => (e: MouseEvent) => {
     e.stopPropagation()
     if (!readOnly) removeMount(shot.id, assetId)
+  }
+  const takeIssue = (assetId: string, kind: AssetKind) => (e: MouseEvent) => {
+    e.stopPropagation()
+    if (!readOnly) addMount(shot.id, { kind, assetId })
+  }
+
+  // 整行可点开详情，但落在按钮 / 输入框上的点击交给它们自己处理。
+  const onRowClick = (e: MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('button, input, a')) return
+    onToggle(shot.id)
   }
 
   // 关联资产分组：角色带服装小字，服装（游离）/场景/道具走标签行。
@@ -69,24 +81,33 @@ export function ShotRow({ shot, startAt, endAt, active, readOnly, onHover }: Pro
       ⚠ 较长
     </div>
   )
-  const takeIssue = (assetId: string, kind: AssetKind, name: string) => (e: MouseEvent) => {
-    e.stopPropagation()
-    if (readOnly) return
-    addMount(shot.id, { kind, assetId })
-    showToast(`已挂载「${name}」`)
-  }
 
   return (
     <div
-      className={[s.row, active ? s.rowOn : ''].join(' ')}
+      className={[s.row, alt ? s.rowAlt : '', active ? s.rowOn : '', open ? s.rowOpen : ''].join(' ')}
       onMouseEnter={() => onHover(shot.id)}
       onMouseLeave={() => onHover(null)}
+      onClick={onRowClick}
     >
-      {/* ① 镜号 · 时长 */}
+      {/* ① 镜头 · 时长（镜号胶囊 + 标题 + 时长 + 时间范围 + 展开箭头） */}
       <div className={s.cNo}>
-        <div className={[s.noPill, active ? s.noPillOn : ''].join(' ')}>
-          {String(shot.no).padStart(2, '0')}
+        <div className={s.noLine}>
+          <div className={[s.noPill, active || open ? s.noPillOn : ''].join(' ')}>
+            {String(shot.no).padStart(2, '0')}
+          </div>
+          <button
+            className={[s.caret, open ? s.caretOn : ''].join(' ')}
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggle(shot.id)
+            }}
+            title={open ? '收起提示词全文' : '展开提示词全文'}
+            aria-expanded={open}
+          >
+            ▸
+          </button>
         </div>
+        <div className={s.shotTitle}>{shot.title}</div>
         {readOnly ? (
           <>
             <div className={s.durStatic}>{shot.duration}s</div>
@@ -160,7 +181,7 @@ export function ShotRow({ shot, startAt, endAt, active, readOnly, onHover }: Pro
                   key={`a${i}`}
                   className={s.issueAction}
                   disabled={readOnly}
-                  onClick={takeIssue(iss.assetId, iss.kind, assets[iss.assetId]?.name ?? '')}
+                  onClick={takeIssue(iss.assetId, iss.kind)}
                   title="点击直接挂载"
                 >
                   {iss.text}
@@ -175,40 +196,16 @@ export function ShotRow({ shot, startAt, endAt, active, readOnly, onHover }: Pro
         </div>
       </div>
 
-      {/* ③ 镜头：景别 / 焦段 / 光影 / 运镜 + 对白 · 音效 */}
-      <div className={s.cShot}>
-        <div className={s.shotTitle}>{shot.title}</div>
-        <div className={s.tagRow}>
-          <span className={s.tag}>
-            <span className={s.tagKey}>景别</span>
-            {shot.shotSize}
-          </span>
-          <span className={s.tag}>
-            <span className={s.tagKey}>焦段</span>
-            {shot.lens}
-          </span>
-          <span className={s.tag}>
-            <span className={s.tagKey}>光影</span>
-            {shot.lighting}
-          </span>
-          <span className={s.tag}>
-            <span className={s.tagKey}>运镜</span>
-            {shot.cameraMove}
-          </span>
-        </div>
-        <div className={s.audioLine}>
-          对白 · {shot.dialogue}　音效 · {shot.sfx}
+      {/* ③ 画面提示词 / ④ 视频提示词：行内只给摘要，底部渐隐，全文在展开面板里 */}
+      <div className={s.cPrompt}>
+        <div className={s.promptClamp}>
+          <PromptSections text={shot.imagePrompt} />
         </div>
       </div>
-
-      {/* ④ 画面提示词（整段） */}
       <div className={s.cPrompt}>
-        <PromptSections text={shot.imagePrompt} flow />
-      </div>
-
-      {/* ⑤ 视频提示词（整段，运镜/对白/音效已在镜头列，正文只留旁白） */}
-      <div className={s.cPrompt}>
-        <PromptSections text={shot.videoPrompt} flow dropTags={['运镜', '对白', '音效']} />
+        <div className={s.promptClamp}>
+          <PromptSections text={shot.videoPrompt} />
+        </div>
       </div>
     </div>
   )

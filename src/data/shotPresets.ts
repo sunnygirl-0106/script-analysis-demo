@@ -24,7 +24,7 @@ const compactS1Seeds: PresetSeed[] = [
   { title: '门铃惊起', duration: 3, shotSize: '全景', lens: '24mm f/4.0', lighting: '自然光偏冷', imagePrompt: '全景。门铃响，苏可原地弹起。', cameraMove: '手持', dialogue: '无', sfx: '「叮咚——」', videoPrompt: '{0-1s} 静。{1-3s} 门铃响，弹起。', mounts: m(A.suke, A.hoodie, A.living), sourceQuote: '「叮咚——」清脆的门铃声，在安静的房间里像防空警报。' },
   { title: '扑向毛绒熊', duration: 3, shotSize: '全景', lens: '24mm f/4.0', lighting: '自然光偏冷', imagePrompt: '全景。苏可敏捷扑向毛绒熊躲藏。', cameraMove: '快速推近', dialogue: '无', sfx: '窸窣声', videoPrompt: '{0-3s} 扑向毛绒熊。', mounts: m(A.suke, A.hoodie, A.living, A.bear), sourceQuote: '动作敏捷地钻到了大毛绒熊后面躲着。' },
   { title: '熊后露眼屏息', duration: 3, shotSize: '特写', lens: '85mm f/2.0', lighting: '自然光偏冷', imagePrompt: '特写。毛绒熊后露出苏可警惕的双眼。', cameraMove: '定镜', dialogue: '无', sfx: '屏息', videoPrompt: '{0-3s} 熊后露眼，屏息。', mounts: m(A.suke, A.hoodie, A.living, A.bear), sourceQuote: '钻到了大毛绒熊后面躲着。' },
-  { title: '外卖员门外喊话', duration: 4, shotSize: '中景', lens: '35mm f/2.8', lighting: '自然光偏冷', imagePrompt: '中景。紧闭的门，画外传来喊话。', cameraMove: '定镜', dialogue: '外卖员（门外喊声）', sfx: '门外喊话声', videoPrompt: '{0-4s} 定镜对门。画外音：「尾号 0617 的外卖！加辣加臭加炸蛋的那份！」', mounts: m(A.suke, A.hoodie, A.living), sourceQuote: '门外（外卖员喊声）：「尾号 0617 的外卖！加辣加臭加炸蛋的那份！没人在家我拿走退单了啊？」' },
+  { title: '外卖员门外喊话', duration: 4, shotSize: '中景', lens: '35mm f/2.8', lighting: '自然光偏冷', imagePrompt: '中景。紧闭的门，画外传来喊话。', cameraMove: '定镜', dialogue: '外卖员（门外喊声）', sfx: '门外喊话声', videoPrompt: '{0-4s} 定镜对门。画外音：「尾号 0617 的外卖！加辣加臭加炸蛋的那份！」', mounts: m(A.suke, A.delivery, A.hoodie, A.rider, A.living), sourceQuote: '门外（外卖员喊声）：「尾号 0617 的外卖！加辣加臭加炸蛋的那份！没人在家我拿走退单了啊？」' },
 ]
 
 // ── 舒缓：5 镜 · 32s，长镜头为主，情绪更绵 ──
@@ -33,7 +33,7 @@ const looseS1Seeds: PresetSeed[] = [
   { title: '探头确认安全·瘫倒', duration: 7, shotSize: '近景', lens: '50mm f/2.8', lighting: '柔和自然光', imagePrompt: '近景长镜。震动停止，苏可探头张望确认安全，如释重负地瘫倒。', cameraMove: '慢推', dialogue: '无', sfx: '由震动转寂静 + 长舒叹气', videoPrompt: '{0-4s} 探头确认安全。{4-7s} 瘫倒沙发想闭眼。', mounts: m(A.suke, A.hoodie, A.living, A.pillow), sourceQuote: '苏可像土拨鼠一样从抱枕里探出头，确认安全。她如释重负地瘫倒。' },
   { title: '门铃惊魂·原地弹起', duration: 6, shotSize: '全景', lens: '24mm f/4.0', lighting: '自然光偏冷', imagePrompt: '全景。安静中门铃骤响，苏可原地弹起，如临大敌。', cameraMove: '手持', dialogue: '无', sfx: '「叮咚——」防空警报般', videoPrompt: '{0-2s} 安静。{2-3s} 门铃骤响。{3-6s} 苏可弹起。', mounts: m(A.suke, A.hoodie, A.living), sourceQuote: '「叮咚——」清脆的门铃声，在安静的房间里像防空警报。' },
   { title: '躲进毛绒熊后', duration: 6, shotSize: '全景', lens: '24mm f/4.0', lighting: '自然光偏冷', imagePrompt: '全景转特写。苏可敏捷钻到毛绒熊后，只露警惕双眼。', cameraMove: '快速推近', dialogue: '无', sfx: '窸窣躲藏声', videoPrompt: '{0-3s} 扑向毛绒熊。{3-6s} 推近熊后露出的半张脸，屏息。', mounts: m(A.suke, A.hoodie, A.living, A.bear), sourceQuote: '动作敏捷地钻到了大毛绒熊后面躲着。' },
-  { title: '外卖员门外喊话', duration: 6, shotSize: '中景', lens: '35mm f/2.8', lighting: '自然光偏冷', imagePrompt: '中景。紧闭的门与门后屏息的苏可，画外喊话。', cameraMove: '定镜', dialogue: '外卖员（门外喊声）', sfx: '门外喊话声', videoPrompt: '{0-6s} 定镜对门。画外音：「尾号 0617 的外卖！加辣加臭加炸蛋的那份！没人在家我拿走退单了啊？」', mounts: m(A.suke, A.hoodie, A.living), sourceQuote: '门外（外卖员喊声）：「尾号 0617 的外卖！加辣加臭加炸蛋的那份！没人在家我拿走退单了啊？」' },
+  { title: '外卖员门外喊话', duration: 6, shotSize: '中景', lens: '35mm f/2.8', lighting: '自然光偏冷', imagePrompt: '中景。紧闭的门与门后屏息的苏可，画外喊话。', cameraMove: '定镜', dialogue: '外卖员（门外喊声）', sfx: '门外喊话声', videoPrompt: '{0-6s} 定镜对门。画外音：「尾号 0617 的外卖！加辣加臭加炸蛋的那份！没人在家我拿走退单了啊？」', mounts: m(A.suke, A.delivery, A.hoodie, A.rider, A.living), sourceQuote: '门外（外卖员喊声）：「尾号 0617 的外卖！加辣加臭加炸蛋的那份！没人在家我拿走退单了啊？」' },
 ]
 
 function withIds(sceneId: string, prefix: string, seeds: PresetSeed[]): Shot[] {

@@ -98,7 +98,8 @@
   line-height: 1.75;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  /* 小传已扩写到 142–212 字，3 行只露得出三分之一 */
+  -webkit-line-clamp: 6;
   overflow: hidden;
 }
 .hr {

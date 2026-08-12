@@ -1,0 +1,89 @@
+/* 镜头展开面板：占满分镜表整幅宽度，把提示词从 340px 的列里解放出来。
+   1120px 全宽下两栏各约 530px，600 字约 13 行，一屏读完，不需要格内滚动。 */
+.wrap {
+  border-bottom: 1px solid #262b31;
+  background: #171a1f;
+  box-shadow: inset 0 1px 0 rgba(159, 216, 228, 0.1);
+  padding: 16px 18px 20px;
+}
+
+/* 镜头参数：删掉「镜头」列之后，这六个字段的唯一出口 */
+.params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.param {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--rpill);
+  background: #232830;
+  border: 1px solid #363d46;
+  font-size: 10.5px;
+  color: #dce0e5;
+  white-space: nowrap;
+}
+.param i {
+  font-style: normal;
+  color: var(--t5);
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1180px) {
+  .cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.box {
+  border: 1px solid #2a3037;
+  border-radius: var(--rlg);
+  background: #1b1f25;
+  overflow: hidden;
+}
+.h {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 13px;
+  border-bottom: 1px solid #2a3037;
+  background: #1e232a;
+}
+.h b {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--t2);
+}
+.h em {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--t5);
+  font-variant-numeric: tabular-nums;
+}
+.copy {
+  margin-left: auto;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: var(--rpill);
+  border: 1px solid #3a424c;
+  background: transparent;
+  color: var(--t4);
+  font-size: 10.5px;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.copy:hover {
+  border-color: var(--acc-line);
+  color: var(--acc);
+}
+.body {
+  padding: 12px 14px 14px;
+}

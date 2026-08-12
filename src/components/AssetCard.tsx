@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore'
 import type { Asset, Character, Costume } from '../data/types'
 import { chipClass } from './entity'
 import { AppearanceSummary } from './AppearanceSummary'
+import { PromptSections } from './PromptSections'
 import ui from '../styles/ui.module.css'
 import s from './AssetGrid.module.css'
 
@@ -55,7 +56,11 @@ export function AssetCard({ asset }: { asset: Asset }) {
         <div className={s.fold} onClick={() => setShowPrompt((v) => !v)}>
           {showPrompt ? '▾' : '▸'} 生图提示词
         </div>
-        {showPrompt && <div className={s.foldc}>{asset.imagePrompt}</div>}
+        {showPrompt && (
+          <div className={s.foldc}>
+            <PromptSections text={asset.imagePrompt} />
+          </div>
+        )}
       </div>
     </div>
   )

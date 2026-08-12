@@ -7,6 +7,26 @@
 //   · 没有服装但也没挂角色 → 正常
 // 「一个镜头没挂满四类，不等于它有问题」——这是这条规则存在的全部理由。
 import type { Asset, AssetKind, Costume, Shot } from '../data/types'
+import { parsePromptSections } from './promptFormat'
+
+/**
+ * 规则 1 只在「描述画面里有什么」的段里找人名。
+ *
+ * 提示词扩写成完全版之后，一条 image 有八段、一条 video 有六段，其中好几段提到人名
+ * 恰恰是在说「这个人不要出现」——【禁止】里的「外卖员出现在画面中…」是负向提示词，
+ * 【节奏】里的「为下一镜妈妈接通做铺垫」是剪辑说明。把这些当成「点名了却没挂」是把
+ * 逻辑读反了：实测 5 条误报里有 4 条来自【禁止】、1 条来自【节奏】。
+ *
+ * 所以这里用白名单而不是黑名单——将来新增段标签时，默认不参与判定，宁可漏报不误报。
+ */
+const SCANNED_TAGS = ['主体', '次主体', '服装', '环境', '表演']
+function visibleText(text: string): string {
+  return parsePromptSections(text)
+    // tag 为空的是视频提示词开头的时间码段，描述的正是画面里发生了什么，要扫。
+    .filter((sec) => !sec.tag || SCANNED_TAGS.some((t) => sec.tag.startsWith(t)))
+    .map((sec) => sec.body)
+    .join(' ')
+}
 
 export type IssueLevel = 'action' | 'hint'
 
@@ -44,7 +64,12 @@ export function mountIssues(shot: Shot, assets: Record<string, Asset>): MountIss
   // 只看角色 / 道具：这两类才会在原文里被点名却漏挂。场景是结构性的（一场一景、且
   // 「客厅 / 玄关 / 餐桌区」这类子空间会同时出现在提示词里），它的缺失由规则 3 单独判定，
   // 不能靠文本点名——否则餐桌区的镜头会被误报「未挂载：客厅」，正是本轮要消灭的噪声。
-  const text = [shot.title, shot.imagePrompt, shot.videoPrompt, shot.sourceQuote].join(' ')
+  const text = [
+    shot.title,
+    visibleText(shot.imagePrompt),
+    visibleText(shot.videoPrompt),
+    shot.sourceQuote,
+  ].join(' ')
   const nameable = list.filter((a) => a.kind === 'character' || a.kind === 'prop')
   const mentioned = mentionedAssetIds(text, nameable)
   for (const id of mentioned) {

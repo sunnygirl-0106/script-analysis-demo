@@ -31,17 +31,31 @@ a {
   color: inherit;
 }
 
+/* 细窄滚动条：平时隐藏，鼠标移入可滚动区域时才浮现（横竖同理） */
 ::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+  transition: background 0.15s ease;
+}
+:hover::-webkit-scrollbar-thumb {
   background: var(--edge);
-  border-radius: var(--rsm);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--t4);
 }
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+/* Firefox：同样做「悬停才浮现」，与上面 webkit 的行为保持一致
+   （之前 FF 这里是常驻可见的，两个引擎看起来不一样） */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: var(--edge) transparent;
 }

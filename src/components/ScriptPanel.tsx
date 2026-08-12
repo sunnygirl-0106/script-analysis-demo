@@ -10,19 +10,21 @@ const kindClass: Record<AssetKind, string> = {
   prop: s.prop!,
 }
 
-// 用剧本里真实出现的资产名把原文里的实体高亮（长名优先，避免「苏可」吃掉「苏可可」）。
+// 用每个资产的「编目名 + 剧本别名」把原文里的实体高亮。
+// 编目名（智能手机）常与原文口语（手机）对不上，所以两者都参与匹配。
+// 长词优先，避免短词吃掉长词（「外卖」不抢「外卖员」，「苏可」不抢「苏可可」）。
 function highlight(text: string, assets: Asset[]): ReactNode {
-  const names = assets
-    .map((a) => ({ name: a.name, kind: a.kind }))
-    .filter((n) => n.name.length >= 2)
-    .sort((a, b) => b.name.length - a.name.length)
-  if (names.length === 0) return text
+  const terms = assets
+    .flatMap((a) => [a.name, ...(a.aliases ?? [])].map((term) => ({ term, kind: a.kind })))
+    .filter((t) => t.term.length >= 2)
+    .sort((a, b) => b.term.length - a.term.length)
+  if (terms.length === 0) return text
 
-  const escaped = names.map((n) => n.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const escaped = terms.map((t) => t.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   const re = new RegExp(`(${escaped.join('|')})`, 'g')
   const parts = text.split(re)
   return parts.map((part, i) => {
-    const hit = names.find((n) => n.name === part)
+    const hit = terms.find((t) => t.term === part)
     if (hit) {
       return (
         <span key={i} className={[s.e, kindClass[hit.kind]].join(' ')}>

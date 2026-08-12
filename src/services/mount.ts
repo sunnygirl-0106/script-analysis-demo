@@ -1,6 +1,4 @@
-// R4 挂载默认值，不是禁令。纯函数。
-// 规则版本：v1.1（2026-08-11）。断言见 tests/rules.test.ts 的 R4。
-// v1.1 变更：素模不是可挂载对象，挂角色恒定带出一张定妆图，互斥提示删除。
+// 挂载默认值，不是禁令。纯函数。挂角色恒定带出一张定妆图。
 import type { Asset, Costume, MountRef, Shot } from '../data/types'
 
 function costumesOf(characterId: string, assets: Record<string, Asset>): Costume[] {

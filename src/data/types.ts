@@ -80,7 +80,8 @@ export interface Appearance {
 interface AssetBase {
   id: string
   kind: AssetKind
-  name: string
+  name: string               // 编目名（展示用），如「智能手机」
+  aliases?: string[]         // 剧本原文里的真实叫法，如「手机」，供原文高亮匹配。name 本身自动参与匹配，不必重复列。
   description: string        // 小传 / 外观描述
   imagePrompt: string        // 生图提示词
   appearances: Appearance[]  // 出场记录，由剧本决定，只读

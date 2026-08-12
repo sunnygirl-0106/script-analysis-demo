@@ -1,6 +1,4 @@
-// R6 阶段锁与重拆。纯函数。
-// 规则版本：v1.1（2026-08-11）。断言见 tests/rules.test.ts 的 R6。
-// v1.1 变更：新增 deleteEpisode（删集 + 只清「仅在该集出现」的资产，跨集资产保留）。
+// 阶段锁与重拆。纯函数。deleteEpisode：删集 + 只清「仅在该集出现」的资产，跨集资产保留。
 import type { Asset, Project, Shot, Stage } from '../data/types'
 import { initialSceneShots } from '../data/seed'
 
@@ -49,7 +47,7 @@ export function resplitScene(project: Project, sceneId: string): Project {
 /**
  * 删除一集：连同它的场、镜一并移除。
  * 资产清理：只删「appearances 全部落在该集」的资产；跨集出现的一律保留
- *（R3 去重思路的反向应用）。其他集的 episodes / scenes / shots 保持原引用。
+ *（去重思路的反向应用）。其他集的 episodes / scenes / shots 保持原引用。
  * 不在此处做「至少保留一集」的守卫——那是调用方（store）的职责。
  */
 export function deleteEpisode(project: Project, episodeId: string): Project {
