@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store/useStore'
-import type { AssetKind, ShotDensity } from '../data/types'
+import type { MountKind, ShotDensity } from '../data/types'
 import { densityShots, hasDensityPresets } from '../services/density'
 import { isLongShot } from '../services/duration'
 import { sceneDuration } from '../services/timeline'
@@ -50,11 +50,10 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
     return densityShots(sceneId, dn).filter((sh) => isLongShot(sh.duration)).length
   }, [choice, customN, hasPresets, sceneId])
 
-  // 影响说明里的资产数：本场当前镜里挂过的资产，按类去重。
+  // 影响说明里的资产数：本场当前镜里挂过的资产（着装角色 / 场景 / 道具），按类去重。
   const assetCounts = useMemo(() => {
-    const buckets: Record<AssetKind, Set<string>> = {
-      character: new Set(),
-      costume: new Set(),
+    const buckets: Record<MountKind, Set<string>> = {
+      look: new Set(),
       location: new Set(),
       prop: new Set(),
     }
@@ -64,8 +63,7 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
       for (const m of sh.mounts) buckets[m.kind].add(m.assetId)
     }
     return {
-      character: buckets.character.size,
-      costume: buckets.costume.size,
+      look: buckets.look.size,
       location: buckets.location.size,
       prop: buckets.prop.size,
     }
@@ -157,8 +155,8 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
 
         <div className={s.impact}>
           <div className={s.impactTitle}>影响说明</div>
-          重拆后，本场的镜头及其画面 / 视频提示词将重新生成；已识别的 {assetCounts.character} 角色 /{' '}
-          {assetCounts.costume} 服装 / {assetCounts.location} 场景 / {assetCounts.prop} 道具继续保留
+          重拆后，本场的镜头及其画面 / 视频提示词将重新生成；已识别的 {assetCounts.look} 着装角色 /{' '}
+          {assetCounts.location} 场景 / {assetCounts.prop} 道具继续保留
           {otherScenes > 0 ? `，其他 ${otherScenes} 场不受影响` : ''}。你对本场分镜的手动修改将被替换。
         </div>
 

@@ -20,7 +20,7 @@ export function EpisodeTree() {
   const selectedSceneId = useStore((st) => st.selectedSceneId)
   const selectScene = useStore((st) => st.selectScene)
   const deleteEpisode = useStore((st) => st.deleteEpisode)
-  const readOnly = !useStore((st) => st.canEditAnalysis())
+  const readOnly = false // 剧本编辑改为字段级权限，脚本操作恒可用（进入视觉筹备后也允许改）
 
   const [menuEp, setMenuEp] = useState<string | null>(null)
   const [dialog, setDialog] = useState<Dialog>(null)

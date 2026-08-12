@@ -16,7 +16,7 @@ export function SceneSettingsDrawer() {
   const scene = useStore((st) => st.project.scenes[sceneId])
   const shots = useStore((st) => st.project.shots)
   const updateTrack = useStore((st) => st.updateSceneTrack)
-  const readOnly = !useStore((st) => st.canEditAnalysis())
+  const readOnly = false // 字段级权限：场级设定恒可编辑
 
   useEffect(() => {
     if (!open) return

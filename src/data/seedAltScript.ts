@@ -1,7 +1,7 @@
 // 覆盖导入演示用的「另一个剧本」《退货风波》：1 集 2 场 5 镜。
 // 复用现有第 2 集内容改写而成，全部新建独立 id（覆盖是换项目，不做去重）。
 // 提示词直接引用 PROMPTS 里 ep2 那 5 条，不新写。
-import type { Asset, Episode, MountRef, Scene, Shot } from './types'
+import type { Asset, AssetSeed, Episode, MountRef, Scene, Shot } from './types'
 import type { ScriptPayload } from '../services/replace'
 import { PROMPTS } from './prompts'
 
@@ -10,12 +10,15 @@ const X = {
   suke: 'alt_c_suke',
   courier: 'alt_c_courier',
   hoodie: 'alt_cos_hoodie',
+  courierCostume: 'alt_cos_courier',
   living: 'alt_loc_living',
   entry: 'alt_loc_entry',
   parcel: 'alt_p_parcel',
+  lookSuke: 'alt_look_suke',
+  lookCourier: 'alt_look_courier',
 } as const
 
-const altAssets: Asset[] = [
+const altAssets: AssetSeed[] = [
   {
     id: X.suke, kind: 'character', role: 'lead',
     name: '苏可',
@@ -31,11 +34,18 @@ const altAssets: Asset[] = [
     appearances: [{ episodeNo: 1, sceneNo: 2 }],
   },
   {
-    id: X.hoodie, kind: 'costume', characterId: X.suke,
+    id: X.hoodie, kind: 'costume',
     name: '宽松连帽卫衣', aliases: ['连帽卫衣', '卫衣'],
     description: '超级宽松的米灰连帽卫衣，居家慵懒感。',
     imagePrompt: '纯白背景，米灰色超宽松连帽卫衣平铺 / 挂拍，帽子自然垂落，棉质柔软有褶皱，正背两面，无人物。',
     appearances: [{ episodeNo: 1, sceneNo: 1 }, { episodeNo: 1, sceneNo: 2 }],
+  },
+  {
+    id: X.courierCostume, kind: 'costume',
+    name: '快递工装', aliases: ['快递服'],
+    description: '藏青快递工装短袖配工装裤，腰挂扫描枪、胸前无字工牌。',
+    imagePrompt: '纯白背景，藏青快递工装短袖与工装长裤平铺，配无字工牌与条码扫描枪，正背两面，无人物，无品牌标识。',
+    appearances: [{ episodeNo: 1, sceneNo: 2 }],
   },
   {
     id: X.living, kind: 'location', timeOfDay: '日 / 内',
@@ -58,9 +68,30 @@ const altAssets: Asset[] = [
     imagePrompt: '纯白背景产品图，浅棕色瓦楞纸箱，缠透明胶带，正面贴一张白色空白面单，45° 俯视，写实，无品牌标识。',
     appearances: [{ episodeNo: 1, sceneNo: 2 }],
   },
+  {
+    id: X.lookSuke, kind: 'look', characterId: X.suke, costumeId: X.hoodie,
+    name: '苏可 · 宽松连帽卫衣', aliases: ['苏可'],
+    description: '苏可穿上米灰宽松连帽卫衣的定妆形态。',
+    imagePrompt: '苏可角色素模穿上米灰超宽松连帽卫衣后的定妆图：五官发型体型取自角色素模，服装款式取自服装平铺图，纯白背景写实真人质感，无第二人物，无字幕水印。',
+    appearances: [{ episodeNo: 1, sceneNo: 1 }, { episodeNo: 1, sceneNo: 2 }],
+  },
+  {
+    id: X.lookCourier, kind: 'look', characterId: X.courier, costumeId: X.courierCostume,
+    name: '快递员 · 快递工装', aliases: ['快递员'],
+    description: '快递员穿上藏青快递工装的定妆形态。',
+    imagePrompt: '快递员角色素模穿上藏青快递工装、腰挂扫描枪、胸前无字工牌后的定妆图：五官发型体型取自角色素模，服装取自服装平铺图，纯白背景写实真人质感，无品牌标识，无第二人物。',
+    appearances: [{ episodeNo: 1, sceneNo: 2 }],
+  },
 ]
 
-const kindOf: Record<string, MountRef['kind']> = Object.fromEntries(altAssets.map((a) => [a.id, a.kind]))
+// 只有 look / location / prop 参与挂载；角色 / 服装不进 kindOf，避免被当成 MountRef。
+const kindOf: Record<string, MountRef['kind']> = Object.fromEntries(
+  altAssets
+    .filter((a): a is AssetSeed & { kind: MountRef['kind'] } =>
+      a.kind === 'look' || a.kind === 'location' || a.kind === 'prop',
+    )
+    .map((a) => [a.id, a.kind]),
+)
 const mm = (...ids: string[]): MountRef[] => ids.map((assetId) => ({ kind: kindOf[assetId]!, assetId }))
 
 // 每条镜从 PROMPTS 拉 ep2 对应那条的 image / video（promptKey），其余字段本地给。
@@ -82,17 +113,17 @@ const altS1Seeds: AltShotSeed[] = [
   {
     promptKey: 'e2s1_sh1', title: '瘫软沙发 · 长出一口气', duration: 4,
     shotSize: '中景', lens: '35mm f/2.8', lighting: '自然光偏冷', cameraMove: '慢推', dialogue: '无', sfx: '一声瘫倒的叹气',
-    mounts: mm(X.suke, X.hoodie, X.living), sourceQuote: '（退货风波）苏可瘫软在沙发上，长出一口气。',
+    mounts: mm(X.lookSuke, X.living), sourceQuote: '（退货风波）苏可瘫软在沙发上，长出一口气。',
   },
   {
     promptKey: 'e2s1_sh2', title: '手机提醒 · 快递上门取件', duration: 4,
     shotSize: '特写', lens: '85mm f/2.0', lighting: '屏幕冷光', cameraMove: 'Rack Focus', dialogue: '无', sfx: '短信提示音',
-    mounts: mm(X.suke, X.hoodie, X.living), sourceQuote: '（退货风波）手机弹出快递上门取件提醒。',
+    mounts: mm(X.lookSuke, X.living), sourceQuote: '（退货风波）手机弹出快递上门取件提醒。',
   },
   {
     promptKey: 'e2s1_sh3', title: '生无可恋 · 爬起走向门口', duration: 4,
     shotSize: '全景', lens: '24mm f/4.0', lighting: '自然光偏冷', cameraMove: '跟随', dialogue: '无', sfx: '拖沓的脚步声',
-    mounts: mm(X.suke, X.hoodie, X.living), sourceQuote: '（退货风波）她不情愿地爬起身走向门口。',
+    mounts: mm(X.lookSuke, X.living), sourceQuote: '（退货风波）她不情愿地爬起身走向门口。',
   },
 ]
 
@@ -100,12 +131,12 @@ const altS2Seeds: AltShotSeed[] = [
   {
     promptKey: 'e2s2_sh1', title: '快递员敲门 · 门外催促', duration: 4,
     shotSize: '中景', lens: '35mm f/2.8', lighting: '玄关暖白偏暗', cameraMove: '定镜', dialogue: '快递员（门外喊声）', sfx: '急促的敲门声',
-    mounts: mm(X.suke, X.courier, X.hoodie, X.entry), sourceQuote: '（退货风波）快递员：「取件的！退货件在家吗？」',
+    mounts: mm(X.lookSuke, X.lookCourier, X.entry), sourceQuote: '（退货风波）快递员：「取件的！退货件在家吗？」',
   },
   {
     promptKey: 'e2s2_sh2', title: '递出包裹 · 飞速关门', duration: 4,
     shotSize: '全景', lens: '24mm f/4.0', lighting: '玄关暖白偏暗', cameraMove: '手持', dialogue: '无', sfx: '门轴与关门声',
-    mounts: mm(X.suke, X.courier, X.hoodie, X.entry, X.parcel), sourceQuote: '（退货风波）她从门缝塞出包裹，飞速关门。',
+    mounts: mm(X.lookSuke, X.lookCourier, X.entry, X.parcel), sourceQuote: '（退货风波）她从门缝塞出包裹，飞速关门。',
   },
 ]
 
@@ -148,5 +179,5 @@ export const altScriptPayload: ScriptPayload = {
   episodes: [altEpisode],
   scenes: { [altScene1.id]: altScene1, [altScene2.id]: altScene2 },
   shots: altShots,
-  assets: Object.fromEntries(altAssets.map((a) => [a.id, a])),
+  assets: Object.fromEntries(altAssets.map((a) => [a.id, { ...a, revision: 1 } as Asset])),
 }

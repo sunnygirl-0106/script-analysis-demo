@@ -6,11 +6,39 @@ const ORDER: Stage[] = ['analysis', 'visual', 'studio']
 const rank = (s: Stage) => ORDER.indexOf(s)
 
 /**
- * 某个阶段的内容是否还能编辑：项目一旦推进到该阶段之后，就锁死。
- * stage 推进到 visual 后，canEdit(project,'analysis') 返回 false。
+ * 阶段先后比较（保留给需要判断「谁在前谁在后」的地方）。
+ * ⚠ 不要再用它做「整页只读」判断：进入 visual 后剧本分析依然可编辑，
+ * 修改只让下游过期（见 services/production.ts），编辑权限改由 analysisPermissions 表达。
  */
 export function canEdit(project: Project, stage: Stage): boolean {
   return rank(project.stage) <= rank(stage)
+}
+
+/**
+ * 字段级编辑权限。取代旧的整页 readOnly。
+ * 当前版本：脚本与五类提示词恒可编辑；只有着装角色内部的角色—服装参考关系恒定只读。
+ * 保留此函数是为了让 UI 不再散落 `stage === ...` 判断，并方便以后接入项目级权限。
+ */
+export interface AnalysisPermissions {
+  canEditScript: boolean
+  canEditCharacterPrompt: boolean
+  canEditCostumePrompt: boolean
+  canEditLookPrompt: boolean
+  canEditLocationPrompt: boolean
+  canEditPropPrompt: boolean
+  canEditReferenceRelation: false
+}
+
+export function analysisPermissions(_project: Project): AnalysisPermissions {
+  return {
+    canEditScript: true,
+    canEditCharacterPrompt: true,
+    canEditCostumePrompt: true,
+    canEditLookPrompt: true,
+    canEditLocationPrompt: true,
+    canEditPropPrompt: true,
+    canEditReferenceRelation: false,
+  }
 }
 
 /**

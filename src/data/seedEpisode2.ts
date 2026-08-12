@@ -2,7 +2,7 @@
 // 关键点：既含老角色「苏可」（应被去重复用旧 id），又含新增资产（应新建）。
 // 新集该带什么资产就带什么 —— 净增数量由内容决定，不是一个写死的常数。
 // 本集新增：角色「快递员」+ 道具「退货包裹」。
-import type { Episode, Scene, Shot, Asset } from './types'
+import type { Episode, Scene, Shot, AssetSeed, MountRef } from './types'
 import { A, m } from './seed'
 import { PROMPTS } from './prompts'
 
@@ -12,11 +12,13 @@ const T = {
   courier: 'c_courier', // 新角色
   parcel: 'p_parcel', // 新道具：这一集才出现的退货包裹
   courierCostume: 'cos_courier', // 新服装：快递员工装，与角色素模分开生成再融合
+  courierLook: 'look_courier', // 新着装角色：快递员 × 快递工装
 } as const
 
 // 第 2 集带来的资产（其余场景 / 道具 / 服装直接复用第 1 集的既有 id）。
 // 追加集不设「只能新增几个」的上限：这一集出现了新道具就建新道具。
-export const ep2Assets: Asset[] = [
+// revision 由 appendEpisode / 组装阶段补齐，这里用 AssetSeed（免手写 revision）。
+export const ep2Assets: AssetSeed[] = [
   {
     id: T.suke, kind: 'character', role: 'lead',
     name: '苏可', // 与第 1 集同名 → 归一化后命中，复用旧 id
@@ -42,7 +44,7 @@ export const ep2Assets: Asset[] = [
     appearances: [{ episodeNo: 2, sceneNo: 2 }],
   },
   {
-    id: T.courierCostume, kind: 'costume', characterId: T.courier,
+    id: T.courierCostume, kind: 'costume',
     name: '快递工装', aliases: ['快递服'],
     description: `快递员的工装：藏青哑光短袖工装、同色工装长裤、腰挂条码扫描枪、胸前一枚空白工牌。和骑手工装是一组对照 —— 那套靠亮黄喊出存在感，这套靠藏青把自己隐进背景里。工牌与扫描枪必须是完全空白的：没有姓名、没有编号、没有二维码、没有公司标识。这既是不蹭品牌，也是因为模型一旦被要求写字，八成会生出一串看不懂的乱码，反而毁掉整张图。`,
     imagePrompt: `【生成规格】服装资产平铺图 · 纯白无缝背景 · 16:9 横版构图 · 上下两排：上排为工装短袖正面 / 背面平铺（左右并排），下排为工装长裤、手持条码扫描枪与空白工牌（从左到右） · 顶部垂直俯拍、镜头轴线垂直于台面、无透视畸变 · 无人物、无人台、无模特、无衣架。
@@ -71,12 +73,23 @@ export const ep2Assets: Asset[] = [
 【禁止】画面内字幕、水印；任何快递公司的名称、logo、配色标识、条码、二维码、姓名、地址、电话；面单上出现任何文字或图形（哪怕是模糊的乱码）；纸箱做成崭新挺括、边角锐利的商品包装；胶带缠得整齐美观；箱子做成礼盒、彩印箱或塑料周转箱；人物、手部入画。`,
     appearances: [{ episodeNo: 2, sceneNo: 2 }],
   },
+  {
+    id: T.courierLook, kind: 'look', characterId: T.courier, costumeId: T.courierCostume,
+    name: '快递员 · 快递工装', aliases: ['快递员'],
+    description: '快递员穿上藏青快递工装、上门取件时的定妆形态，只在第 2 集玄关出现。',
+    imagePrompt: `【着装角色】快递员（素模）+ 快递工装（服装）融合后的定妆图，用于第 2 集门外取件的快递员镜头。
+【人物】以快递员角色素模为准：30 岁上下东亚男性，身高约 175cm 中等略壮实、肩宽背厚，方圆脸、面相憨直但赶时间，黑色短发、下巴有淡淡胡茬，踏实压实的站姿。五官、发型、体型与角色素模一致，不得改动。
+【着装】穿上中性哑光藏青蓝快递工装短袖配同色工装长裤，腰挂深灰条码扫描枪，胸前挂一枚空白工牌；面料为耐磨涤棉、硬挺不反光，袖口裤脚有被天天穿的磨白。工牌与扫描枪一律纯空白，无姓名、编号、二维码、公司标识。
+【一致性】人物特征取自角色素模、服装款式取自服装平铺图，二者融合但各自不得走样。
+【光线质感】中性棚拍柔光、5500K、纯白无缝背景、高细节写实真人摄影质感。
+【禁止】画面内字幕、水印；任何快递公司名称 / logo / 条码 / 工号；第二个人物入画；更换或叠加其他服装；改变素模的五官、发型、身形。`,
+    appearances: [{ episodeNo: 2, sceneNo: 2 }],
+  },
 ]
 
 /** 第 2 集自带的新资产，需手工构造 MountRef —— seed 的 m() 只认得第 1 集的资产。 */
-const parcelMount = { kind: 'prop', assetId: T.parcel } as const
-const courierMount = { kind: 'character', assetId: T.courier } as const
-const courierCostumeMount = { kind: 'costume', assetId: T.courierCostume } as const
+const parcelMount: MountRef = { kind: 'prop', assetId: T.parcel }
+const courierLookMount: MountRef = { kind: 'look', assetId: T.courierLook }
 
 type ShotSeed = Omit<Shot, 'id' | 'sceneId' | 'no'>
 
@@ -87,7 +100,7 @@ const ep2s1Shots: ShotSeed[] = [
     imagePrompt: '中景。苏可挂断和妈妈的视频后，整个人瘫软陷进客厅沙发，长出一口气。',
     cameraMove: '慢推', dialogue: '无', sfx: '一声瘫倒的叹气',
     videoPrompt: '{0-4s} 缓推。苏可瘫软陷进沙发，劫后余生。',
-    mounts: m(A.suke, A.hoodie, A.living),
+    mounts: m(A.lookSuke, A.living),
     sourceQuote: '（第 2 集续写）挂断视频后，苏可瘫软在沙发上。',
   },
   {
@@ -96,7 +109,7 @@ const ep2s1Shots: ShotSeed[] = [
     imagePrompt: '特写。手机屏幕弹出「快递员即将上门取件」的提醒。',
     cameraMove: 'Rack Focus', dialogue: '无', sfx: '短信提示音',
     videoPrompt: '{0-2s} 屏幕亮起提醒。{2-4s} Rack Focus 到苏可无语的脸。',
-    mounts: m(A.suke, A.hoodie, A.living, A.phone),
+    mounts: m(A.lookSuke, A.living, A.phone),
     sourceQuote: '（第 2 集续写）手机弹出快递上门提醒。',
   },
   {
@@ -105,7 +118,7 @@ const ep2s1Shots: ShotSeed[] = [
     imagePrompt: '全景。苏可万般不情愿地从沙发上爬起，拖着步子走向门口。',
     cameraMove: '跟随', dialogue: '无', sfx: '拖沓的脚步声',
     videoPrompt: '{0-4s} 跟随苏可拖着步子走向门口。',
-    mounts: m(A.suke, A.hoodie, A.living),
+    mounts: m(A.lookSuke, A.living),
     sourceQuote: '（第 2 集续写）她不情愿地爬起身走向门口。',
   },
 ]
@@ -117,7 +130,7 @@ const ep2s2Shots: ShotSeed[] = [
     imagePrompt: '中景。玄关门被敲响，苏可迟疑地站在门后。',
     cameraMove: '定镜', dialogue: '快递员（门外喊声）', sfx: '急促的敲门声',
     videoPrompt: '{0-4s} 定镜对门。画外音（快递员）：「取件的！退货件在家吗？下楼我可就走了啊！」',
-    mounts: [...m(A.suke, A.hoodie, A.entry), courierMount, courierCostumeMount],
+    mounts: [...m(A.lookSuke, A.entry), courierLookMount],
     sourceQuote: '（第 2 集续写）快递员：「取件的！退货件在家吗？」',
   },
   {
@@ -126,7 +139,7 @@ const ep2s2Shots: ShotSeed[] = [
     imagePrompt: '全景。苏可从门缝把退货包裹塞出去，飞速关门，全程不露正脸。',
     cameraMove: '手持', dialogue: '无', sfx: '门轴与关门声',
     videoPrompt: '{0-2s} 门缝递出包裹。{2-4s} 飞速关门。',
-    mounts: [...m(A.suke, A.hoodie, A.entry), courierMount, courierCostumeMount, parcelMount],
+    mounts: [...m(A.lookSuke, A.entry), courierLookMount, parcelMount],
     sourceQuote: '（第 2 集续写）她从门缝塞出包裹，飞速关门。',
   },
 ]
@@ -177,7 +190,7 @@ export interface EpisodePayload {
   episode: Episode
   scenes: Record<string, Scene>
   shots: Record<string, Shot>
-  assets: Asset[]
+  assets: AssetSeed[] // 新集资产（未定 revision，由 appendEpisode 补齐）
 }
 
 export const episode2Payload: EpisodePayload = {

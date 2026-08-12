@@ -13,12 +13,15 @@ export interface ScriptPayload {
 /**
  * 覆盖导入：整个解析结果换成新剧本。
  * 保留：project.id / title / aspect / style / defaultDensity（这些是用户的项目级设置）
- * 重置：episodes / scenes / shots / assets 全换，stage 回到 'analysis'
+ * 重置：episodes / scenes / shots / assets 全换，stage 回到 'analysis'，
+ *       scriptRevision 归 1、丢弃上一份生产快照（换的是全新项目，下游从头再来）。
  */
 export function replaceScript(project: Project, payload: ScriptPayload): Project {
   return {
     ...project, // 保留 id / title / aspect / style / defaultDensity
     stage: 'analysis',
+    scriptRevision: 1,
+    productionSnapshot: undefined,
     episodes: payload.episodes,
     scenes: payload.scenes,
     shots: payload.shots,

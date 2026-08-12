@@ -1,12 +1,13 @@
 // Zustand：一个 project + 所有动作。不做持久化，刷新回到初始状态。
 import { create } from 'zustand'
-import type { MountRef, Project, Shot, ShotDensity, Stage } from '../data/types'
+import type { Asset, MountRef, Project, Shot, ShotDensity, Stage } from '../data/types'
 import { seedProject } from '../data/seed'
 import { episode2Payload } from '../data/seedEpisode2'
 import { appendEpisode } from '../services/incremental'
 import { replaceScript as replaceScriptSvc, type ScriptPayload } from '../services/replace'
 import { densityShots, hasDensityPresets, resplitSceneDensity } from '../services/density'
-import { canEdit, deleteEpisode as deleteEpisodeSvc, resplitScene } from '../services/lock'
+import { deleteEpisode as deleteEpisodeSvc, resplitScene } from '../services/lock'
+import { affectedLooks, buildProductionSnapshot } from '../services/production'
 import { sceneDuration } from '../services/timeline'
 
 export type Tab = 'character' | 'costume' | 'location' | 'prop' | 'shot'
@@ -30,6 +31,7 @@ interface UIState {
   sceneSettingsOpen: boolean
   navCollapsed: boolean
   toast: Toast | null
+  producedIds: string[] // Demo：已在视觉筹备里点过「已生成」的资产（仅演示用）
 }
 
 interface StoreState extends UIState {
@@ -37,7 +39,6 @@ interface StoreState extends UIState {
 
   // ── 派生便捷读取 ──
   currentScene: () => Project['scenes'][string] | undefined
-  canEditAnalysis: () => boolean
   countShotsOf: (assetId: string) => number
 
   // ── UI 动作 ──
@@ -51,7 +52,7 @@ interface StoreState extends UIState {
   showToast: (text: string) => void
   dismissToast: () => void
 
-  // ── 数据动作（受阶段锁约束）──
+  // ── 脚本 / 分镜修改（成功改动后统一 scriptRevision + 1）──
   updateShotField: (shotId: string, field: keyof Shot, value: string) => void
   setShotDuration: (shotId: string, duration: number) => void
   addMount: (shotId: string, mount: MountRef) => void
@@ -63,10 +64,19 @@ interface StoreState extends UIState {
   deleteEpisode: (episodeId: string) => void
   resplit: (sceneId: string, opts: { density?: ShotDensity; targetShots?: number }) => void
   resplitEpisode: (episodeId: string, opts: { density: ShotDensity; sceneCount?: number }) => void
+
+  // ── 资产提示词修改与单向生产 ──
+  updateAssetPrompt: (assetId: string, prompt: string) => void
+  startAssetProduction: () => void
+  markAssetProduced: (assetId: string) => void
+
   setStage: (stage: Stage) => void
 }
 
 let toastSeq = 0
+
+/** 脚本/分镜修改成功后，抬升 scriptRevision（下游据此判断「脚本已修改，需重新同步」）。 */
+const bumpScript = (proj: Project): Project => ({ ...proj, scriptRevision: proj.scriptRevision + 1 })
 
 /** targetShots → 在三套预设里选镜数最接近 N 的那套。 */
 function closestDensity(sceneId: string, target: number): ShotDensity {
@@ -88,13 +98,26 @@ export const useStore = create<StoreState>((set, get) => ({
   sceneSettingsOpen: false,
   navCollapsed: false,
   toast: null,
+  producedIds: [],
 
   currentScene: () => get().project.scenes[get().selectedSceneId],
-  canEditAnalysis: () => canEdit(get().project, 'analysis'),
   // 遍历 shots 数「挂了该资产」的镜数。挂载会变，所以按需反查，不往 Appearance 里塞字段。
-  countShotsOf: (assetId) =>
-    Object.values(get().project.shots).filter((sh) => sh.mounts.some((mo) => mo.assetId === assetId))
-      .length,
+  // 对角色/服装：它们不再直接挂载，改为反查「挂了引用它的着装角色」的镜数。
+  countShotsOf: (assetId) => {
+    const { assets, shots } = get().project
+    const asset = assets[assetId]
+    const shotList = Object.values(shots)
+    if (asset && (asset.kind === 'character' || asset.kind === 'costume')) {
+      const lookIds = new Set(
+        Object.values(assets)
+          .filter((a) => a.kind === 'look')
+          .filter((l) => (asset.kind === 'character' ? l.characterId === assetId : l.costumeId === assetId))
+          .map((l) => l.id),
+      )
+      return shotList.filter((sh) => sh.mounts.some((mo) => lookIds.has(mo.assetId))).length
+    }
+    return shotList.filter((sh) => sh.mounts.some((mo) => mo.assetId === assetId)).length
+  },
 
   toggleNav: () => set((s) => ({ navCollapsed: !s.navCollapsed })),
   setPage: (activePage) => set({ activePage }),
@@ -111,18 +134,15 @@ export const useStore = create<StoreState>((set, get) => ({
   dismissToast: () => set({ toast: null }),
 
   updateShotField: (shotId, field, value) => {
-    if (!get().canEditAnalysis()) return
     set((s) => {
       const shot = s.project.shots[shotId]
       if (!shot) return s
-      return {
-        project: { ...s.project, shots: { ...s.project.shots, [shotId]: { ...shot, [field]: value } } },
-      }
+      const next = { ...s.project, shots: { ...s.project.shots, [shotId]: { ...shot, [field]: value } } }
+      return { project: bumpScript(next) }
     })
   },
 
   setShotDuration: (shotId, duration) => {
-    if (!get().canEditAnalysis()) return
     const s = get()
     const shot = s.project.shots[shotId]
     if (!shot) return
@@ -132,7 +152,7 @@ export const useStore = create<StoreState>((set, get) => ({
     const nextShots = { ...s.project.shots, [shotId]: { ...shot, duration: clamped } }
     const scene = s.project.scenes[shot.sceneId]!
     const after = scene.shotIds.slice(scene.shotIds.indexOf(shotId) + 1).length
-    set({ project: { ...s.project, shots: nextShots } })
+    set({ project: bumpScript({ ...s.project, shots: nextShots }) })
     const newSceneDur = sceneDuration(scene, nextShots)
     get().showToast(
       `第 ${shot.no} 镜 ${delta > 0 ? '+' : ''}${delta}s：后续 ${after} 个镜顺移，本场总时长变为 ${newSceneDur}s`,
@@ -140,66 +160,59 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   addMount: (shotId, mount) => {
-    if (!get().canEditAnalysis()) return
     set((s) => {
       const shot = s.project.shots[shotId]
       if (!shot || shot.mounts.some((m) => m.assetId === mount.assetId)) return s
       const mounts = [...shot.mounts, mount]
-      return { project: { ...s.project, shots: { ...s.project.shots, [shotId]: { ...shot, mounts } } } }
+      return { project: bumpScript({ ...s.project, shots: { ...s.project.shots, [shotId]: { ...shot, mounts } } }) }
     })
   },
 
   removeMount: (shotId, assetId) => {
-    if (!get().canEditAnalysis()) return
     set((s) => {
       const shot = s.project.shots[shotId]
       if (!shot) return s
       const mounts = shot.mounts.filter((m) => m.assetId !== assetId)
-      return { project: { ...s.project, shots: { ...s.project.shots, [shotId]: { ...shot, mounts } } } }
+      return { project: bumpScript({ ...s.project, shots: { ...s.project.shots, [shotId]: { ...shot, mounts } } }) }
     })
   },
 
   updateSceneTrack: (sceneId, patch) => {
-    if (!get().canEditAnalysis()) return
     set((s) => {
       const scene = s.project.scenes[sceneId]
       if (!scene) return s
-      return {
-        project: {
-          ...s.project,
-          scenes: { ...s.project.scenes, [sceneId]: { ...scene, track: { ...scene.track, ...patch } } },
-        },
+      const next = {
+        ...s.project,
+        scenes: { ...s.project.scenes, [sceneId]: { ...scene, track: { ...scene.track, ...patch } } },
       }
+      return { project: bumpScript(next) }
     })
   },
 
   appendEpisode2: () => {
-    if (!get().canEditAnalysis()) return
     const s = get()
     if (s.project.episodes.some((e) => e.id === 'e2')) {
       get().showToast('第 2 集已经追加过了')
       return
     }
     const next = appendEpisode(s.project, episode2Payload)
-    set({ project: next })
+    set({ project: bumpScript(next) })
     get().showToast('已追加第 2 集：老角色「苏可」复用，未重复；新角色「快递员」入库')
   },
 
   replaceScript: (payload) => {
-    if (!get().canEditAnalysis()) return
     const s = get()
     const oldEp = s.project.episodes.length
     const oldShots = Object.keys(s.project.shots).length
-    const next = replaceScriptSvc(s.project, payload)
+    const next = replaceScriptSvc(s.project, payload) // 内部已重置 scriptRevision / 快照
     const firstScene = next.episodes[0]?.sceneIds[0] ?? ''
-    set({ project: next, selectedSceneId: firstScene, sceneSettingsOpen: false, activeTab: 'shot' })
+    set({ project: next, selectedSceneId: firstScene, sceneSettingsOpen: false, activeTab: 'shot', producedIds: [] })
     get().showToast(`已覆盖导入「${payload.title}」：原 ${oldEp} 集 ${oldShots} 镜已丢弃`)
   },
 
   // 替换本集：语义诚实地实现为「删除本集 + 追加新集」。演示只有一套「新集」内容（第 2 集），
   // 若它已存在则不替换，如实告知，避免删了却补不上。
   replaceEpisode: (episodeId) => {
-    if (!get().canEditAnalysis()) return
     const s = get()
     const proj = s.project
     const ep = proj.episodes.find((e) => e.id === episodeId)
@@ -215,12 +228,11 @@ export const useStore = create<StoreState>((set, get) => ({
     const renum = { ...appended, episodes: appended.episodes.map((e, i) => ({ ...e, no: i + 1 })) }
     const newEp = renum.episodes.find((e) => e.id === 'e2')
     const firstScene = newEp?.sceneIds[0] ?? renum.episodes[0]?.sceneIds[0] ?? ''
-    set({ project: renum, selectedSceneId: firstScene, sceneSettingsOpen: false, activeTab: 'shot' })
+    set({ project: bumpScript(renum), selectedSceneId: firstScene, sceneSettingsOpen: false, activeTab: 'shot' })
     get().showToast(`已替换第 ${ep.no} 集：原内容删除、按新剧本重新拆解，其他集不受影响`)
   },
 
   deleteEpisode: (episodeId) => {
-    if (!get().canEditAnalysis()) return
     const s = get()
     const proj = s.project
     if (proj.episodes.length <= 1) {
@@ -234,12 +246,11 @@ export const useStore = create<StoreState>((set, get) => ({
     const cleaned = before - Object.keys(next.assets).length
     const renum = { ...next, episodes: next.episodes.map((e, i) => ({ ...e, no: i + 1 })) }
     const firstScene = renum.episodes[0]?.sceneIds[0] ?? ''
-    set({ project: renum, selectedSceneId: firstScene, sceneSettingsOpen: false, activeTab: 'shot' })
+    set({ project: bumpScript(renum), selectedSceneId: firstScene, sceneSettingsOpen: false, activeTab: 'shot' })
     get().showToast(`已删除第 ${ep.no} 集：${cleaned} 项仅本集资产已清理，跨集资产保留`)
   },
 
   resplit: (sceneId, opts) => {
-    if (!get().canEditAnalysis()) return
     const s = get()
     const scene = s.project.scenes[sceneId]
     if (!scene) return
@@ -249,7 +260,7 @@ export const useStore = create<StoreState>((set, get) => ({
       const reset = resplitScene(s.project, sceneId)
       const rscene = reset.scenes[sceneId]!
       const next = { ...reset, scenes: { ...reset.scenes, [sceneId]: { ...rscene, density: 'standard' as ShotDensity } } }
-      set({ project: next, sceneSettingsOpen: false })
+      set({ project: bumpScript(next), sceneSettingsOpen: false })
       get().showToast('演示数据仅为第 1 场准备了多套拆解方案，本场已按原方案重新生成')
       return
     }
@@ -258,7 +269,7 @@ export const useStore = create<StoreState>((set, get) => ({
     if (opts.targetShots != null && opts.density == null) {
       const density = closestDensity(sceneId, opts.targetShots)
       const next = resplitSceneDensity(s.project, sceneId, density)
-      set({ project: next, sceneSettingsOpen: false })
+      set({ project: bumpScript(next), sceneSettingsOpen: false })
       get().showToast(
         `已按「指定 ${opts.targetShots} 镜」重拆：演示数据中最接近的方案为「${DENSITY_LABEL[density]}」${densityShots(sceneId, density).length} 镜`,
       )
@@ -268,12 +279,11 @@ export const useStore = create<StoreState>((set, get) => ({
     // 指定颗粒度（或照原颗粒度重拆一次）。
     const density = opts.density ?? scene.density
     const next = resplitSceneDensity(s.project, sceneId, density)
-    set({ project: next, sceneSettingsOpen: false })
+    set({ project: bumpScript(next), sceneSettingsOpen: false })
     get().showToast(`已重拆「${scene.name}」为「${DENSITY_LABEL[density]}」${densityShots(sceneId, density).length} 镜，其他场不动`)
   },
 
   resplitEpisode: (episodeId, opts) => {
-    if (!get().canEditAnalysis()) return
     const s = get()
     let proj = s.project
     const ep = proj.episodes.find((e) => e.id === episodeId)
@@ -294,7 +304,7 @@ export const useStore = create<StoreState>((set, get) => ({
         kept.push(scene.no)
       }
     }
-    set({ project: proj, selectedSceneId: ep.sceneIds[0] ?? s.selectedSceneId, sceneSettingsOpen: false })
+    set({ project: bumpScript(proj), selectedSceneId: ep.sceneIds[0] ?? s.selectedSceneId, sceneSettingsOpen: false })
 
     let msg = applied.length
       ? `已重拆第 ${ep.no} 集：${applied.join('，')}`
@@ -304,8 +314,49 @@ export const useStore = create<StoreState>((set, get) => ({
     get().showToast(msg)
   },
 
+  // 资产提示词修改（单向）：更新提示词 + revision，不动参考关系、不动已有生产快照。
+  updateAssetPrompt: (assetId, prompt) => {
+    set((s) => {
+      const asset = s.project.assets[assetId]
+      if (!asset || asset.imagePrompt === prompt) return s
+      const nextAssets: Record<string, Asset> = { ...s.project.assets }
+      nextAssets[assetId] = { ...asset, imagePrompt: prompt, revision: asset.revision + 1 } as Asset
+      // 角色 / 服装：给依赖它们的着装角色抬 revision，只作失效标记，不改其提示词与参考关系。
+      if (asset.kind === 'character' || asset.kind === 'costume') {
+        for (const lookId of affectedLooks(assetId, s.project.assets)) {
+          const lk = nextAssets[lookId]
+          if (lk) nextAssets[lookId] = { ...lk, revision: lk.revision + 1 } as Asset
+        }
+      }
+      // 从「已生成」集合里剔除刚被改动的资产（Demo 状态回到待重新生成）。
+      const producedIds = s.producedIds.filter((id) => id !== assetId)
+      return { project: { ...s.project, assets: nextAssets }, producedIds }
+    })
+  },
+
+  // 开始第一批生产：用当前四类基础资产生成快照并下发，推进到视觉筹备。着装角色不入本次快照。
+  startAssetProduction: () => {
+    set((s) => {
+      const snapshot = buildProductionSnapshot(s.project)
+      const nextAssets: Record<string, Asset> = { ...s.project.assets }
+      for (const it of snapshot.items) {
+        const a = nextAssets[it.sourceAssetId]
+        if (a) nextAssets[it.sourceAssetId] = { ...a, productionRevision: a.revision } as Asset
+      }
+      return {
+        project: { ...s.project, assets: nextAssets, productionSnapshot: snapshot, stage: 'visual' },
+        activePage: 'visual',
+        producedIds: [],
+      }
+    })
+    get().showToast(`已开始第一批生产：${get().project.productionSnapshot?.items.length ?? 0} 项基础资产进入视觉筹备`)
+  },
+
+  markAssetProduced: (assetId) => {
+    set((s) => (s.producedIds.includes(assetId) ? s : { producedIds: [...s.producedIds, assetId] }))
+  },
+
   setStage: (stage) => {
     set((s) => ({ project: { ...s.project, stage }, activePage: stage }))
-    if (stage === 'visual') get().showToast('已进入视觉筹备：剧本分析整个置灰只读')
   },
 }))

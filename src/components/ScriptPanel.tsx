@@ -8,6 +8,7 @@ const kindClass: Record<AssetKind, string> = {
   costume: s.cloth!,
   location: s.scene!,
   prop: s.prop!,
+  look: s.role!, // 着装角色不进原文高亮（见下方过滤），这里仅为类型完整占位
 }
 
 // 用每个资产的「编目名 + 剧本别名」把原文里的实体高亮。
@@ -43,7 +44,9 @@ export function ScriptPanel() {
   const toggle = useStore((st) => st.toggleScript)
 
   const scene = project.scenes[sceneId]
-  const assets = Object.values(project.assets)
+  // 着装角色不参与原文高亮：它是关系资产，名字（「苏可 · 卫衣」）不会逐字出现在剧本里，
+  // 其别名又会与角色本名撞车，所以只用基础资产做高亮。
+  const assets = Object.values(project.assets).filter((a) => a.kind !== 'look')
 
   if (!open) {
     return (

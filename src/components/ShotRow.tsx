@@ -1,6 +1,6 @@
 import type { MouseEvent } from 'react'
 import { useStore } from '../store/useStore'
-import type { AssetKind, Costume, MountRef, Shot } from '../data/types'
+import type { AssetKind, MountRef, Shot } from '../data/types'
 import { chipClass, KIND_LABEL } from './entity'
 import { mountIssues } from '../services/completeness'
 import { isLongShot } from '../services/duration'
@@ -43,7 +43,10 @@ export function ShotRow({ shot, startAt, endAt, active, alt, open, readOnly, onH
   }
   const takeIssue = (assetId: string, kind: AssetKind) => (e: MouseEvent) => {
     e.stopPropagation()
-    if (!readOnly) addMount(shot.id, { kind, assetId })
+    // 可点击挂载的完整性提示只会是道具（MountKind），这里收窄类型后挂上。
+    if (!readOnly && (kind === 'look' || kind === 'location' || kind === 'prop')) {
+      addMount(shot.id, { kind, assetId })
+    }
   }
 
   // 整行可点开详情，但落在按钮 / 输入框上的点击交给它们自己处理。
@@ -52,23 +55,11 @@ export function ShotRow({ shot, startAt, endAt, active, alt, open, readOnly, onH
     onToggle(shot.id)
   }
 
-  // 关联资产分组：角色带服装小字，服装（游离）/场景/道具走标签行。
-  const characters = shot.mounts.filter((m) => m.kind === 'character')
-  const mountedCostumeIds = new Set(shot.mounts.filter((m) => m.kind === 'costume').map((m) => m.assetId))
-  const costumeOwner = (charId: string) =>
-    [...mountedCostumeIds]
-      .map((id) => assets[id] as Costume | undefined)
-      .filter((c): c is Costume => !!c && c.characterId === charId)
-      .map((c) => c.name)
-  const ownedCostumeIds = new Set(
-    characters.flatMap((m) =>
-      [...mountedCostumeIds].filter((cid) => (assets[cid] as Costume | undefined)?.characterId === m.assetId),
-    ),
-  )
-  const orphanCostumes = shot.mounts.filter((m) => m.kind === 'costume' && !ownedCostumeIds.has(m.assetId))
+  // 关联资产：人物走着装角色（look，展示角色名 + 锁定的服装），场景 / 道具走标签行。
+  // 独立服装不进分镜（人物参考已是着装角色）。
+  const looks = shot.mounts.filter((m) => m.kind === 'look')
   const rows = (
     [
-      { label: KIND_LABEL.costume, kind: 'costume', items: orphanCostumes },
       { label: KIND_LABEL.location, kind: 'location', items: shot.mounts.filter((m) => m.kind === 'location') },
       { label: KIND_LABEL.prop, kind: 'prop', items: shot.mounts.filter((m) => m.kind === 'prop') },
     ] as { label: string; kind: AssetKind; items: MountRef[] }[]
@@ -135,18 +126,21 @@ export function ShotRow({ shot, startAt, endAt, active, alt, open, readOnly, onH
       {/* ② 关联资产 */}
       <div className={s.cAsset}>
         <div className={s.assetStack}>
-          {characters.map((m) => {
-            const name = nameOf(m)
-            const wardrobe = costumeOwner(m.assetId)
+          {looks.map((m) => {
+            const look = assets[m.assetId]
+            const character = look?.kind === 'look' ? assets[look.characterId] : undefined
+            const costume = look?.kind === 'look' ? assets[look.costumeId] : undefined
+            const charName = character?.name ?? '（角色缺失）'
+            const costumeName = costume?.name ?? '（服装缺失）'
             return (
               <div className={s.cast} key={m.assetId}>
-                <span className={s.avatar}>{name.slice(0, 1)}</span>
+                <span className={s.avatar}>{charName.slice(0, 1)}</span>
                 <span className={s.castMeta}>
-                  <span className={s.castName}>{name}</span>
-                  <span className={s.castCostume}>{wardrobe.length ? wardrobe.join(' · ') : '未指定服装'}</span>
+                  <span className={s.castName}>{charName}</span>
+                  <span className={s.castCostume}>{costumeName} 🔒</span>
                 </span>
                 {!readOnly && (
-                  <button className={s.castX} onClick={remove(m.assetId)} title="移除挂载">
+                  <button className={s.castX} onClick={remove(m.assetId)} title="移除该着装角色">
                     ✕
                   </button>
                 )}

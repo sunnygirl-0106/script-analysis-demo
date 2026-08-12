@@ -14,7 +14,7 @@ import { seedProject, A } from '../data/seed'
 import { episode2Payload } from '../data/seedEpisode2'
 import type { MountRef } from '../data/types'
 import { computeTimeline, sceneDuration } from '../services/timeline'
-import { defaultMounts } from '../services/mount'
+import { automaticMounts } from '../services/mount'
 import { referenceImages } from '../services/reference'
 import { appendEpisode } from '../services/incremental'
 import { replaceScript } from '../services/replace'
@@ -25,7 +25,7 @@ import { mountIssues } from '../services/completeness'
 import { isLongShot, LONG_SHOT_SEC } from '../services/duration'
 
 /** 规则基线版本。整体版本升级时改这里，单条规则/断言的局部变更用行内标记覆盖。 */
-export const RULES_VERSION = 'v1.1' // 2026-08-11 · 对应技术方案 v1.2（累计到 v1.1 规则集）
+export const RULES_VERSION = 'v1.2' // 2026-08-12 · 资产页改造：着装角色 / 两批生产 / 单向影响 / 字段级权限
 
 // 每个用例都从 seed 深拷贝，互不污染。
 const fresh = () => structuredClone(seedProject)
@@ -76,14 +76,13 @@ describe('R1 时长是累计时间轴', () => {
 // ── R2 挂载是引用不是复制 · since v1.0 · updated v1.0 ──
 describe('R2 挂载是引用不是复制', () => {
   it('改资产名后，挂过它的镜渲染出的标签是新名字', () => {
-    // v1.0
+    // v1.2 —— 人物走着装角色（look），挂载仍是引用：改名后挂过它的镜跟着变。
     const p = fresh()
-    p.assets[A.suke]!.name = '苏可可'
-    // 任取一个挂了苏可的镜
-    const shot = Object.values(p.shots).find((s) => s.mounts.some((m) => m.assetId === A.suke))!
+    p.assets[A.lookSuke]!.name = '苏可可 · 宽松连帽卫衣'
+    const shot = Object.values(p.shots).find((s) => s.mounts.some((m) => m.assetId === A.lookSuke))!
     expect(shot).toBeTruthy()
-    const label = p.assets[A.suke]!.name // 界面渲染时用 id 反查名字
-    expect(label).toBe('苏可可')
+    const label = p.assets[A.lookSuke]!.name // 界面渲染时用 id 反查名字
+    expect(label).toBe('苏可可 · 宽松连帽卫衣')
   })
 })
 
@@ -116,14 +115,14 @@ describe('R3 追加集与资产去重', () => {
     }
   })
 
-  it('第 2 集的镜挂载指向复用后的旧 id', () => {
-    // v1.0
+  it('第 2 集的镜挂载指向跨集复用的着装角色，且不含临时 id', () => {
+    // v1.2 —— 人物走 look；第 2 集苏可复用第 1 集已有的着装角色 look_suke_hoodie。
     const p = fresh()
     const next = appendEpisode(p, episode2Payload)
     const ep2Shots = Object.values(next.shots).filter((s) => s.sceneId.startsWith('e2'))
-    const sukeMount = ep2Shots.flatMap((s) => s.mounts).find((m) => m.assetId === A.suke)
-    expect(sukeMount).toBeTruthy() // 指向的是第 1 集的 c_suke，而非临时 id
-    // 临时 id 不应出现在任何挂载里
+    const lookMount = ep2Shots.flatMap((s) => s.mounts).find((m) => m.assetId === A.lookSuke)
+    expect(lookMount).toBeTruthy() // 指向第 1 集已有的 look_suke_hoodie
+    // 临时角色 id 不应出现在任何挂载里
     const anyTemp = ep2Shots.flatMap((s) => s.mounts).some((m) => m.assetId === 'c_suke__ep2')
     expect(anyTemp).toBe(false)
   })
@@ -139,31 +138,35 @@ describe('R3 追加集与资产去重', () => {
   })
 })
 
-// ── R4 挂载默认值，不是禁令 · since v1.0 · updated v1.1 ──
-describe('R4 挂载默认值，不是禁令', () => {
-  it('defaultMounts 结果同时包含 character 和 costume', () => {
-    // v1.0
+// ── R4 自动挂载只认着装角色 / 场景 / 道具 · since v1.0 · updated v1.2 ──
+// v1.2：服装取消单一角色归属，人物参考走着装角色（look）；服装不自动挂载。
+describe('R4 自动挂载只认着装角色 / 场景 / 道具', () => {
+  it('automaticMounts 只保留 look / location / prop，忽略角色 / 服装并按 assetId 去重', () => {
+    // v1.2
     const p = fresh()
-    // 构造一个只挂了角色的镜
-    const shot = structuredClone(p.shots.s1_sh5!)
-    shot.mounts = [{ kind: 'character', assetId: A.suke }]
-    const result = defaultMounts(shot, p.assets)
-    expect(result.some((m: MountRef) => m.kind === 'character')).toBe(true)
-    expect(result.some((m: MountRef) => m.kind === 'costume')).toBe(true)
+    const shot = structuredClone(p.shots.s1_sh1!) // 已挂 lookSuke / living / phone
+    const detected = [
+      { kind: 'costume', assetId: A.hoodie }, // 服装：应被忽略
+      { kind: 'character', assetId: A.suke }, // 角色：应被忽略
+      { kind: 'prop', assetId: A.phone }, // 已挂：去重
+      { kind: 'location', assetId: A.living }, // 已挂：去重
+    ] as const
+    const result = automaticMounts(shot, detected)
+    expect(result.every((m: MountRef) => m.kind === 'look' || m.kind === 'location' || m.kind === 'prop')).toBe(true)
+    expect(result.some((m: MountRef) => m.assetId === A.hoodie)).toBe(false) // 服装不自动挂载
+    expect(result.some((m: MountRef) => m.assetId === A.suke)).toBe(false) // 角色不自动挂载
+    expect(new Set(result.map((m: MountRef) => m.assetId)).size).toBe(result.length) // 去重
   })
 
-  // R4-b：参考图清单 —— 每个已挂角色恰好一张定妆图（角色 + 其服装），素模不单列。
-  it('挂了苏可的镜：referenceImages 里 character 恰好 1 条且携带 costumeId', () => {
-    // v1.1
+  // R4-b：参考图清单直接引用着装角色 / 场景 / 道具，独立服装不进清单。
+  it('referenceImages 直接引用着装角色，且不返回独立服装', () => {
+    // v1.2
     const p = fresh()
-    const shot = Object.values(p.shots).find((s) => s.mounts.some((mm) => mm.assetId === A.suke))!
+    const shot = Object.values(p.shots).find((s) => s.mounts.some((mm) => mm.assetId === A.lookSuke))!
     expect(shot).toBeTruthy()
     const refs = referenceImages(shot, p.assets)
-    const chars = refs.filter((r) => r.kind === 'character')
-    expect(chars.length).toBe(1)
-    expect(chars[0]!.costumeId).toBe(A.hoodie)
-    // 服装不作为独立参考图出现（已融进定妆图）。
-    expect(refs.some((r) => r.kind === 'costume')).toBe(false)
+    expect(refs.some((r) => r.kind === 'look' && r.assetId === A.lookSuke)).toBe(true)
+    expect(refs.every((r) => r.kind !== ('costume' as string))).toBe(true)
   })
 })
 
@@ -308,34 +311,29 @@ describe('R9 资产完整性提示', () => {
     expect(hit!.kind).toBe('prop')
   })
 
-  it('规则 2：挂了角色但没挂其服装 → hint 提示', () => {
-    // v1.1
+  it('规则 2：画面里有人物但没挂着装角色 → hint「未指定着装角色」，不再有「未指定服装」', () => {
+    // v1.2
     const p = fresh()
     const shot = structuredClone(p.shots.s1_sh5!)
     shot.title = ''
     shot.imagePrompt = ''
     shot.videoPrompt = ''
-    shot.sourceQuote = ''
-    shot.mounts = [
-      { kind: 'character', assetId: A.suke },
-      { kind: 'location', assetId: A.living },
-    ]
+    shot.sourceQuote = '苏可坐在客厅里' // 点名人物，但下面不挂它的着装角色
+    shot.mounts = [{ kind: 'location', assetId: A.living }]
     const issues = mountIssues(shot, p.assets)
-    expect(issues.some((i) => i.level === 'hint' && i.text.includes('未指定服装'))).toBe(true)
+    expect(issues.some((i) => i.level === 'hint' && i.text === '未指定着装角色')).toBe(true)
+    expect(issues.some((i) => i.text.includes('未指定服装'))).toBe(false)
   })
 
   it('规则 3：没有任何场景挂载 → hint「未指定场景」', () => {
-    // v1.1
+    // v1.2
     const p = fresh()
     const shot = structuredClone(p.shots.s1_sh5!)
     shot.title = ''
     shot.imagePrompt = ''
     shot.videoPrompt = ''
     shot.sourceQuote = ''
-    shot.mounts = [
-      { kind: 'character', assetId: A.suke },
-      { kind: 'costume', assetId: A.hoodie },
-    ]
+    shot.mounts = [{ kind: 'look', assetId: A.lookSuke }]
     const issues = mountIssues(shot, p.assets)
     expect(issues.some((i) => i.level === 'hint' && i.text === '未指定场景')).toBe(true)
   })

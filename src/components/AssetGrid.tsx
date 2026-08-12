@@ -4,13 +4,13 @@ import { AssetCard } from './AssetCard'
 import s from './AssetGrid.module.css'
 
 const NOTE: Partial<Record<AssetKind, string>> = {
-  character: '纯白背景三视图（正 / 侧 / 背全身站姿）+ 特写。角色下方的服装 chip 是「谁穿哪件」的关系视图。',
-  costume: '纯白背景平铺 / 挂拍，正背两面，无人物 —— 与角色三视图分开生成，再融合成定妆图。只列剧本里真实出现的组合，不做全排列。',
-  location: '同一空间不同时段各生一张，否则拍摄台挂载时光线对不上。',
+  character: '角色素模的纯白三视图 + 特写。卡片下方「着装角色」是该角色 × 服装的固定组合，关系锁定只读，提示词各自可编辑。',
+  costume: '独立生产的基础服装（第一批下发），不直接进分镜。同一件可被 0 / 1 / 多个着装角色引用，人物参考走着装角色。',
+  location: '同一空间不同时段各一张，「客厅日」「客厅夜」是两份独立资产，本轮不做时段合并。',
   prop: '只提取会被镜头单独交代的物件，纯白背景产品图。',
 }
 
-// 资产卡片网格，三类共用。character 展示服装 + 不生图开关；prop 展示次要开关。
+// 资产卡片网格，四类共用。character 展示其着装角色；costume 反查被哪些着装角色引用。
 export function AssetGrid({ kind }: { kind: AssetKind }) {
   const assets = useStore((st) => st.project.assets)
   const list = Object.values(assets).filter((a) => a.kind === kind)

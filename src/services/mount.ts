@@ -1,26 +1,33 @@
-// 挂载默认值，不是禁令。纯函数。挂角色恒定带出一张定妆图。
-import type { Asset, Costume, MountRef, Shot } from '../data/types'
+// 自动挂载：只过滤 / 补齐着装角色、场景、道具。纯函数。
+//
+// 旧逻辑「挂角色自动带出该角色所有服装」已删除：
+//   · 服装不再自动挂载（它是第一批独立生产的基础资产，不作为分镜参考）。
+//   · 人物参考一律走着装角色（look）。
+//   · 不根据名称或归属关系自动猜着装角色 —— Look 关系由 AI 给定。
+import type { AssetKind, MountRef, Shot } from '../data/types'
 
-function costumesOf(characterId: string, assets: Record<string, Asset>): Costume[] {
-  return Object.values(assets).filter(
-    (a): a is Costume => a.kind === 'costume' && a.characterId === characterId,
-  )
+/** 允许自动挂载的三类。 */
+function isMountable(kind: AssetKind): kind is MountRef['kind'] {
+  return kind === 'look' || kind === 'location' || kind === 'prop'
 }
 
 /**
- * 默认：挂了某个角色，连同他在这场穿的服装一起挂上（这就是定妆图）。
- * 在原有挂载基础上补齐每个已挂角色的服装，去重。
+ * 在本镜已有挂载的基础上，并入 AI 检测到的挂载：
+ *   · 只接收 look / location / prop，costume / character 一律忽略。
+ *   · 按 assetId 去重（先到先得，保持顺序）。
+ * detected 用较宽的类型，以便调用方（或测试）传入被忽略的 costume 也能被安全过滤掉。
  */
-export function defaultMounts(shot: Shot, assets: Record<string, Asset>): MountRef[] {
-  const result: MountRef[] = [...shot.mounts]
-  const has = (id: string) => result.some((m) => m.assetId === id)
-
-  for (const mref of shot.mounts) {
-    const asset = assets[mref.assetId]
-    if (asset?.kind !== 'character') continue
-    for (const costume of costumesOf(asset.id, assets)) {
-      if (!has(costume.id)) result.push({ kind: 'costume', assetId: costume.id })
-    }
+export function automaticMounts(
+  shot: Shot,
+  detected: ReadonlyArray<{ kind: AssetKind; assetId: string }>,
+): MountRef[] {
+  const out: MountRef[] = []
+  const seen = new Set<string>()
+  for (const ref of [...shot.mounts, ...detected]) {
+    if (!isMountable(ref.kind)) continue
+    if (seen.has(ref.assetId)) continue
+    seen.add(ref.assetId)
+    out.push({ kind: ref.kind, assetId: ref.assetId })
   }
-  return result
+  return out
 }

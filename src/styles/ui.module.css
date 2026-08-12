@@ -95,6 +95,19 @@
 .chipProp {
   --dot: var(--prop);
 }
+.chipLook {
+  --dot: var(--look);
+}
+/* 只读锁定的关系 chip：不给删除按钮、不给 hover 交互 */
+.chipLock {
+  cursor: default;
+  opacity: 0.92;
+}
+.chipLock .lock {
+  font-size: 9px;
+  color: var(--t5);
+  margin-left: 1px;
+}
 .chipX {
   width: 15px;
   height: 15px;

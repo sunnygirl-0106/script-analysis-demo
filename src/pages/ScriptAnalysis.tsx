@@ -17,7 +17,8 @@ export function ScriptAnalysis() {
   const project = useStore((st) => st.project)
   const sceneId = useStore((st) => st.selectedSceneId)
   const activeTab = useStore((st) => st.activeTab)
-  const readOnly = !useStore((st) => st.canEditAnalysis())
+  // 字段级权限取代整页只读：脚本与提示词恒可编辑（进入视觉筹备后返回仍可改）。
+  const readOnly = false
 
   const [importOpen, setImportOpen] = useState(false)
   const [resplitOpen, setResplitOpen] = useState(false)
@@ -69,7 +70,7 @@ export function ScriptAnalysis() {
             {counts.location} 场景 / {counts.prop} 道具
           </div>
           <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={() => setConfirmOpen(true)}>
-            进入视觉筹备 →
+            资产生产 →
           </button>
         </div>
       </div>

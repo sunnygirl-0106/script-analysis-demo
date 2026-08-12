@@ -1,6 +1,6 @@
 // 第 1 集：《最后的尊严》3 场 25 镜 + 全部资产。
 // 内容全部取材自剧本原文，不用 lorem —— 原型的说服力全在这。
-import type { Project, Scene, Shot, Asset, MountRef } from './types'
+import type { Project, Scene, Shot, Asset, AssetSeed, MountRef } from './types'
 import { PROMPTS } from './prompts'
 
 // ── 资产 id（全剧唯一，供挂载引用）──
@@ -21,9 +21,13 @@ export const A = {
   bag: 'p_bag',
   malatang: 'p_malatang',
   napkin: 'p_napkin',
+  // 着装角色（角色 + 服装组合，AI 分析给定，页面只读）。分镜里的人物参考挂的是这些。
+  lookSuke: 'look_suke_hoodie',
+  lookMom: 'look_mom_cardigan',
+  lookDelivery: 'look_delivery_rider',
 } as const
 
-const assetList: Asset[] = [
+const assetList: AssetSeed[] = [
   // ── 角色 ──
   {
     id: A.suke, kind: 'character', role: 'lead',
@@ -76,9 +80,9 @@ const assetList: Asset[] = [
 【禁止】画面内字幕、水印、logo、色卡、标注文字；亮黄色骑手工装、鸭舌帽、保温单肩包、头盔等任何戏服与配件；第二个人物入画；三视图之间人物比例、发型或五官不一致；手指数量错误或肢体变形；把人物做得过于俊美（像模特）或过于凶恶（像反派）；肌肉过于发达；背景出现地面、阴影或渐变。`,
     appearances: [{ episodeNo: 1, sceneNo: 1 }],
   },
-  // ── 服装（挂在角色下）──
+  // ── 服装（完全独立的基础资产，不保存「属于哪个角色」）──
   {
-    id: A.hoodie, kind: 'costume', characterId: A.suke,
+    id: A.hoodie, kind: 'costume',
     name: '宽松连帽卫衣', aliases: ['连帽卫衣', '卫衣'],
     description: `苏可的战袍，也是她的壳。米灰色、大到能把整个人吞进去的 oversize 连帽卫衣，帽子常年扣在头上 —— 她躲电话时躲在里面，探头确认安全时也裹着它，对着亲妈演「刚睡醒」时穿的还是它。全剧未换装，所以这一件要覆盖 46 镜的所有状态：卷起的下摆、歪掉的帽子、瘫倒时堆叠的褶皱。它必须看起来是被穿旧穿软了的，不是刚买回来的新衣服 —— 一件崭新挺括的卫衣会让整个「宅家」的设定失真。`,
     imagePrompt: `【生成规格】服装资产平铺图 · 纯白无缝背景 · 16:9 横版构图 · 左右并排两图（左：正面平铺 / 右：背面平铺），两图等比等高 · 服装占画面宽度各约 40% · 顶部垂直俯拍、镜头轴线垂直于台面、无透视畸变 · 无人物、无人台、无模特、无衣架。
@@ -93,7 +97,7 @@ const assetList: Asset[] = [
     appearances: [{ episodeNo: 1, sceneNo: 1 }, { episodeNo: 1, sceneNo: 2 }, { episodeNo: 1, sceneNo: 3 }],
   },
   {
-    id: A.rider, kind: 'costume', characterId: A.delivery,
+    id: A.rider, kind: 'costume',
     name: '骑手工装', aliases: ['骑手服', '外卖服'],
     description: `外卖员的整套行头：亮黄色骑手冲锋衣、束脚长裤、同色鸭舌帽、方形保温单肩包。亮黄是这套衣服的全部性格 —— 它的功能就是在马路上被一眼看见，所以在纯白背景上它会非常跳，需要靠拼接的深炭灰把它压住。所有平台标识、二维码、工号一律不能出现：这是演示素材，不蹭任何真实品牌，也避免生成出四不像的假 logo。这套衣服要看起来是天天穿在身上的：袖口磨过、包底压出痕迹、帽檐弯了。`,
     imagePrompt: `【生成规格】服装资产平铺图 · 纯白无缝背景 · 16:9 横版构图 · 上下两排：上排为冲锋衣正面 / 背面平铺（左右并排），下排为束脚长裤、鸭舌帽与保温单肩包三件配件平铺（从左到右） · 顶部垂直俯拍、镜头轴线垂直于台面、无透视畸变 · 无人物、无人台、无模特、无衣架。
@@ -108,7 +112,7 @@ const assetList: Asset[] = [
     appearances: [{ episodeNo: 1, sceneNo: 1 }],
   },
   {
-    id: A.cardigan, kind: 'costume', characterId: A.mom,
+    id: A.cardigan, kind: 'costume',
     name: '家常针织开衫', aliases: ['针织开衫', '开衫'],
     description: `妈妈的家常装：浅豆沙色中长款针织开衫、深藏青直筒长裤、深灰居家布鞋。这套衣服的关键词是「常穿常洗」—— 针织已经被洗软、肘部起了球、前襟有点变形。它要能一眼传达出「这是在自己家里、刚给自己倒了杯水就顺手打了个视频」的松弛感，而不是出门做客的体面。颜色要柔和：豆沙色配藏青是最典型的、不出错的中年家常配色，既不艳也不暗。`,
     imagePrompt: `【生成规格】服装资产平铺图 · 纯白无缝背景 · 16:9 横版构图 · 上下两排：上排为开衫正面 / 背面平铺（左右并排），下排为直筒长裤与一双居家布鞋 · 顶部垂直俯拍、镜头轴线垂直于台面、无透视畸变 · 无人物、无人台、无模特、无衣架。
@@ -278,11 +282,53 @@ const assetList: Asset[] = [
 【禁止】画面内字幕、水印、logo；纸巾或筷子上出现任何印花、文字、品牌套袋或纸质包装；筷子已被掰开或分成两根；摆放歪斜、凌乱、交叉；曝光过度导致餐巾纸与白背景分不开；人物、手部入画；把餐巾纸做成方巾、布餐巾或抽纸盒；筷子做成金属筷或漆筷。`,
     appearances: [{ episodeNo: 1, sceneNo: 3 }],
   },
+  // ── 着装角色（角色 × 服装，AI 分析给定的确定关系，页面只读）──
+  {
+    id: A.lookSuke, kind: 'look', characterId: A.suke, costumeId: A.hoodie,
+    name: '苏可 · 宽松连帽卫衣', aliases: ['苏可'],
+    description: '苏可穿上那件米灰 oversize 连帽卫衣的定妆形态 —— 全剧未换装，贯穿全部镜头的人物参考。',
+    imagePrompt: `【着装角色】苏可（素模）+ 宽松连帽卫衣（服装）融合后的定妆图，用于分镜中所有出现苏可的镜头。
+【人物】以苏可角色素模为准：24 岁东亚女性，身高约 163cm 偏瘦，略偏圆的鹅蛋脸、杏眼、眼尾微垂，黑色中长发中分微卷到锁骨下，素颜感干净肤色，放松自然站姿。头身比、五官、发型、肤色一律与角色素模一致，不得改动。
+【着装】穿上米灰色（暖调燕麦色）超宽松 oversize 连帽卫衣：落肩袖、箱型垮塌廓形，衣长盖过臀部，袖口下摆宽松罗纹；帽子自然搭在肩背或半扣头上；面料为中厚磨毛纯棉，哑光不反光，肘部与前襟有被穿旧的轻微起球磨白。卫衣是唯一戏服，不叠加其他外套或配件。
+【一致性】人物特征取自角色素模、服装款式取自服装平铺图，二者融合但各自不得走样；未指定的裸露部位（手、颈、脸）继续遵循素模设定。
+【光线质感】中性棚拍柔光、5500K、纯白无缝背景、高细节写实真人摄影质感。
+【禁止】画面内字幕、水印、logo；第二个人物入画；更换或叠加其他服装；改变素模的五官、发型、身形；把人物做成动漫或 3D 渲染风格。`,
+    appearances: [{ episodeNo: 1, sceneNo: 1 }, { episodeNo: 1, sceneNo: 2 }, { episodeNo: 1, sceneNo: 3 }],
+  },
+  {
+    id: A.lookMom, kind: 'look', characterId: A.mom, costumeId: A.cardigan,
+    name: '妈妈 · 家常针织开衫', aliases: ['妈妈'],
+    description: '妈妈穿着豆沙色家常针织开衫、通过视频通话出现的定妆形态。',
+    imagePrompt: `【着装角色】妈妈（素模）+ 家常针织开衫（服装）融合后的定妆图，用于第 3 场视频通话里出现的妈妈镜头。
+【人物】以妈妈角色素模为准：50 岁上下东亚女性，身高约 158cm 中等偏丰腴，圆脸有笑纹、眼神温和，短卷发微烫带少量自然白发，家常松弛的端正站姿。五官、发型、体型与角色素模一致，不得改动。
+【着装】穿上浅豆沙色（暖调低饱和柔粉棕）中长款 V 领针织开衫，直筒宽松、前襟五粒同色树脂扣、袖口下摆窄罗纹，肘部起球、前襟因常穿略变形；内搭简单，下装为深藏青直筒长裤。开衫是主体戏服，读起来是「在自己家里顺手打了个视频」的松弛感，不是出门做客的体面。
+【一致性】人物特征取自角色素模、服装款式取自服装平铺图，二者融合但各自不得走样。
+【光线质感】中性棚拍柔光、5500K、纯白无缝背景、高细节写实真人摄影质感。
+【禁止】画面内字幕、水印、logo；第二个人物入画；更换或叠加其他服装；改变素模的五官、发型、身形；把开衫做成时装外套；过度美颜、抹平皱纹或染黑白发。`,
+    appearances: [{ episodeNo: 1, sceneNo: 3 }],
+  },
+  {
+    id: A.lookDelivery, kind: 'look', characterId: A.delivery, costumeId: A.rider,
+    name: '外卖员 · 骑手工装', aliases: ['外卖员'],
+    description: '外卖员穿上整套亮黄骑手工装的定妆形态，只在第 1 场门外出现。',
+    imagePrompt: `【着装角色】外卖员（素模）+ 骑手工装（服装）融合后的定妆图，用于第 1 场门外出现的外卖员镜头。
+【人物】以外卖员角色素模为准：25 岁上下东亚男性，身高约 178cm 瘦高精瘦，长脸颧骨略高、眉浓密平直、神情匆忙不耐但不凶，黑色短寸头，略前倾的「随时要走」站姿。五官、发型、体型与角色素模一致，不得改动。
+【着装】穿上整套亮黄色（安全警示黄）骑手工装冲锋衣配束脚长裤、同色鸭舌帽，肩挎方形亮黄保温单肩包；拼接处为深炭灰，反光条纯银灰无字；面料为防风尼龙梭织，有被天天穿的磨白与压痕。工装是主体戏服，所有平台标识、二维码、工号一律不出现。
+【一致性】人物特征取自角色素模、服装款式取自服装平铺图，二者融合但各自不得走样。
+【光线质感】中性棚拍柔光、5500K、纯白无缝背景、高细节写实真人摄影质感。
+【禁止】画面内字幕、水印；任何外卖平台名称 / logo / 二维码 / 工号；第二个人物入画；更换或叠加其他服装；改变素模的五官、发型、身形；把人物做得过于俊美或过于凶恶。`,
+    appearances: [{ episodeNo: 1, sceneNo: 1 }],
+  },
 ]
 
 // 挂载简写：把 assetId 列表转成 MountRef[]，kind 从 assetList 反查。
+// 只有 look / location / prop 可挂载；传入角色或服装 id 会在 buildProject 组装时被 kindOf 拦成非法。
 const kindOf: Record<string, MountRef['kind']> = Object.fromEntries(
-  assetList.map((a) => [a.id, a.kind]),
+  assetList
+    .filter((a): a is AssetSeed & { kind: MountRef['kind'] } =>
+      a.kind === 'look' || a.kind === 'location' || a.kind === 'prop',
+    )
+    .map((a) => [a.id, a.kind]),
 )
 export const m = (...ids: string[]): MountRef[] =>
   ids.map((assetId) => ({ kind: kindOf[assetId]!, assetId }))
@@ -297,7 +343,7 @@ const scene1Shots: ShotSeed[] = [
     imagePrompt: '极近微距特写。手机屏幕充满画面，高亮刺眼，来电显示「健身教练-王（15）」清晰可辨。背景为客厅沙发织物，浅景深虚化。苏可蜷缩在沙发角落，仅露出部分轮廓。',
     cameraMove: '慢推 → Rack Focus', dialogue: '无', sfx: '高频震动嗡嗡声',
     videoPrompt: '{0-2s} 镜头缓慢推近手机屏幕，屏幕疯狂闪烁。{2-3s} 快速虚实转换，焦点从手机移到后景苏可脸上，面部被屏幕冷光照亮。【禁止】背景音乐、画面内字幕。',
-    mounts: m(A.suke, A.hoodie, A.living, A.phone),
+    mounts: m(A.lookSuke,A.living, A.phone),
     sourceQuote: '特写镜头。苏可蜷缩在沙发里，手机屏幕疯狂闪烁。来电显示：「健身教练-王（15）」。',
   },
   {
@@ -306,7 +352,7 @@ const scene1Shots: ShotSeed[] = [
     imagePrompt: '中景。苏可赤裸的脚趾用力将手机推入抱枕下方，动作夸张滑稽。客厅沙发全貌入画，米色布艺，散落抱枕。',
     cameraMove: '低角度跟随', dialogue: '苏可（碎碎念）', sfx: '织物下闷响',
     videoPrompt: '{0-2s} 低角度跟随脚趾动作。台词（碎碎念）：「看不见我……你看不见我……我已经在跑步机上猝死了……」{2-4s} 手机被埋入抱枕，闷声震动。',
-    mounts: m(A.suke, A.hoodie, A.living, A.phone, A.pillow),
+    mounts: m(A.lookSuke,A.living, A.phone, A.pillow),
     sourceQuote: '苏可一脸「视死如归」，用脚趾把手机踢到了抱枕下面。手机在抱枕下闷声震动。',
   },
   {
@@ -315,7 +361,7 @@ const scene1Shots: ShotSeed[] = [
     imagePrompt: '特写。抱枕表面因手机震动而微微颤动，织物纹理清晰，旁边散落零食包装。',
     cameraMove: '定镜', dialogue: '无', sfx: '织物下沉闷的震动声',
     videoPrompt: '{0-3s} 定镜。抱枕随手机震动轻轻抖动，震动逐渐停止。【禁止】背景音乐。',
-    mounts: m(A.suke, A.hoodie, A.living, A.phone, A.pillow),
+    mounts: m(A.lookSuke,A.living, A.phone, A.pillow),
     sourceQuote: '手机在抱枕下闷声震动。',
   },
   {
@@ -324,7 +370,7 @@ const scene1Shots: ShotSeed[] = [
     imagePrompt: '近景。苏可从抱枕堆中探出半个脑袋，眼神警惕左右张望，表情如释重负。',
     cameraMove: '定镜', dialogue: '无', sfx: '由震动骤停转为寂静',
     videoPrompt: '{0-3s} 定镜。震动停止，苏可像土拨鼠一样缓缓探头。{3-5s} 确认安全后长舒一口气。【禁止】背景音乐、画面内字幕。',
-    mounts: m(A.suke, A.hoodie, A.living, A.pillow),
+    mounts: m(A.lookSuke,A.living, A.pillow),
     sourceQuote: '震动停止。苏可像土拨鼠一样从抱枕里探出头，确认安全。',
   },
   {
@@ -333,7 +379,7 @@ const scene1Shots: ShotSeed[] = [
     imagePrompt: '中景。苏可整个人如释重负地瘫倒在沙发上，四肢摊开，闭眼，嘴角带着劫后余生的满足。',
     cameraMove: '慢推', dialogue: '无', sfx: '一声长舒的叹气',
     videoPrompt: '{0-4s} 镜头极缓慢推近，苏可瘫倒后刚想闭眼享受安静。【禁止】背景音乐。',
-    mounts: m(A.suke, A.hoodie, A.living),
+    mounts: m(A.lookSuke,A.living),
     sourceQuote: '她如释重负地瘫倒，刚想闭眼。',
   },
   {
@@ -342,7 +388,7 @@ const scene1Shots: ShotSeed[] = [
     imagePrompt: '全景。客厅全貌，苏可听到门铃后整个人从沙发上原地弹起，肢体僵直，表情如临大敌。',
     cameraMove: '手持', dialogue: '无', sfx: '「叮咚——」清脆刺耳的门铃声',
     videoPrompt: '{0-1s} 定镜安静。{1-2s} 「叮咚——」门铃声在安静房间里像防空警报。{2-4s} 手持微晃，苏可原地弹起。',
-    mounts: m(A.suke, A.hoodie, A.living),
+    mounts: m(A.lookSuke,A.living),
     sourceQuote: '「叮咚——」清脆的门铃声，在安静的房间里像防空警报。',
   },
   {
@@ -351,7 +397,7 @@ const scene1Shots: ShotSeed[] = [
     imagePrompt: '全景。苏可动作敏捷地钻到半人高的巨大毛绒熊后面躲着，只露出一双警惕的眼睛。',
     cameraMove: '快速推近', dialogue: '无', sfx: '窸窸窣窣的躲藏声',
     videoPrompt: '{0-2s} 苏可如特工般扑向毛绒熊。{2-5s} 快速推近到熊后露出的半张脸，屏息。【禁止】背景音乐。',
-    mounts: m(A.suke, A.hoodie, A.living, A.bear),
+    mounts: m(A.lookSuke,A.living, A.bear),
     sourceQuote: '苏可整个人原地弹起，动作敏捷地钻到了大毛绒熊后面躲着。',
   },
   {
@@ -360,7 +406,7 @@ const scene1Shots: ShotSeed[] = [
     imagePrompt: '中景。紧闭的防盗门，门后隐约可见躲在毛绒熊后的苏可，画面重心在门与她之间的空气张力。',
     cameraMove: '定镜', dialogue: '外卖员（门外喊声）', sfx: '门外闷闷的喊话声',
     videoPrompt: '{0-4s} 定镜对着门。画外音（外卖员）：「尾号 0617 的外卖！加辣加臭加炸蛋的那份！没人在家我拿走退单了啊？」苏可在熊后表情剧变。',
-    mounts: m(A.suke, A.delivery, A.hoodie, A.rider, A.living),
+    mounts: m(A.lookSuke, A.lookDelivery, A.living),
     sourceQuote: '门外（外卖员喊声）：「尾号 0617 的外卖！加辣加臭加炸蛋的那份！没人在家我拿走退单了啊？」',
   },
 ]
@@ -373,7 +419,7 @@ const scene2Shots: ShotSeed[] = [
     imagePrompt: '中景。苏可像特工一样贴着墙根小心翼翼挪向门口，身体压低，神情夸张警惕。',
     cameraMove: '跟随', dialogue: '无', sfx: '刻意放轻的脚步声',
     videoPrompt: '{0-4s} 镜头跟随苏可贴墙移动到门口，动作夸张滑稽。【禁止】背景音乐。',
-    mounts: m(A.suke, A.hoodie, A.entry),
+    mounts: m(A.lookSuke,A.entry),
     sourceQuote: '镜头跟着苏可。她像特工一样，贴着墙根挪到门口，通过猫眼观察。',
   },
   {
@@ -382,7 +428,7 @@ const scene2Shots: ShotSeed[] = [
     imagePrompt: '猫眼鱼眼畸变视角。公共走廊空无一人，地上放着一个冒着热气的外卖打包袋。',
     cameraMove: '定镜', dialogue: '无', sfx: '走廊的空旷回声',
     videoPrompt: '{0-4s} 定镜，猫眼视角。走廊空无一人，热气从地上的外卖袋升起。',
-    mounts: m(A.suke, A.hoodie, A.corridor, A.bag),
+    mounts: m(A.lookSuke,A.corridor, A.bag),
     sourceQuote: '走廊空无一人。地上放着一个冒着热气的袋子。',
   },
   {
@@ -391,7 +437,7 @@ const scene2Shots: ShotSeed[] = [
     imagePrompt: '全景。苏可迅速开门，像抓猎物一样把外卖袋一把捞进屋内，随即回身猛地锁门。',
     cameraMove: '手持', dialogue: '无', sfx: '开门、抓取、门锁「咔哒」',
     videoPrompt: '{0-2s} 门缝拉开。{2-4s} 手快速捞起外卖袋。{4-5s} 回身锁门，一气呵成。',
-    mounts: m(A.suke, A.hoodie, A.entry, A.bag),
+    mounts: m(A.lookSuke,A.entry, A.bag),
     sourceQuote: '她迅速开门，像抓猎物一样把外卖捞进来，迅速锁门。',
   },
   {
@@ -400,7 +446,7 @@ const scene2Shots: ShotSeed[] = [
     imagePrompt: '近景。苏可背靠门板，怀里抱着外卖袋，大口喘气，像完成了一场惊心动魄的任务。',
     cameraMove: '慢推', dialogue: '无', sfx: '急促的喘气声',
     videoPrompt: '{0-4s} 镜头缓推。苏可背靠门板大喘气，肩膀起伏。',
-    mounts: m(A.suke, A.hoodie, A.entry, A.bag),
+    mounts: m(A.lookSuke,A.entry, A.bag),
     sourceQuote: '背靠门板大喘气。',
   },
   {
@@ -409,7 +455,7 @@ const scene2Shots: ShotSeed[] = [
     imagePrompt: '近景。苏可脸上绽放狂喜，眼神发亮，怀抱外卖袋如获至宝。',
     cameraMove: '定镜', dialogue: '苏可（狂喜）', sfx: '轻快的呼气',
     videoPrompt: '{0-3s} 定镜。台词（狂喜低语）：「呼……社交危机解除。现在是，我的时间。」',
-    mounts: m(A.suke, A.hoodie, A.entry, A.bag),
+    mounts: m(A.lookSuke,A.entry, A.bag),
     sourceQuote: '苏可（狂喜）：「呼……社交危机解除。现在是，我的时间。」',
   },
 ]
@@ -422,7 +468,7 @@ const scene3Shots: ShotSeed[] = [
     imagePrompt: '中景。苏可欢快地跑到餐桌前，仪式感极强地铺开餐巾纸，掰开一次性筷子。',
     cameraMove: '跟随', dialogue: '无', sfx: '筷子掰开的脆响',
     videoPrompt: '{0-2s} 跟随苏可跑到餐桌。{2-4s} 铺餐巾纸、掰筷子，动作充满仪式感。',
-    mounts: m(A.suke, A.hoodie, A.table, A.napkin, A.bag),
+    mounts: m(A.lookSuke,A.table, A.napkin, A.bag),
     sourceQuote: '她欢快地跑到餐桌前，仪式感极强地铺开餐巾纸，掰开一次性筷子。',
   },
   {
@@ -431,7 +477,7 @@ const scene3Shots: ShotSeed[] = [
     imagePrompt: '特写。双手拆开外卖打包袋，红油麻辣烫露出，热气与香味仿佛溢出屏幕。',
     cameraMove: '慢推', dialogue: '无', sfx: '塑料袋摩擦、汤汁轻响',
     videoPrompt: '{0-4s} 缓推。拆开包装袋，红油的香味瞬间溢出屏幕，热气升腾。',
-    mounts: m(A.suke, A.hoodie, A.table, A.bag, A.malatang),
+    mounts: m(A.lookSuke,A.table, A.bag, A.malatang),
     sourceQuote: '拆开包装袋——红油的香味瞬间溢出屏幕。',
   },
   {
@@ -440,7 +486,7 @@ const scene3Shots: ShotSeed[] = [
     imagePrompt: '极特写。筷子夹起一颗裹满汤汁的鱼丸，红油欲滴，正要送往嘴边，背景为苏可期待的脸。',
     cameraMove: '慢推', dialogue: '无', sfx: '汤汁滴落声',
     videoPrompt: '{0-4s} 极缓推近鱼丸。她夹起裹满汤汁的鱼丸，正要往嘴里送。【禁止】背景音乐。',
-    mounts: m(A.suke, A.hoodie, A.table, A.malatang),
+    mounts: m(A.lookSuke,A.table, A.malatang),
     sourceQuote: '特写：她夹起一颗裹满汤汁的鱼丸，正要往嘴里送。',
   },
   {
@@ -449,7 +495,7 @@ const scene3Shots: ShotSeed[] = [
     imagePrompt: '特写。桌上手机再次亮起，屏幕显示微信视频通话邀请界面，冷光照亮桌面一角。',
     cameraMove: 'Rack Focus', dialogue: '无', sfx: '微信视频呼叫铃声',
     videoPrompt: '{0-2s} 焦点在鱼丸。{2-4s} Rack Focus 转到亮起的手机，微信视频邀请。',
-    mounts: m(A.suke, A.hoodie, A.table, A.phone),
+    mounts: m(A.lookSuke,A.table, A.phone),
     sourceQuote: '手机再次亮起。不是电话，是一条微信视频邀请。',
   },
   {
@@ -458,7 +504,7 @@ const scene3Shots: ShotSeed[] = [
     imagePrompt: '特写。手机屏幕备注「亲妈」清晰可见，画面切到苏可瞳孔一缩的眼睛特写。',
     cameraMove: '快速推近', dialogue: '无', sfx: '一声短促的心跳',
     videoPrompt: '{0-1.5s} 屏幕备注「亲妈」。{1.5-3s} 快切苏可瞳孔一缩。',
-    mounts: m(A.suke, A.hoodie, A.table, A.phone),
+    mounts: m(A.lookSuke,A.table, A.phone),
     sourceQuote: '备注：「亲妈」。',
   },
   {
@@ -467,7 +513,7 @@ const scene3Shots: ShotSeed[] = [
     imagePrompt: '近景。苏可看看手里的鱼丸，又看看响个不停的手机，纠结凝固，时间仿佛静止。',
     cameraMove: '定镜', dialogue: '无', sfx: '持续的视频呼叫铃声',
     videoPrompt: '{0-5s} 定镜。停顿 5 秒，苏可视线在鱼丸与手机之间来回，天人交战。【禁止】背景音乐。',
-    mounts: m(A.suke, A.hoodie, A.table, A.malatang, A.phone),
+    mounts: m(A.lookSuke,A.table, A.malatang, A.phone),
     sourceQuote: '停顿 5 秒。苏可（看着鱼丸，又看着手机）。',
   },
   {
@@ -476,7 +522,7 @@ const scene3Shots: ShotSeed[] = [
     imagePrompt: '近景。苏可无奈地看着手机，嘴角抽动，低声吐槽。',
     cameraMove: '定镜', dialogue: '苏可', sfx: '视频呼叫铃声',
     videoPrompt: '{0-4s} 定镜。台词：「妈……你可真会掐点……」',
-    mounts: m(A.suke, A.hoodie, A.table, A.phone),
+    mounts: m(A.lookSuke,A.table, A.phone),
     sourceQuote: '苏可（看着鱼丸，又看着手机）：「妈……你可真会掐点……」',
   },
   {
@@ -485,7 +531,7 @@ const scene3Shots: ShotSeed[] = [
     imagePrompt: '中景。苏可深吸一口气，快速整理乱发，为接听通话做准备。',
     cameraMove: '慢推', dialogue: '无', sfx: '整理头发的窸窣声',
     videoPrompt: '{0-4s} 缓推。她深吸一口气，整理了一下乱发，蓄势待发。',
-    mounts: m(A.suke, A.hoodie, A.table),
+    mounts: m(A.lookSuke,A.table),
     sourceQuote: '她深吸一口气，整理了一下乱发。',
   },
   {
@@ -494,7 +540,7 @@ const scene3Shots: ShotSeed[] = [
     imagePrompt: '近景。苏可点击接听的瞬间，表情从生无可恋秒切成「乖巧且虚弱」的滤镜。',
     cameraMove: '定镜', dialogue: '无', sfx: '接听「叮」的提示音',
     videoPrompt: '{0-2s} 手指点击接听。{2-4s} 表情瞬间切换成乖巧虚弱，判若两人。',
-    mounts: m(A.suke, A.hoodie, A.table, A.phone),
+    mounts: m(A.lookSuke,A.table, A.phone),
     sourceQuote: '她点击接听，瞬间切换成「乖巧且虚弱」的滤镜。',
   },
   {
@@ -503,7 +549,7 @@ const scene3Shots: ShotSeed[] = [
     imagePrompt: '特写。苏可对着屏幕，嗓音甜美，演技拉满地扮演「清纯大学生」。',
     cameraMove: '定镜', dialogue: '苏可（对屏幕，嗓音甜美）', sfx: '无',
     videoPrompt: '{0-5s} 定镜正对苏可。台词（甜美）：「喂妈？哎呀刚睡醒，正准备喝白粥呢，减肥嘛，不饿不饿……」',
-    mounts: m(A.suke, A.mom, A.hoodie, A.cardigan, A.table, A.phone),
+    mounts: m(A.lookSuke, A.lookMom,A.table, A.phone),
     sourceQuote: '苏可（对着屏幕，嗓音甜美）：「喂妈？哎呀刚睡醒，正准备喝白粥呢，减肥嘛，不饿不饿……」',
   },
   {
@@ -512,7 +558,7 @@ const scene3Shots: ShotSeed[] = [
     imagePrompt: '全景对照构图。画面左边苏可对着手机演「清纯大学生」，右边一碗冒着红油热气的豪华麻辣烫，反差强烈。',
     cameraMove: '拉远', dialogue: '妈妈（视频里）', sfx: '视频通话的电流底噪',
     videoPrompt: '{0-3s} 镜头拉远，露出左演戏、右麻辣烫的对照。{3-5s} 视频里妈妈：「可可啊，我怎么闻着你那边有股炸蛋的味道？」',
-    mounts: m(A.suke, A.mom, A.hoodie, A.cardigan, A.table, A.phone, A.malatang),
+    mounts: m(A.lookSuke, A.lookMom,A.table, A.phone, A.malatang),
     sourceQuote: '镜头拉远。画面左边是她对着手机屏幕演「清纯大学生」，右边是那一碗冒着红油、甚至还在冒热气的豪华麻辣烫。视频里妈妈：「我怎么闻着你那边有股炸蛋的味道？」',
   },
   {
@@ -521,7 +567,7 @@ const scene3Shots: ShotSeed[] = [
     imagePrompt: '特写。苏可瞳孔地震，拿着筷子的手在半空僵住，笑容凝固，随即画面切黑。',
     cameraMove: '快速推近', dialogue: '无', sfx: '戛然而止的静默',
     videoPrompt: '{0-3s} 快速推近苏可僵住的脸。{3-4s} 筷子悬在半空。{4-5s} 切黑。【禁止】背景音乐、画面内字幕。',
-    mounts: m(A.suke, A.mom, A.hoodie, A.cardigan, A.table, A.phone, A.malatang),
+    mounts: m(A.lookSuke, A.lookMom,A.table, A.phone, A.malatang),
     sourceQuote: '苏可瞳孔地震，拿着筷子的手在半空僵住。切黑。',
   },
 ]
@@ -589,7 +635,10 @@ const scenes: Record<string, Scene> = {
   [scene3.id]: scene3,
 }
 
-const assets: Record<string, Asset> = Object.fromEntries(assetList.map((a) => [a.id, a]))
+// revision 由组装阶段统一补齐（从 1 起），避免在每条资产字面量里手写。
+const assets: Record<string, Asset> = Object.fromEntries(
+  assetList.map((a) => [a.id, { ...a, revision: 1 } as Asset]),
+)
 
 export const seedProject: Project = {
   id: 'proj_last_dignity',
@@ -598,6 +647,7 @@ export const seedProject: Project = {
   style: 'realistic',
   defaultDensity: 'standard',
   stage: 'analysis',
+  scriptRevision: 1,
   episodes: [
     { id: 'e1', no: 1, title: '外卖与尊严', sceneIds: ['s1', 's2', 's3'] },
   ],

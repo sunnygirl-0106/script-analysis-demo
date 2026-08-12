@@ -28,7 +28,6 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
     <div className={s.pane}>
       <SceneSettingsDrawer />
       <SceneTimeline scene={scene} shots={shots} activeId={hoverId} onHover={setHoverId} />
-      {readOnly && <div className={s.lockNote}>🔒 已进入视觉筹备，剧本分析只读</div>}
 
       <div className={s.scroll}>
         <div className={s.grid}>

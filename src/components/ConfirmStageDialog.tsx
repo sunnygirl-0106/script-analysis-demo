@@ -1,72 +1,64 @@
 import { useMemo } from 'react'
 import { useStore } from '../store/useStore'
 import { mountIssues } from '../services/completeness'
-import { sceneDuration } from '../services/timeline'
+import { firstBatchAssets } from '../services/production'
 import ui from '../styles/ui.module.css'
 import d from './ScriptImportDialog.module.css'
 import s from './ConfirmStageDialog.module.css'
 
-// ★ 「进入视觉筹备」前置确认：把当前拆解结果摊开给用户看一眼，重量由弹窗承担，按钮保持轻。
+// ★ 第一批资产生产确认页：只统计四类基础资产，不统计着装角色。
+// 确认即调用 startAssetProduction() 生成生产快照并进入视觉筹备。
 export function ConfirmStageDialog({ onClose }: { onClose: () => void }) {
   const project = useStore((st) => st.project)
-  const setStage = useStore((st) => st.setStage)
+  const startAssetProduction = useStore((st) => st.startAssetProduction)
 
   const stat = useMemo(() => {
-    const scenes = Object.values(project.scenes)
-    const shot = scenes.reduce((n, sc) => n + sc.shotIds.length, 0)
-    const dur = scenes.reduce((n, sc) => n + sceneDuration(sc, project.shots), 0)
-    const assets = Object.values(project.assets)
-    // 有「未挂载」动作提示（规则 1）的镜数。
-    const flagged = Object.values(project.shots).filter((sh) =>
-      mountIssues(sh, project.assets).some((iss) => iss.level === 'action'),
+    const base = firstBatchAssets(project)
+    const by = (k: string) => base.filter((a) => a.kind === k).length
+    // 缺着装角色 / 场景 / 道具等提示（含 action 与 hint）的镜数。
+    const flagged = Object.values(project.shots).filter(
+      (sh) => mountIssues(sh, project.assets).length > 0,
     ).length
     return {
-      ep: project.episodes.length,
-      scene: scenes.length,
-      shot,
-      dur,
-      character: assets.filter((a) => a.kind === 'character').length,
-      costume: assets.filter((a) => a.kind === 'costume').length,
-      location: assets.filter((a) => a.kind === 'location').length,
-      prop: assets.filter((a) => a.kind === 'prop').length,
+      character: by('character'),
+      costume: by('costume'),
+      location: by('location'),
+      prop: by('prop'),
+      total: base.length,
       flagged,
     }
   }, [project])
 
   const confirm = () => {
-    setStage('visual')
+    startAssetProduction()
     onClose()
   }
 
   return (
     <div className={d.overlay} onClick={onClose}>
       <div className={d.dialog} onClick={(e) => e.stopPropagation()}>
-        <div className={d.title}>确认剧本拆解结果</div>
+        <div className={d.title}>即将开始资产生产</div>
 
-        <div className={s.lead}>当前剧本已拆解为：</div>
+        <div className={s.lead}>第一批将生成：</div>
         <div className={s.stat}>
-          {stat.ep} 集 · {stat.scene} 场 · {stat.shot} 镜 · 约 {stat.dur} 秒
+          {stat.character} 个素模角色 · {stat.costume} 套服装 · {stat.location} 个场景 · {stat.prop} 个道具
         </div>
-        <div className={s.stat}>
-          {stat.character} 个角色 · {stat.costume} 套服装 · {stat.location} 个场景 · {stat.prop} 个道具
-        </div>
+        <div className={s.stat}>共 {stat.total} 项基础资产</div>
+
+        <div className={s.desc}>着装角色将在基础资产确认后另行生成，本次不包含。</div>
 
         {stat.flagged > 0 && (
           <div className={s.warn}>
-            ⚠ {stat.flagged} 个镜头存在未挂载的资产提示，建议确认后再进入。
+            ⚠ {stat.flagged} 个镜头存在缺少着装角色 / 场景 / 道具的提示，建议确认后再进入。
           </div>
         )}
-
-        <div className={s.desc}>
-          确认后将以当前剧本拆解结果进入视觉筹备。剧本分析将切换为只读；如果之后返回修改，受影响的后续生成结果可能需要重新生成。
-        </div>
 
         <div className={d.actions}>
           <button className={ui.btn} onClick={onClose}>
             继续检查
           </button>
           <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={confirm}>
-            确认并进入
+            确认并开始生产
           </button>
         </div>
       </div>

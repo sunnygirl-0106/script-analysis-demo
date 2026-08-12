@@ -32,7 +32,7 @@ export function appendEpisode(project: Project, payload: EpisodePayload): Projec
       remap.set(asset.id, existingId) // 复用旧 id，不新建
     } else {
       remap.set(asset.id, asset.id) // 保留自身 id
-      addedAssets[asset.id] = asset
+      addedAssets[asset.id] = { ...asset, revision: 1 } as Asset // 新集资产入库补 revision
       byKey.set(key, asset.id)
     }
   }
