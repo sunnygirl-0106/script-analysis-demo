@@ -78,19 +78,19 @@ export function ScriptImportDialog({ open, defaultMode = 'append', scope = 'proj
                     追加到末尾 <span className={s.rec}>推荐</span>
                   </div>
                   <div className={s.optDesc}>
-                    已有 {counts.ep} 集 {counts.scene} 场 {counts.shot} 镜保持不动，新集接在最后。老角色按名称复用，不重复建资产。
-                    {hasEp2 && <span className={s.warnInline}>（第 2 集已追加过，将无变化）</span>}
+                    现有 {counts.ep} 集 {counts.scene} 场 {counts.shot} 个镜头不会改变，新剧本会接在现有剧集之后，同名角色会自动沿用已有资料。
+                    {hasEp2 && <span className={s.warnInline}>（第 2 集已加入过，将无变化）</span>}
                   </div>
                 </div>
               </label>
               <label className={[s.opt, mode === 'overwrite' ? s.on : ''].join(' ')}>
                 <input type="radio" checked={mode === 'overwrite'} onChange={() => setMode('overwrite')} />
                 <div className={s.optBody}>
-                  <div className={s.optHead}>{isEpisode ? '替换本集' : '覆盖重来'}</div>
+                  <div className={s.optHead}>{isEpisode ? '替换本集' : '替换整个剧本'}</div>
                   <div className={s.optDesc}>
                     {isEpisode
-                      ? `替换第 ${targetEp?.no ?? ''} 集的全部解析结果，其他集不受影响。实现为删除本集后按新剧本重新拆解。`
-                      : '丢弃当前全部解析结果，用新剧本重新开始。已手改的时长、提示词、挂载不可恢复。'}
+                      ? `替换第 ${targetEp?.no ?? ''} 集的全部解析结果，其他集不受影响。`
+                      : '当前的剧本分析内容将被替换。你修改过的镜头时长、提示词以及出场人物和物品将无法保留。'}
                   </div>
                 </div>
               </label>
@@ -106,19 +106,19 @@ export function ScriptImportDialog({ open, defaultMode = 'append', scope = 'proj
           </>
         ) : (
           <>
-            <div className={s.title}>{isEpisode ? `确认替换第 ${targetEp?.no ?? ''} 集` : '确认覆盖重来'}</div>
+            <div className={s.title}>{isEpisode ? `确认替换第 ${targetEp?.no ?? ''} 集` : '确定替换整个剧本？'}</div>
             <div className={s.danger}>
               {isEpisode ? (
-                <>⚠️ 第 {targetEp?.no ?? ''} 集的全部解析结果将被删除，并按新剧本《{altScriptPayload.title}》重新拆解。其他集不受影响，此操作不可恢复。</>
+                <>⚠️ 第 {targetEp?.no ?? ''} 集的全部分析内容将被替换为新剧本《{altScriptPayload.title}》。其他集不受影响，此操作无法恢复。</>
               ) : (
-                <>⚠️ 这是危险操作。当前项目的全部解析结果将被新剧本《{altScriptPayload.title}》整体替换，且不可恢复。</>
+                <>⚠️ 新剧本《{altScriptPayload.title}》将替换当前剧本及全部分析内容。你此前的修改在替换后将无法恢复。</>
               )}
             </div>
             {!isEpisode && (
               <label className={s.ackRow}>
                 <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} />
                 <span>
-                  我知道将丢失 <b>{counts.ep} 集 / {counts.scene} 场 / {counts.shot} 镜 / {counts.asset} 项资产</b>
+                  我已了解：当前 <b>{counts.ep} 集 / {counts.scene} 场 / {counts.shot} 个镜头 / {counts.asset} 项相关素材</b> 将被替换
                 </span>
               </label>
             )}
@@ -131,7 +131,7 @@ export function ScriptImportDialog({ open, defaultMode = 'append', scope = 'proj
                 disabled={!isEpisode && !ack}
                 onClick={onConfirmOverwrite}
               >
-                {isEpisode ? '替换本集' : '覆盖重来'}
+                {isEpisode ? '替换本集' : '替换剧本'}
               </button>
             </div>
           </>

@@ -81,7 +81,7 @@ export function mountIssues(shot: Shot, assets: Record<string, Asset>): MountIss
     const asset = assets[id]!
     if (asset.kind === 'prop') {
       if (mountedPropIds.has(id)) continue
-      issues.push({ level: 'action', text: `未挂载：${asset.name}`, assetId: id, kind: 'prop' })
+      issues.push({ level: 'action', text: `＋ 添加「${asset.name}」`, assetId: id, kind: 'prop' })
     } else {
       // 角色：挂了它的任一 look 或挂了它本身，都算已挂。
       if (coveredCharacterIds.has(id)) continue
@@ -89,9 +89,9 @@ export function mountIssues(shot: Shot, assets: Record<string, Asset>): MountIss
       // 没有任何 look 才退回挂 character 兜底。
       const looks = looksOfCharacter(id, assets)
       if (looks.length > 0) {
-        issues.push({ level: 'action', text: `未挂载：${asset.name}`, assetId: looks[0]!.id, kind: 'look' })
+        issues.push({ level: 'action', text: `＋ 添加「${asset.name}」`, assetId: looks[0]!.id, kind: 'look' })
       } else {
-        issues.push({ level: 'action', text: `未挂载：${asset.name}`, assetId: id, kind: 'character' })
+        issues.push({ level: 'action', text: `＋ 添加「${asset.name}」`, assetId: id, kind: 'character' })
       }
     }
   }
@@ -102,12 +102,12 @@ export function mountIssues(shot: Shot, assets: Record<string, Asset>): MountIss
     if (m.kind !== 'character') continue
     const char = assets[m.assetId]
     if (!char) continue
-    issues.push({ level: 'hint', text: `${char.name}未指定着装` })
+    issues.push({ level: 'hint', text: `${char.name}还没有选择造型` })
   }
 
   // 规则 3：mounts 里没有任何 location → hint「未指定场景」。
   if (!shot.mounts.some((m) => m.kind === 'location')) {
-    issues.push({ level: 'hint', text: '未指定场景' })
+    issues.push({ level: 'hint', text: '请选择场景' })
   }
 
   return issues

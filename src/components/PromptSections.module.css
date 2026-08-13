@@ -2,7 +2,7 @@
 .full {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 3px;
 }
 
 /* 视频提示词开头的时间码段（无标签）：轻量、等宽数字、保留换行 */
@@ -22,7 +22,7 @@
 .seg {
   margin: 0;
   font-size: 12px;
-  line-height: 1.85;
+  line-height: 2.05;
   color: #dce0e5;
   text-wrap: pretty;
 }

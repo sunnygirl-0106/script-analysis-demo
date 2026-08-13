@@ -150,7 +150,7 @@ export const useStore = create<StoreState>((set, get) => ({
     set({ project: { ...s.project, shots: nextShots } })
     const newSceneDur = sceneDuration(scene, nextShots)
     get().showToast(
-      `第 ${shot.no} 镜 ${delta > 0 ? '+' : ''}${delta}s：后续 ${after} 个镜顺移，本场总时长变为 ${newSceneDur}s`,
+      `第 ${shot.no} 镜已调整为 ${clamped} 秒，本场共 ${newSceneDur} 秒${after > 0 ? '；后续镜头时间已自动更新。' : '。'}`,
     )
   },
 
@@ -236,23 +236,21 @@ export const useStore = create<StoreState>((set, get) => ({
     if (!can(get().project, 'editScript')) return
     const s = get()
     if (s.project.episodes.some((e) => e.id === 'e2')) {
-      get().showToast('第 2 集已经追加过了')
+      get().showToast('第 2 集已在项目中，无需重复添加。')
       return
     }
     const next = appendEpisode(s.project, episode2Payload)
     set({ project: next })
-    get().showToast('已追加第 2 集：老角色「苏可」复用，未重复；新角色「快递员」入库')
+    get().showToast('第 2 集已添加。已有角色资料已自动沿用，新角色资料也已创建。')
   },
 
   replaceScript: (payload) => {
     if (!can(get().project, 'editScript')) return
     const s = get()
-    const oldEp = s.project.episodes.length
-    const oldShots = Object.keys(s.project.shots).length
     const next = replaceScriptSvc(s.project, payload)
     const firstScene = next.episodes[0]?.sceneIds[0] ?? ''
     set({ project: next, selectedSceneId: firstScene, sceneSettingsOpen: false, activeTab: 'shot' })
-    get().showToast(`已覆盖导入「${payload.title}」：原 ${oldEp} 集 ${oldShots} 镜已丢弃`)
+    get().showToast(`已导入《${payload.title}》，原剧本内容已替换。`)
   },
 
   // 替换本集：语义诚实地实现为「删除本集 + 追加新集」。演示只有一套「新集」内容（第 2 集），
@@ -265,7 +263,7 @@ export const useStore = create<StoreState>((set, get) => ({
     if (!ep) return
     const remaining = proj.episodes.filter((e) => e.id !== episodeId)
     if (remaining.some((e) => e.id === 'e2')) {
-      get().showToast('演示数据只有一套「新集」内容，且第 2 集已存在，无法替换本集')
+      get().showToast('当前演示仅支持一套新剧本内容，且第 2 集已存在，无法替换本集')
       return
     }
     const deleted = deleteEpisodeSvc(proj, episodeId)
@@ -275,7 +273,7 @@ export const useStore = create<StoreState>((set, get) => ({
     const newEp = renum.episodes.find((e) => e.id === 'e2')
     const firstScene = newEp?.sceneIds[0] ?? renum.episodes[0]?.sceneIds[0] ?? ''
     set({ project: renum, selectedSceneId: firstScene, sceneSettingsOpen: false, activeTab: 'shot' })
-    get().showToast(`已替换第 ${ep.no} 集：原内容删除、按新剧本重新拆解，其他集不受影响`)
+    get().showToast(`第 ${ep.no} 集已替换，其他剧集没有改变。`)
   },
 
   deleteEpisode: (episodeId) => {
@@ -283,7 +281,7 @@ export const useStore = create<StoreState>((set, get) => ({
     const s = get()
     const proj = s.project
     if (proj.episodes.length <= 1) {
-      get().showToast('至少保留一集')
+      get().showToast('项目中至少需要保留 1 集，暂时无法删除')
       return
     }
     const ep = proj.episodes.find((e) => e.id === episodeId)
@@ -294,7 +292,7 @@ export const useStore = create<StoreState>((set, get) => ({
     const renum = { ...next, episodes: next.episodes.map((e, i) => ({ ...e, no: i + 1 })) }
     const firstScene = renum.episodes[0]?.sceneIds[0] ?? ''
     set({ project: renum, selectedSceneId: firstScene, sceneSettingsOpen: false, activeTab: 'shot' })
-    get().showToast(`已删除第 ${ep.no} 集：${cleaned} 项仅本集资产已清理，跨集资产保留`)
+    get().showToast(`第 ${ep.no} 集已删除。本集独有的 ${cleaned} 项内容已一并删除，其他剧集使用的内容仍会保留。`)
   },
 
   resplit: (sceneId, opts) => {
@@ -309,7 +307,7 @@ export const useStore = create<StoreState>((set, get) => ({
       const rscene = reset.scenes[sceneId]!
       const next = { ...reset, scenes: { ...reset.scenes, [sceneId]: { ...rscene, density: 'standard' as ShotDensity } } }
       set({ project: next, sceneSettingsOpen: false })
-      get().showToast('演示数据仅为第 1 场准备了多套拆解方案，本场已按原方案重新生成')
+      get().showToast('当前演示仅第 1 场支持不同镜头节奏，本场已按原方式重新生成')
       return
     }
 
@@ -319,7 +317,7 @@ export const useStore = create<StoreState>((set, get) => ({
       const next = resplitSceneDensity(s.project, sceneId, density)
       set({ project: next, sceneSettingsOpen: false })
       get().showToast(
-        `已按「指定 ${opts.targetShots} 镜」重拆：演示数据中最接近的方案为「${DENSITY_LABEL[density]}」${densityShots(sceneId, density).length} 镜`,
+        `已按「期望 ${opts.targetShots} 个镜头」重新拆分：当前演示中最接近的方案为「${DENSITY_LABEL[density]}」，共 ${densityShots(sceneId, density).length} 个镜头`,
       )
       return
     }
@@ -328,7 +326,7 @@ export const useStore = create<StoreState>((set, get) => ({
     const density = opts.density ?? scene.density
     const next = resplitSceneDensity(s.project, sceneId, density)
     set({ project: next, sceneSettingsOpen: false })
-    get().showToast(`已重拆「${scene.name}」为「${DENSITY_LABEL[density]}」${densityShots(sceneId, density).length} 镜，其他场不动`)
+    get().showToast(`「${scene.name}」已按${DENSITY_LABEL[density]}节奏重新拆分为 ${densityShots(sceneId, density).length} 个镜头，其他场景没有改变。`)
   },
 
   resplitEpisode: (episodeId, opts) => {
@@ -345,7 +343,7 @@ export const useStore = create<StoreState>((set, get) => ({
       if (!scene) continue
       if (hasDensityPresets(sid)) {
         proj = resplitSceneDensity(proj, sid, opts.density)
-        applied.push(`第 ${scene.no} 场按「${DENSITY_LABEL[opts.density]}」重排为 ${proj.scenes[sid]!.shotIds.length} 镜`)
+        applied.push(`第 ${scene.no} 场按${DENSITY_LABEL[opts.density]}节奏重新拆分为 ${proj.scenes[sid]!.shotIds.length} 个镜头`)
       } else {
         const reset = resplitScene(proj, sid)
         const rscene = reset.scenes[sid]!
@@ -356,10 +354,10 @@ export const useStore = create<StoreState>((set, get) => ({
     set({ project: proj, selectedSceneId: ep.sceneIds[0] ?? s.selectedSceneId, sceneSettingsOpen: false })
 
     let msg = applied.length
-      ? `已重拆第 ${ep.no} 集：${applied.join('，')}`
-      : `已重拆第 ${ep.no} 集`
-    if (kept.length) msg += `，第 ${kept.join(' / ')} 场演示数据无多套方案，保持原方案`
-    if (opts.sceneCount != null) msg += '；演示数据暂不支持重新划分场数'
+      ? `已重新拆分第 ${ep.no} 集：${applied.join('，')}`
+      : `已重新拆分第 ${ep.no} 集`
+    if (kept.length) msg += `，第 ${kept.join(' / ')} 场当前演示无多套方案，保持原方式`
+    if (opts.sceneCount != null) msg += '；当前版本暂不支持调整场景数量'
     get().showToast(msg)
   },
 
@@ -369,6 +367,6 @@ export const useStore = create<StoreState>((set, get) => ({
       const project = stage === 'visual' ? deliverFirstBatch({ ...s.project, stage }) : { ...s.project, stage }
       return { project, activePage: stage }
     })
-    if (stage === 'visual') get().showToast('已进入视觉筹备：提示词与剧本仍可修改，绑定关系不可改')
+    if (stage === 'visual') get().showToast('已进入项目资产库，第一批资产开始生成。剧本和提示词仍可调整，角色与服装组合保持不变。')
   },
 }))

@@ -1,11 +1,10 @@
-import { Fragment, useState } from 'react'
+import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import type { Scene } from '../data/types'
 import { computeTimeline, sceneDuration } from '../services/timeline'
 import { SceneTimeline } from './SceneTimeline'
 import { SceneSettingsDrawer } from './SceneSettingsDrawer'
 import { ShotRow } from './ShotRow'
-import { ShotDetail } from './ShotDetail'
 import s from './Storyboard.module.css'
 
 function fmt(sec: number): string {
@@ -17,9 +16,6 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
 
   // 高亮完全由悬停驱动：不悬停就没有任何镜被高亮。
   const [hoverId, setHoverId] = useState<string | null>(null)
-  // 展开的镜（单开，避免一次撑开一屏全是全文）。
-  const [openId, setOpenId] = useState<string | null>(null)
-  const toggle = (id: string) => setOpenId((cur) => (cur === id ? null : id))
 
   const timeline = computeTimeline(scene, shots)
   const total = sceneDuration(scene, shots)
@@ -28,13 +24,13 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
     <div className={s.pane}>
       <SceneSettingsDrawer />
       <SceneTimeline scene={scene} shots={shots} activeId={hoverId} onHover={setHoverId} />
-      {readOnly && <div className={s.lockNote}>🔒 已进入视觉筹备，剧本分析只读</div>}
+      {readOnly && <div className={s.lockNote}>🔒 已进入项目资产库，剧本分析只读</div>}
 
       <div className={s.scroll}>
         <div className={s.grid}>
           <div className={s.header}>
             <div className={s.hCell}>镜头 · 时长</div>
-            <div className={s.hCell}>关联资产</div>
+            <div className={s.hCell}>出场的人和物</div>
             <div className={s.hCell}>画面提示词</div>
             <div className={s.hCell}>视频提示词</div>
           </div>
@@ -42,28 +38,23 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
           {timeline.map((entry, i) => {
             const shot = shots[entry.shotId]
             if (!shot) return null
-            const open = openId === shot.id
             return (
-              <Fragment key={shot.id}>
-                <ShotRow
-                  shot={shot}
-                  startAt={entry.startAt}
-                  endAt={entry.endAt}
-                  active={hoverId === shot.id}
-                  alt={i % 2 === 1}
-                  open={open}
-                  readOnly={readOnly}
-                  onHover={setHoverId}
-                  onToggle={toggle}
-                />
-                {open && <ShotDetail shot={shot} />}
-              </Fragment>
+              <ShotRow
+                key={shot.id}
+                shot={shot}
+                startAt={entry.startAt}
+                endAt={entry.endAt}
+                active={hoverId === shot.id}
+                alt={i % 2 === 1}
+                readOnly={readOnly}
+                onHover={setHoverId}
+              />
             )
           })}
 
           <div className={s.tail}>
             <div className={s.tailNo}>{fmt(total)}</div>
-            <div className={s.tailText}>本场结束 · 共 {total}s</div>
+            <div className={s.tailText}>本场共 {total} 秒</div>
           </div>
         </div>
       </div>

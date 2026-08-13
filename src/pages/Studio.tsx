@@ -21,7 +21,7 @@ export function Studio() {
       <div style={{ fontSize: 40 }}>🎬</div>
       <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--t1)' }}>拍摄台</div>
       <div style={{ fontSize: 12.5, lineHeight: 1.8, maxWidth: 420 }}>
-        关键帧生成、视频生成、同期声合成在这里进行。本 demo 只演示到剧本分析与视觉筹备，拍摄台留作占位。
+        拍摄台暂未开放。这里将用于生成关键帧、视频和同期声。
       </div>
       <button
         onClick={() => setStage('visual')}
@@ -33,7 +33,7 @@ export function Studio() {
           fontSize: 12,
         }}
       >
-        ← 返回视觉筹备
+        ← 返回项目资产库
       </button>
     </div>
   )

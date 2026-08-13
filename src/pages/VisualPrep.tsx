@@ -16,13 +16,13 @@ export function VisualPrep() {
   return (
     <div className={s.page}>
       <div className={s.head}>
-        <div className={s.h1}>视觉筹备 · 生图队列</div>
+        <div className={s.h1}>项目资产库</div>
         <div className={s.sub}>
-          第一批只生产四类基础资产：角色素模、服装、场景、道具。着装角色需素模与服装出图确认后，在后续批次生成。
+          正在生成第一批：角色形象、服装、场景和道具。确认角色与服装后，再生成对应的角色造型。
         </div>
         <div className={s.stat}>
           <span>
-            本批 <b>{total}</b> 项
+            第一批共 <b>{total}</b> 项
           </span>
         </div>
       </div>
@@ -42,7 +42,7 @@ export function VisualPrep() {
                   <div key={a.id} className={s.item}>
                     <div className={s.itemHead}>
                       <span className={s.nm}>{a.name}</span>
-                      <span className={[s.badge, s.badgeQueued].join(' ')}>待生图</span>
+                      <span className={[s.badge, s.badgeQueued].join(' ')}>生成中</span>
                     </div>
                     <div className={s.thumb}>
                       <span className={s.slot} />

@@ -5,37 +5,33 @@ import { can } from '../services/capability'
 import { syncState } from '../services/staleness'
 import { lookName, looksOfCharacter, looksUsingCostume } from '../services/looks'
 import { parsePromptSections } from '../services/promptFormat'
-import { chipClass } from './entity'
 import { EpisodeStrip } from './EpisodeStrip'
 import { SyncBadge } from './SyncBadge'
 import { AppearanceSummary } from './AppearanceSummary'
-import ui from '../styles/ui.module.css'
 import s from './AssetList.module.css'
 
-function roleLabel(role: Character['role']) {
-  return role === 'lead' ? '主角' : role === 'support' ? '配角' : '龙套'
-}
-
-// 提示词摘要：去掉段标签，取正文首句 ~60 字，顶替被删掉的 description（决策 4b）。
-function promptSummary(text: string): string {
-  const secs = parsePromptSections(text)
-  const body = (secs.find((x) => x.tag && x.tag !== '生成规格' && x.tag !== '着装融合')?.body ?? secs[0]?.body ?? '')
+// 卡片正文：去掉【生成规格】技术段（分辨率/画幅/机位等，不进展示），其余段落正文连读。
+// 角色素模 → 体型/面部/发型…；着装 → 着装融合说明。CSS 再做多行截断。
+function cardBody(text: string): string {
+  return parsePromptSections(text)
+    .filter((sec) => sec.tag !== '生成规格')
+    .map((sec) => sec.body)
+    .join(' ')
     .replace(/\s+/g, ' ')
     .trim()
-  return body.length > 64 ? body.slice(0, 64) + '…' : body
 }
 
 function firstText(fa: { episodeNo: number; sceneNo: number } | undefined): string {
-  return fa ? `首现 ${fa.episodeNo}集${fa.sceneNo}场` : '未出场'
+  return fa ? `首次出现在第 ${fa.episodeNo} 集 · 第 ${fa.sceneNo} 场` : '未出场'
 }
 
 // 内联改名：点名字进编辑态，回车 / 失焦保存。仅 analysis 阶段可用（editAssetName）。
-function EditableName({ id, name }: { id: string; name: string }) {
+function EditableName({ id, name, className }: { id: string; name: string; className: string }) {
   const canRename = useStore((st) => can(st.project, 'editAssetName'))
   const rename = useStore((st) => st.renameAsset)
   const [editing, setEditing] = useState(false)
   const [v, setV] = useState(name)
-  if (!canRename) return <span className={s.nm}>{name}</span>
+  if (!canRename) return <span className={className}>{name}</span>
   if (editing) {
     return (
       <input
@@ -49,7 +45,7 @@ function EditableName({ id, name }: { id: string; name: string }) {
     )
   }
   return (
-    <span className={s.nm} title="点击改名" onClick={() => { setV(name); setEditing(true) }}>{name}</span>
+    <span className={className} title="点击改名" onClick={() => { setV(name); setEditing(true) }}>{name}</span>
   )
 }
 
@@ -66,31 +62,41 @@ export function AssetRow({ asset, onOpenPrompt }: Props) {
   const toggleExcluded = useStore((st) => st.toggleAssetExcluded)
 
   const usage = usageIndex[asset.id] ?? { appearances: [], shotCount: 0 }
-  const promptBtn = (
-    <button className={s.promptBtn} onClick={() => onOpenPrompt(asset.id)} title="查看 / 编辑完整提示词">
-      提示词
-    </button>
+  // 提示词正文：点一下即打开编辑（无独立「展开编辑」入口）。
+  const promptText = (id: string, text: string, short?: boolean) => (
+    <div
+      className={[s.cellBody, short ? s.cellBodyShort : ''].join(' ')}
+      onClick={() => onOpenPrompt(id)}
+      title="点击编辑提示词"
+    >
+      {cardBody(text)}
+    </div>
   )
 
-  // ── 道具：单行紧凑 ──
+  // ── 道具：紧凑卡 ──
   if (asset.kind === 'prop') {
     return (
-      <div className={[s.row, s.rowProp, asset.excluded ? s.rowExcluded : ''].join(' ')}>
-        <span className={[s.bar, s.barProp].join(' ')} />
-        <EditableName id={asset.id} name={asset.name} />
-        {asset.aliases?.length ? <span className={s.aliases}>「{asset.aliases.join('」「')}」</span> : null}
-        <AppearanceSummary appearances={usage.appearances} shotCount={usage.shotCount} compact />
-        <span className={s.rowRight}>
-          <button
-            className={s.exclBtn}
-            disabled={!canExclude}
-            onClick={() => toggleExcluded(asset.id)}
-            title={asset.excluded ? '恢复出图' : '设为不出图'}
-          >
-            {asset.excluded ? '○ 不出图' : '● 待生成'}
-          </button>
-          {promptBtn}
-        </span>
+      <div className={[s.card, asset.excluded ? s.cardExcluded : ''].join(' ')}>
+        <div className={s.cHead}>
+          <span className={[s.cellDot, s.dotBase].join(' ')} />
+          <span className={s.cellKind}>道具</span>
+          <EditableName id={asset.id} name={asset.name} className={s.cNameSm} />
+          <span className={s.cHeadRight}>
+            <button
+              className={s.exclBtn}
+              disabled={!canExclude}
+              onClick={() => toggleExcluded(asset.id)}
+              title={asset.excluded ? '加入生成' : '暂不生成此素材'}
+            >
+              {asset.excluded ? '○ 暂不生成' : '● 待生成'}
+            </button>
+          </span>
+        </div>
+        {promptText(asset.id, asset.imagePrompt, true)}
+        <div className={s.cellFoot}>
+          <span className={s.footNote}>
+            <AppearanceSummary appearances={usage.appearances} shotCount={usage.shotCount} compact />
+          </span>        </div>
       </div>
     )
   }
@@ -98,111 +104,97 @@ export function AssetRow({ asset, onOpenPrompt }: Props) {
   // ── 场景 ──
   if (asset.kind === 'location') {
     return (
-      <div className={s.row}>
-        <span className={[s.bar, s.barScene].join(' ')} />
-        <div className={s.main}>
-          <div className={s.head}>
-            <EditableName id={asset.id} name={asset.name} />
-            <span className={s.tag}>{asset.timeOfDay}</span>
-            <span className={s.headRight}><SyncBadge state={syncState(asset)} /></span>
-          </div>
-          {asset.aliases?.length ? <div className={s.aliases}>别名「{asset.aliases.join('」「')}」</div> : null}
-          <div className={s.summary}>「{promptSummary(asset.imagePrompt)}」{promptBtn}</div>
-          <div className={s.appr}>
-            <EpisodeStrip totalEpisodes={totalEpisodes} appearances={usage.appearances} />
-            <AppearanceSummary appearances={usage.appearances} shotCount={usage.shotCount} />
-          </div>
+      <div className={s.card}>
+        <div className={s.cHead}>
+          <span className={[s.cellDot, s.dotBase].join(' ')} />
+          <span className={s.cellKind}>场景</span>
+          <EditableName id={asset.id} name={asset.name} className={s.cNameSm} />
+          <span className={s.cHeadRight}><SyncBadge state={syncState(asset)} /></span>
         </div>
+        {promptText(asset.id, asset.imagePrompt)}
+        <div className={s.cellFoot}>
+          <EpisodeStrip totalEpisodes={totalEpisodes} appearances={usage.appearances} />
+          <span className={s.footNote}>
+            <AppearanceSummary appearances={usage.appearances} shotCount={usage.shotCount} />
+          </span>        </div>
       </div>
     )
   }
 
-  // ── 服装：不显示归属，改为显示被哪些着装角色使用 ──
+  // ── 服装：不显示归属，改为显示被哪些角色造型使用 ──
   if (asset.kind === 'costume') {
     const usedBy = looksUsingCostume(asset.id, assets)
     return (
-      <div className={s.row}>
-        <span className={[s.bar, s.barCloth].join(' ')} />
-        <div className={s.main}>
-          <div className={s.head}>
-            <EditableName id={asset.id} name={asset.name} />
-            <span className={s.headRight}><SyncBadge state={syncState(asset)} /></span>
-          </div>
-          {asset.aliases?.length ? <div className={s.aliases}>别名「{asset.aliases.join('」「')}」</div> : null}
-          <div className={s.summary}>「{promptSummary(asset.imagePrompt)}」{promptBtn}</div>
-          {usedBy.length > 0 && (
-            <div className={s.usedBy}>
-              <span className={s.usedLabel}>用于</span>
-              {usedBy.map((lk) => (
-                <span key={lk.id} className={[ui.chip, chipClass('look')].join(' ')}>
-                  <span className={ui.odot} />
-                  {lookName(lk, assets)}
-                </span>
-              ))}
-            </div>
-          )}
-          <div className={s.appr}>
-            <EpisodeStrip totalEpisodes={totalEpisodes} appearances={usage.appearances} />
-            <AppearanceSummary appearances={usage.appearances} shotCount={usage.shotCount} />
-            <span className={s.viaNote}>（经着装角色）</span>
-          </div>
+      <div className={s.card}>
+        <div className={s.cHead}>
+          <span className={[s.cellDot, s.dotDress].join(' ')} />
+          <span className={s.cellKind}>服装</span>
+          <EditableName id={asset.id} name={asset.name} className={s.cNameSm} />
+          <span className={s.cHeadRight}><SyncBadge state={syncState(asset)} /></span>
         </div>
+        {promptText(asset.id, asset.imagePrompt)}
+        {usedBy.length > 0 && (
+          <div className={s.usedBy}>
+            <span className={s.usedLabel}>用于</span>
+            {usedBy.map((lk) => (
+              <span key={lk.id} className={s.miniChip}>{lookName(lk, assets)}</span>
+            ))}
+          </div>
+        )}
+        <div className={s.cellFoot}>
+          <EpisodeStrip totalEpisodes={totalEpisodes} appearances={usage.appearances} />
+          <span className={s.footNote}>
+            <AppearanceSummary appearances={usage.appearances} shotCount={usage.shotCount} />
+          </span>        </div>
       </div>
     )
   }
 
-  // ── 角色（含着装角色子行）——此分支 asset 必为 Character（look 无独立 tab，不进 AssetList）──
+  // ── 角色：大卡，卡体合并「角色素模 + 着装（造型）」双列 ──
   const character = asset as Character
   const looks = looksOfCharacter(character.id, assets)
   return (
-    <div className={s.row}>
-      <span className={[s.bar, s.barRole].join(' ')} />
-      <div className={s.main}>
-        <div className={s.head}>
-          <EditableName id={character.id} name={character.name} />
-          <span className={s.tag}>{roleLabel(character.role)}</span>
-          <span className={s.first}>{firstText(usage.firstAppearance)}</span>
-          <span className={s.headRight}><SyncBadge state={syncState(asset)} /></span>
-        </div>
-        {asset.aliases?.length ? <div className={s.aliases}>别名「{asset.aliases.join('」「')}」</div> : null}
-        <div className={s.summary}>「{promptSummary(asset.imagePrompt)}」{promptBtn}</div>
-        <div className={s.appr}>
-          <EpisodeStrip totalEpisodes={totalEpisodes} appearances={usage.appearances} />
+    <div className={s.card}>
+      <div className={s.cHead}>
+        <EditableName id={character.id} name={character.name} className={s.cName} />
+        <span className={s.cMeta}>{firstText(usage.firstAppearance)}</span>
+        <span className={s.cMeta}>·</span>
+        <span className={s.cMeta}>
           <AppearanceSummary appearances={usage.appearances} shotCount={usage.shotCount} />
+        </span>
+        <span className={s.cHeadRight}><SyncBadge state={syncState(asset)} /></span>
+      </div>
+
+      <div className={s.assetGrid}>
+        {/* 角色（基础形象） */}
+        <div className={s.cell2}>
+          <div className={s.cellHead}>
+            <span className={[s.cellDot, s.dotBase].join(' ')} />
+            <span className={s.cellKind}>角色</span>
+            <span className={s.cellName}>{character.name}</span>
+            <span className={s.cellTagR}>基础形象</span>
+          </div>
+          {promptText(character.id, character.imagePrompt)}
         </div>
 
-        {looks.length > 0 && (
-          <div className={s.lookGroup}>
-            <div className={s.lookHead}>着装角色 {looks.length}</div>
-            {looks.map((lk) => {
-              const lu = usageIndex[lk.id] ?? { appearances: [], shotCount: 0 }
-              return (
-                <div className={s.lookRow} key={lk.id}>
-                  <span className={s.lookChips} title="角色与服装的绑定由剧本分析确定，不可修改">
-                    <span className={[ui.chip, chipClass('character')].join(' ')}>
-                      <span className={ui.odot} />
-                      {assets[lk.characterId]?.name ?? '未知角色'}
-                    </span>
-                    {lk.costumeIds.map((cid) => (
-                      <span key={cid} className={[ui.chip, chipClass('costume')].join(' ')}>
-                        <span className={ui.odot} />
-                        {assets[cid]?.name ?? '未知服装'}
-                      </span>
-                    ))}
-                    {lk.costumeIds.length === 0 && <span className={s.defaultLook}>默认着装</span>}
-                  </span>
-                  <span className={s.lookAppr}>
-                    <AppearanceSummary appearances={lu.appearances} shotCount={lu.shotCount} compact />
-                  </span>
-                  <SyncBadge state={syncState(lk)} />
-                  <button className={s.promptBtn} onClick={() => onOpenPrompt(lk.id)} title="查看 / 编辑着装角色提示词">
-                    提示词
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        )}
+        {/* 着装（角色造型 look，每套一格） */}
+        {looks.map((lk) => {
+          const lu = usageIndex[lk.id] ?? { appearances: [], shotCount: 0 }
+          return (
+            <div className={s.cell2} key={lk.id}>
+              <div className={s.cellHead}>
+                <span className={[s.cellDot, s.dotDress].join(' ')} />
+                <span className={s.cellKind}>着装</span>
+                <span className={s.cellName}>{lookName(lk, assets)}</span>
+                <span className={s.cellTagR}>{lu.appearances.length ? `${new Set(lu.appearances.map((a) => `${a.episodeNo}-${a.sceneNo}`)).size} 场` : '未出场'}</span>
+              </div>
+              {promptText(lk.id, lk.imagePrompt)}
+              <div className={s.cellFoot}>
+                <SyncBadge state={syncState(lk)} />
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

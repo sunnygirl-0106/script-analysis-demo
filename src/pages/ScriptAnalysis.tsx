@@ -48,7 +48,7 @@ export function ScriptAnalysis() {
           <div className={s.tbr}>
             {activeTab === 'shot' && (
               <button className={ui.btn} disabled={readOnly} onClick={() => setResplitOpen(true)}>
-                重拆本场
+                重新拆分本场镜头
               </button>
             )}
             <button className={ui.btn} disabled={readOnly} onClick={() => setImportOpen(true)}>
@@ -68,11 +68,11 @@ export function ScriptAnalysis() {
         <div className={s.foot}>
           <div className={s.info}>
             全剧 <b>{project.episodes.length} 集</b> · <b>{Object.keys(project.scenes).length} 场</b> ·{' '}
-            <b>{shotTotal} 镜</b> · 约 {durTotal}s　　{counts.character} 角色（{counts.look} 着装角色）/{' '}
+            <b>{shotTotal} 个镜头</b> · 约 {durTotal} 秒　　{counts.character} 角色（{counts.look} 角色造型）/{' '}
             {counts.costume} 服装 / {counts.location} 场景 / {counts.prop} 道具
           </div>
           <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={() => setConfirmOpen(true)}>
-            进入视觉筹备 →
+            生成第一批 →
           </button>
         </div>
       </div>

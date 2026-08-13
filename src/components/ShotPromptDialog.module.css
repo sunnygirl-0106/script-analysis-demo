@@ -1,13 +1,33 @@
-/* 镜头展开面板：占满分镜表整幅宽度，把提示词从 340px 的列里解放出来。
-   1120px 全宽下两栏各约 530px，600 字约 13 行，一屏读完，不需要格内滚动。 */
-.wrap {
-  border-bottom: 1px solid #262b31;
-  background: #171a1f;
-  box-shadow: inset 0 1px 0 rgba(159, 216, 228, 0.1);
-  padding: 16px 18px 20px;
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 12, 0.55);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.dialog {
+  width: 1000px;
+  max-width: 94vw;
+  max-height: 88vh;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--rlg);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  padding: 18px 18px 16px;
+}
+.title {
+  font-size: 13px;
+  color: var(--t2);
+  font-weight: 600;
+  margin-bottom: 12px;
 }
 
-/* 镜头参数：删掉「镜头」列之后，这六个字段的唯一出口 */
+/* 镜头参数：搬自原展开面板，这六个字段的出口 */
 .params {
   display: flex;
   flex-wrap: wrap;
@@ -32,18 +52,23 @@
 }
 
 .cols {
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
-@media (max-width: 1180px) {
+@media (max-width: 900px) {
   .cols {
     grid-template-columns: 1fr;
   }
 }
 
 .box {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   border: 1px solid #2a3037;
   border-radius: var(--rlg);
   background: #1b1f25;
@@ -84,6 +109,28 @@
   border-color: var(--acc-line);
   color: var(--acc);
 }
-.body {
-  padding: 12px 14px 14px;
+.textarea {
+  flex: 1;
+  min-height: 46vh;
+  resize: none;
+  background: var(--bg1);
+  border: none;
+  color: var(--t1);
+  font-size: 12.5px;
+  line-height: 1.85;
+  padding: 12px 14px;
+}
+.textarea:focus {
+  outline: none;
+}
+.textarea[readonly] {
+  color: var(--t3);
+  cursor: default;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
 }

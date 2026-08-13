@@ -43,17 +43,17 @@ export function ResplitEpisodeDialog({ episodeId, onClose }: { episodeId: string
     <div className={d.overlay} onClick={onClose}>
       <div className={d.dialog} onClick={(e) => e.stopPropagation()}>
         <div className={d.title}>
-          重拆第 {ep.no} 集 · {ep.title}
+          重新拆分第 {ep.no} 集 · {ep.title}
         </div>
         <div className={s.sub}>
           当前：{stats.scenes} 场 · {stats.shots} 镜 · 约 {stats.dur} 秒
         </div>
 
-        <div className={s.groupTitle}>场景数量</div>
+        <div className={s.groupTitle}>场景划分</div>
         <div className={s.sceneOpts}>
           <label className={[s.opt, sceneMode === 'auto' ? s.optOn : ''].join(' ')}>
             <input type="radio" checked={sceneMode === 'auto'} onChange={() => setSceneMode('auto')} />
-            由 AI 判断（当前 {stats.scenes} 场）
+            由 AI 自动划分（当前 {stats.scenes} 场）
           </label>
           <label className={[s.opt, sceneMode === 'custom' ? s.optOn : ''].join(' ')}>
             <input type="radio" checked={sceneMode === 'custom'} onChange={() => setSceneMode('custom')} />
@@ -70,11 +70,11 @@ export function ResplitEpisodeDialog({ episodeId, onClose }: { episodeId: string
             场
           </label>
           {sceneMode === 'custom' && (
-            <div className={s.sceneNote}>演示数据暂不支持重新划分场数，此项仅作声明。</div>
+            <div className={s.sceneNote}>当前版本暂不支持调整场景数量。</div>
           )}
         </div>
 
-        <div className={s.groupTitle}>默认镜头颗粒度</div>
+        <div className={s.groupTitle}>默认镜头节奏</div>
         <div className={s.seg}>
           {DENSITY.map((o) => (
             <button
@@ -90,7 +90,7 @@ export function ResplitEpisodeDialog({ episodeId, onClose }: { episodeId: string
         <div className={s.impact}>
           <div className={s.impactTitle}>影响说明</div>
           本集 {stats.scenes} 场 {stats.shots} 镜将全部重新生成；已识别的角色 / 服装 / 场景 / 道具继续保留；其他集不受影响。
-          演示数据仅第 1 场备有多套方案，其余场按原方案重排。
+          第 1 场可选择不同镜头节奏，其他场景将按原有方式重新生成。
         </div>
 
         <div className={d.actions}>
@@ -98,7 +98,7 @@ export function ResplitEpisodeDialog({ episodeId, onClose }: { episodeId: string
             取消
           </button>
           <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={confirm}>
-            确认重拆
+            确认重新拆分
           </button>
         </div>
       </div>

@@ -30,7 +30,7 @@
 .header,
 .row {
   display: grid;
-  grid-template-columns: 200px 240px minmax(340px, 1fr) minmax(340px, 1fr);
+  grid-template-columns: 200px 264px minmax(340px, 1fr) minmax(340px, 1fr);
 }
 
 /* ── 表头（吸顶）── */
@@ -75,11 +75,6 @@
 .rowOn {
   background: var(--row-on-bg) !important;
 }
-/* 展开态：左侧一道主色，和下方详情面板连成一块 */
-.rowOpen {
-  background: #1a2126 !important;
-  box-shadow: inset 3px 0 0 var(--acc-line);
-}
 
 /* ① 镜头 · 时长 */
 .cNo {
@@ -90,28 +85,6 @@
   align-items: center;
   gap: 8px;
 }
-.caret {
-  width: 22px;
-  height: 22px;
-  flex: none;
-  border-radius: 50%;
-  color: var(--t5);
-  font-size: 11px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s cubic-bezier(0.22, 0.61, 0.36, 1), color 0.16s, background 0.16s;
-}
-.caret:hover {
-  color: var(--acc);
-  background: #2e343b;
-}
-.caretOn {
-  transform: rotate(90deg);
-  color: var(--acc);
-}
-
 /* 镜头标题：进入第一列，允许自然换行 */
 .shotTitle {
   margin-top: 9px;
@@ -201,11 +174,11 @@
   cursor: help;
 }
 .tcRange {
-  font-size: 9.5px;
-  color: #6c7480;
-  margin-top: 8px;
+  font-size: 10.5px;
+  color: #8a929e;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.2px;
+  white-space: nowrap;
 }
 
 /* ② 关联资产：极端情况下资产超过行高时独立滚动，不裁掉资产 */
@@ -214,88 +187,105 @@
   overflow-y: auto;
   overflow-x: hidden;
 }
-.assetStack {
+/* 固定三组：角色 / 场景 / 道具。每组横排一行：左标签 + 右侧 chip/「+」，
+   三行竖排即可塞进固定行高，不必拉宽拉高表格。 */
+.assetGroups {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
 }
-.cast {
+.assetGroup {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 8px;
+  /* 顶对齐：一组内 chip 换行成多行时，左标签仍贴第一行，不被拉到竖直居中 */
+  align-items: start;
+}
+.groupTitle {
+  font-size: 10px;
+  color: var(--t5);
+  letter-spacing: 0.4px;
+  /* 行高对齐 chip（24px），使标签垂直居中于第一行 chip */
+  line-height: 24px;
+}
+.groupItems {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-.avatar {
-  width: 26px;
-  height: 26px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--role-bg);
-  border: 1px solid rgba(167, 139, 250, 0.3);
-  color: #c4b5fd;
-  font-size: 11px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.castMeta {
+  flex-wrap: wrap;
+  gap: 6px;
   min-width: 0;
 }
+/* 角色行：多个角色时换行到下一行，避免同框两人把着装名互相挤没 */
+.groupItemsRole {
+  flex-wrap: wrap;
+}
+/* 该类目的「+」始终占位（透明），鼠标移到本组这一行（或键盘聚焦）时才显形。
+   用透明度而非 display 切换：避免 hover 时元素进出布局导致 chip 抖动 / 串行。 */
+.addSlot {
+  display: inline-flex;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.assetGroup:hover .addSlot,
+.assetGroup:focus-within .addSlot {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 角色卡：头像 + 角色名 + 着装，装进一颗胶囊 */
+.castPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  min-width: 0;
+  padding: 0 8px 0 10px;
+  border-radius: var(--rpill);
+  background: #262b31;
+  border: 1px solid #30363d;
+}
+.roleDot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: #a78bfa;
+}
 .castName {
-  display: block;
-  font-size: 12.5px;
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 600;
   color: #f2f4f6;
-  line-height: 1.35;
+  line-height: 1.3;
 }
 .castCostume {
-  display: block;
+  min-width: 0;
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 10.5px;
-  color: #7c8fa8;
-  line-height: 1.35;
+  color: #8b95a3;
+  line-height: 1.3;
 }
 .castX {
   flex: none;
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
+  margin-left: 1px;
   border-radius: 50%;
-  color: #737b87;
+  color: #8a929e;
   font-size: 9px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  transition: opacity 0.18s, background 0.18s, color 0.18s;
-}
-.cast:hover .castX {
-  opacity: 1;
+  transition: background 0.18s, color 0.18s;
 }
 .castX:hover {
   background: #383f47;
   color: #e9ecef;
-}
-.assetRow {
-  display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
-  gap: 9px;
-  align-items: start;
-}
-.rowLabel {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 20px;
-  margin-top: 2px;
-  border-radius: var(--rpill);
-  background: #22272d;
-  border: 1px solid #2d333a;
-  font-size: 9.5px;
-  color: var(--t5);
-  letter-spacing: 0.5px;
-}
-.rowChips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
 }
 .assetActions {
   display: flex;
@@ -339,13 +329,23 @@
    四种，任何写死的渐变色都会在其中三种上露出色带。mask 是把像素本身变透明，
    底色是什么都对。 */
 .cPrompt {
-  padding: 13px 16px 0;
+  padding: 13px 16px 14px;
+}
+/* 提示词格子可点开弹窗编辑，但不做 hover 高亮框 */
+.cPromptClickable {
+  cursor: pointer;
+}
+/* 提示词区域：左侧一条浅竖线 + 内缩，让整段读作一个整体 */
+.promptBlock {
+  height: 100%;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 .promptClamp {
   height: 100%;
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 34px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 46px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 46px), transparent 100%);
 }
 
 /* 收尾行 */

@@ -20,10 +20,11 @@ export function ConfirmStageDialog({ onClose }: { onClose: () => void }) {
     const excluded = base.filter((a) => a.excluded)
     const countIn = (k: string) => inBatch.filter((a) => a.kind === k).length
     // 已排除按类目汇总，如「1 项道具」。
+    const UNIT: Record<string, string> = { character: '个', costume: '套', location: '个', prop: '件' }
     const exclByKind = FIRST_BATCH_KINDS
       .map((k) => ({ k, n: excluded.filter((a) => a.kind === k).length }))
       .filter((x) => x.n > 0)
-      .map((x) => `${x.n} 项${KIND_LABEL[x.k]}`)
+      .map((x) => `${x.n} ${UNIT[x.k] ?? '项'}${KIND_LABEL[x.k]}`)
     return {
       total: inBatch.length,
       character: countIn('character'),
@@ -44,30 +45,28 @@ export function ConfirmStageDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className={d.overlay} onClick={onClose}>
       <div className={d.dialog} onClick={(e) => e.stopPropagation()}>
-        <div className={d.title}>即将进入资产生产</div>
+        <div className={d.title}>即将生成第一批资产</div>
 
-        <div className={s.lead}>本批将生成 <b>{bill.total}</b> 项</div>
+        <div className={s.lead}>第一批将生成 <b>{bill.total}</b> 项基础资产</div>
         <div className={s.stat}>
-          角色素模 {bill.character} · 服装 {bill.costume} · 场景 {bill.location} · 道具 {bill.prop}
+          {bill.character} 个角色形象 · {bill.costume} 套服装 · {bill.location} 个场景 · {bill.prop} 件道具
         </div>
-        {bill.excludedText && <div className={s.desc}>（已排除 {bill.excludedText}）</div>}
+        {bill.excludedText && <div className={s.desc}>已跳过 {bill.excludedText}</div>}
 
         {bill.lookCount > 0 && (
           <div className={s.warn}>
-            着装角色 {bill.lookCount} 项不在本批
-            <div className={s.subWarn}>需素模与服装出图并确认后再生成</div>
+            另有 {bill.lookCount} 套角色造型将在下一步生成
+            <div className={s.subWarn}>确认角色形象和服装后，即可生成对应的角色造型</div>
           </div>
         )}
 
         <div className={s.desc}>
-          进入后仍可修改提示词与剧本。
-          <br />
-          角色与服装的绑定关系不可更改。
+          进入项目资产库后仍可调整剧本和提示词，但不能直接修改角色与服装的组合。
         </div>
 
         <div className={d.actions}>
-          <button className={ui.btn} onClick={onClose}>返回检查</button>
-          <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={confirm}>开始生成</button>
+          <button className={ui.btn} onClick={onClose}>返回修改</button>
+          <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={confirm}>开始生成第一批</button>
         </div>
       </div>
     </div>

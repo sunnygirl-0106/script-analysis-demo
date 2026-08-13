@@ -1,9 +1,34 @@
-/* 资产条目流：单列横向 row（区别于资产库的方图网格）。8px 圆角、琥珀待处理徽章。 */
+/* 资产页面（角色 / 服装 / 场景 / 道具）：对齐《资产页面.html》参考稿 ——
+   更暗、去蓝调的中性偏青近黑色阶 + 卡片式布局。
+   配色策略：在 .scroll 根上「局部覆盖」全局 CSS 变量，只让这块内容区变中性，
+   不动 app 框架其它页面（顶栏 / 侧栏 / 分镜），零回归。 */
 
 .scroll {
+  /* —— 中性偏青近黑，覆盖 theme.css 的冷蓝灰（仅在本子树生效）——
+     三层拉开对比：页面底(最暗) → 外卡(明显提亮、浮起) → 内卡/提示词(压暗、凹陷)。 */
+  --bg0: #0a0b0c; /* 内容区底（最暗） */
+  --bg1: #0c0e0f; /* 内层小卡 / 提示词区（凹陷、更黑） */
+  --bg2: #171b1d; /* 外层大卡 / 行（明显亮，浮起） */
+  --bg3: #232829; /* 抬起面 / 输入 / chip */
+  --line: #2c3336; /* 卡片描边（清晰勾勒） */
+  --line2: #20272a; /* 内卡描边 */
+  --edge: #3d474a; /* hover 描边 */
+  --t1: #eef2f0; /* 标题 */
+  --t2: #d3dad8; /* 正文强 */
+  --t3: #9aa6a3; /* 正文 */
+  --t4: #6d7876; /* 次要 */
+  --t5: #545f5d; /* 弱 / 标签 */
+  --acc: #5eead4; /* 天青主色（参考 teal） */
+  --acc-bg: rgba(94, 234, 212, 0.1);
+  --acc-line: rgba(94, 234, 212, 0.32);
+  /* 两种生成类型的圆点：角色=青 / 着装=赤陶（中性暖点） */
+  --dot-base: #5eead4;
+  --dot-dress: #d0906f;
+
   flex: 1;
   overflow: auto;
-  padding: 12px 18px 22px;
+  background: var(--bg0);
+  padding: 18px 26px 44px;
 }
 
 /* ── 概览条 ── */
@@ -11,250 +36,309 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 4px 2px 12px;
+  padding: 2px 2px 18px;
 }
 .ovText {
-  font-size: 12px;
-  color: var(--t3);
+  font-size: 12.5px;
+  color: var(--t4);
+}
+.ovText b {
+  color: var(--t2);
+  font-weight: 600;
 }
 .ovRight {
   margin-left: auto;
   display: inline-flex;
+  align-items: center;
   gap: 8px;
+}
+.ovSortLabel {
+  font-size: 12px;
+  color: var(--t5);
 }
 .sortSel {
   background: var(--bg3);
   border: 1px solid var(--line);
   color: var(--t2);
   border-radius: var(--rsm);
-  font-size: 11.5px;
-  padding: 4px 8px;
+  font-size: 12px;
+  padding: 5px 10px;
 }
 
+/* ── 列表容器 ── */
 .list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
+}
+/* 服装 / 场景 / 道具：卡片网格 */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 14px;
+}
+.gridProp {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 }
 
-/* ── 条目 row ── */
-.row {
-  position: relative;
-  display: flex;
-  gap: 12px;
-  border: 1px solid var(--line2);
-  border-radius: var(--rsm);
+/* ── 大卡（角色）/ 通用卡（服装 场景 道具）── */
+.card {
+  min-width: 0;
   background: var(--bg2);
-  padding: 13px 15px 13px 16px;
-  transition: 0.14s;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 20px;
+  transition: border-color 0.16s;
 }
-.row:hover {
+.card:hover {
   border-color: var(--edge);
 }
-.rowExcluded {
-  opacity: 0.55;
+.cardExcluded {
+  opacity: 0.5;
 }
-.bar {
-  position: absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
-  width: 3px;
-  border-radius: 3px;
-  background: var(--edge);
-}
-.barRole { background: var(--role); }
-.barCloth { background: var(--cloth); }
-.barScene { background: var(--scene); }
-.barProp { background: var(--prop); }
 
-.main {
-  flex: 1;
-  min-width: 0;
-}
-.head {
+/* 卡头 */
+.cHead {
   display: flex;
-  align-items: center;
-  gap: 9px;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
 }
-.headRight {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.cName {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--t1);
+  cursor: default;
 }
-.nm {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
+.cNameSm {
+  font-size: 15px;
+  font-weight: 600;
   color: var(--t1);
   cursor: default;
 }
 .nmInput {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 600;
   color: var(--t1);
   background: var(--bg3);
   border: 1px solid var(--acc-line);
   border-radius: var(--rsm);
-  padding: 1px 6px;
-  width: 12em;
+  padding: 1px 8px;
+  width: 10em;
 }
-.tag {
-  font-size: 10px;
-  padding: 1.5px 8px;
-  border-radius: var(--rsm);
-  background: var(--bg3);
-  color: var(--t3);
-}
-.first {
+.cTag {
   font-size: 10.5px;
-  color: var(--t4);
-}
-.aliases {
-  margin-top: 4px;
-  font-size: 10.5px;
-  color: var(--t4);
-}
-.summary {
-  margin-top: 7px;
-  font-size: 12px;
-  color: var(--t3);
-  line-height: 1.7;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.summary::first-line {
-  line-height: 1.7;
-}
-.promptBtn {
-  flex: none;
-  font-size: 10.5px;
-  color: var(--acc);
-  border: 1px solid var(--acc-line);
+  padding: 2px 9px;
   border-radius: var(--rpill);
-  padding: 2px 10px;
-  transition: 0.16s;
+  background: var(--bg3);
+  color: var(--t4);
+  align-self: center;
 }
-.promptBtn:hover {
-  background: var(--acc-bg);
-  border-color: var(--acc);
+.cMeta {
+  font-size: 12px;
+  color: var(--t5);
 }
-.appr {
-  margin-top: 9px;
-  display: flex;
+.cHeadRight {
+  margin-left: auto;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
+  align-self: center;
 }
-.viaNote {
-  font-size: 10px;
-  color: var(--t4);
+.aliases {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--t5);
 }
 
-/* 服装「用于」行 */
-.usedBy {
-  margin-top: 8px;
+/* 卡体：角色素模 + 着装 双列（look 多则自动多列换行） */
+.assetGrid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+/* ── 内层小卡（角色素模 / 着装 / 服装 / 场景 / 道具 正文块）── */
+.cell2 {
+  min-width: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  background: var(--bg1);
+  border: 1px solid var(--line2);
+  border-radius: 11px;
+  padding: 13px 15px;
+}
+.cellHead {
+  display: flex;
   align-items: center;
   gap: 7px;
 }
-.usedLabel {
+.cellDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--dot, var(--acc));
+}
+.dotBase {
+  background: var(--dot-base);
+}
+.dotDress {
+  background: var(--dot-dress);
+}
+.cellKind {
+  font-size: 11px;
+  color: var(--t5);
+}
+.cellName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t2);
+}
+.cellTagR {
+  margin-left: auto;
   font-size: 10.5px;
-  color: var(--t4);
+  color: var(--t5);
 }
-
-/* ── 着装角色子行 ── */
-.lookGroup {
-  margin-top: 11px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--line2);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.cellBody {
+  margin-top: 9px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--t3);
+  max-height: 8.75em; /* 约 5 行，超出裁掉 */
+  overflow: hidden; /* 默认不显示滚动条 */
+  cursor: text;
+  transition: color 0.15s;
 }
-.lookHead {
-  font-size: 10.5px;
-  color: var(--t4);
+.cellBody:hover {
+  color: var(--t1);
+  overflow-y: auto; /* hover 才可上下滚动查看全文 */
 }
-.lookRow {
+.cellBodyShort {
+  max-height: 5.25em; /* 约 3 行 */
+}
+.cellFoot {
+  margin-top: auto;
+  padding-top: 11px;
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
 }
-.lookChips {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.expandBtn {
+  font-size: 11.5px;
+  color: var(--acc);
+  transition: 0.16s;
 }
-.lookAppr {
-  color: var(--t4);
+.expandBtn:hover {
+  color: #9af0e0;
 }
-.defaultLook {
+.footNote {
   font-size: 10.5px;
-  color: var(--t4);
+  color: var(--t5);
 }
-
-/* ── 道具紧凑行 ── */
-.rowProp {
-  align-items: center;
-  gap: 10px;
-  padding: 9px 15px 9px 16px;
-}
-.rowRight {
+.footRight {
   margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 10px;
 }
+
+/* 服装「用于」造型行 */
+.usedBy {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.usedLabel {
+  font-size: 10.5px;
+  color: var(--t5);
+}
+.miniChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--t3);
+  background: var(--bg3);
+  border: 1px solid var(--line);
+  border-radius: var(--rpill);
+  padding: 2px 9px;
+}
+.miniChip::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--dot-dress);
+}
+
+/* 道具排除按钮 */
 .exclBtn {
   font-size: 10.5px;
-  color: var(--t3);
+  color: var(--t4);
   border: 1px solid transparent;
   border-radius: var(--rpill);
-  padding: 2px 8px;
+  padding: 2px 9px;
   transition: 0.16s;
 }
 .exclBtn:hover:not(:disabled) {
   border-color: var(--edge);
-  color: var(--t1);
+  color: var(--t2);
 }
 .exclBtn:disabled {
   cursor: default;
 }
 
-/* ── 出场迷你集条 ── */
+/* 超出显示上限提示（角色最多 6） */
+.moreHint {
+  margin-top: 4px;
+  padding: 12px 4px 2px;
+  font-size: 12px;
+  color: var(--t5);
+  text-align: center;
+}
+
+/* ── 出场迷你集点（EpisodeStrip 复用）：圆点，出场实心 accent、未出场空心描边 ── */
 .strip {
   display: inline-flex;
-  gap: 2px;
+  gap: 4px;
   align-items: center;
 }
 .stripDense {
-  gap: 0;
+  gap: 2px;
 }
 .cell {
-  width: 6px;
-  height: 12px;
-  border-radius: 2px;
-  background: var(--line2);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--line);
 }
 .stripDense .cell {
-  width: 3px;
-  border-radius: 0;
+  width: 4px;
+  height: 4px;
+  border-width: 0;
+  background: var(--line);
 }
 .cellOn {
   background: var(--acc);
+  border-color: var(--acc);
+}
+.stripDense .cellOn {
+  background: var(--acc);
 }
 
-/* ── 同步状态徽章 ── */
+/* ── 同步状态徽章（SyncBadge 复用）── */
 .badgeDraft,
 .badgeDelivered {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--t4);
   white-space: nowrap;
 }
@@ -266,7 +350,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--t4);
+  background: var(--t5);
 }
 .dotAcc {
   background: var(--acc);
@@ -283,10 +367,10 @@
   white-space: nowrap;
 }
 
-/* ── 出场摘要（AppearanceSummary 复用，沿用灰度）── */
+/* ── 出场摘要（AppearanceSummary 复用）── */
 .rt {
-  font-size: 10.5px;
-  color: var(--t4);
+  font-size: 11px;
+  color: var(--t5);
 }
 .apprRow {
   display: inline-flex;
@@ -296,8 +380,8 @@
   min-width: 0;
 }
 .apprToggle {
-  font-size: 10.5px;
-  color: var(--t4);
+  font-size: 11px;
+  color: var(--t5);
   cursor: pointer;
   white-space: nowrap;
   transition: 0.14s;
@@ -320,12 +404,12 @@
   display: flex;
   gap: 10px;
   font-size: 10.5px;
-  color: var(--t4);
+  color: var(--t5);
   white-space: nowrap;
 }
 .apprLine b {
   flex: none;
   width: 48px;
   font-weight: 400;
-  color: var(--t3);
+  color: var(--t4);
 }

@@ -27,14 +27,26 @@ export function AssetList({ kind }: { kind: AssetKind }) {
     return fa.episodeNo - fb.episodeNo || fa.sceneNo - fb.sceneNo
   })
 
+  // 角色：合并角色 + 造型的大卡，纵向铺开，最多显示 6 个（决策：角色只看前 6）。
+  // 服装 / 场景 / 道具：中性卡片网格。
+  const isChar = kind === 'character'
+  const CHAR_CAP = 6
+  const shown = isChar ? sorted.slice(0, CHAR_CAP) : sorted
+  const containerCls = isChar
+    ? s.list
+    : [s.grid, kind === 'prop' ? s.gridProp : ''].join(' ')
+
   return (
     <div className={s.scroll}>
       <AssetOverviewBar kind={kind} list={list} allAssets={assets} sort={sort} onSort={setSort} />
-      <div className={s.list}>
-        {sorted.map((a) => (
+      <div className={containerCls}>
+        {shown.map((a) => (
           <AssetRow key={a.id} asset={a} onOpenPrompt={setPromptAsset} />
         ))}
       </div>
+      {isChar && sorted.length > CHAR_CAP && (
+        <div className={s.moreHint}>仅显示前 {CHAR_CAP} 个角色（共 {sorted.length} 个）</div>
+      )}
       {promptAsset && <PromptDialog assetId={promptAsset} onClose={() => setPromptAsset(null)} />}
     </div>
   )

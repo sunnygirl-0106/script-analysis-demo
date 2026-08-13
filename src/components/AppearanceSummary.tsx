@@ -35,7 +35,7 @@ export function AppearanceSummary({ appearances, shotCount, compact }: Props) {
   return (
     <span className={s.apprRow}>
       <span className={s.apprToggle} onClick={() => setOpen((v) => !v)}>
-        出场 {sum.episodeCount} 集 · {sum.sceneCount} 场 · {shotCount} 镜 {open ? '▾' : '▸'}
+        出场 {sum.episodeCount} 集 · {sum.sceneCount} 场 · {shotCount} 个镜头 {open ? '▾' : '▸'}
       </span>
       {open && (
         <span className={s.apprDetail}>

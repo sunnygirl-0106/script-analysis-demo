@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store/useStore'
-import type { MountableKind, ShotDensity } from '../data/types'
+import type { ShotDensity } from '../data/types'
 import { densityShots, hasDensityPresets } from '../services/density'
 import { isLongShot } from '../services/duration'
 import { sceneDuration } from '../services/timeline'
@@ -11,16 +11,15 @@ import s from './ResplitSceneDialog.module.css'
 type Choice = ShotDensity | 'custom'
 
 const DENSITY_META: { key: ShotDensity; label: string; hint: string }[] = [
-  { key: 'compact', label: '紧凑', hint: '切分更细、节奏更快' },
-  { key: 'standard', label: '标准', hint: '' },
-  { key: 'loose', label: '舒缓', hint: '长镜头更多' },
+  { key: 'compact', label: '紧凑', hint: '镜头更多，节奏更快' },
+  { key: 'standard', label: '标准', hint: '镜头数量与节奏较均衡' },
+  { key: 'loose', label: '舒缓', hint: '镜头更长，节奏更慢' },
 ]
 
 // ★ 重拆本场：把「密度切换」收敛进来，颗粒度作为参数。镜数全部真实算出。
 export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onClose: () => void }) {
   const scene = useStore((st) => st.project.scenes[sceneId])
   const shots = useStore((st) => st.project.shots)
-  const sceneTotal = useStore((st) => Object.keys(st.project.scenes).length)
   const resplit = useStore((st) => st.resplit)
 
   const hasPresets = hasDensityPresets(sceneId)
@@ -50,29 +49,8 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
     return densityShots(sceneId, dn).filter((sh) => isLongShot(sh.duration)).length
   }, [choice, customN, hasPresets, sceneId])
 
-  // 影响说明里的资产数：本场当前镜里挂过的资产，按类去重。
-  const assetCounts = useMemo(() => {
-    const buckets: Record<MountableKind, Set<string>> = {
-      look: new Set(),
-      character: new Set(),
-      location: new Set(),
-      prop: new Set(),
-    }
-    for (const id of scene?.shotIds ?? []) {
-      const sh = shots[id]
-      if (!sh) continue
-      for (const m of sh.mounts) buckets[m.kind].add(m.assetId)
-    }
-    return {
-      look: buckets.look.size,
-      location: buckets.location.size,
-      prop: buckets.prop.size,
-    }
-  }, [scene, shots])
-
   if (!scene) return null
   const total = sceneDuration(scene, shots)
-  const otherScenes = sceneTotal - 1
 
   const confirm = () => {
     if (!hasPresets) resplit(sceneId, {})
@@ -85,19 +63,19 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
     <div className={d.overlay} onClick={onClose}>
       <div className={d.dialog} onClick={(e) => e.stopPropagation()}>
         <div className={d.title}>
-          重拆第 {scene.no} 场 · {scene.name}
+          重新拆分第 {scene.no} 场 · {scene.name}
         </div>
         <div className={s.sub}>
-          当前拆解：{curCount} 镜 · {total} 秒
+          当前为 {curCount} 个镜头，共 {total} 秒
         </div>
 
         {!hasPresets && (
           <div className={s.presetNote}>
-            演示数据仅为第 1 场准备了多套拆解方案；本场重拆将按原方案重新生成，镜数不变。
+            当前演示仅为第 1 场准备了多套镜头方案；本场重新拆分后将按原方案重新生成，镜数不变。
           </div>
         )}
 
-        <div className={s.groupTitle}>拆解颗粒度</div>
+        <div className={s.groupTitle}>镜头节奏</div>
         <div className={s.opts}>
           {DENSITY_META.map((m) => {
             const on = choice === m.key
@@ -131,7 +109,7 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
               disabled={!hasPresets}
               onChange={() => setChoice('custom')}
             />
-            <span className={s.optLabel}>指定镜数</span>
+            <span className={s.optLabel}>期望镜头数</span>
             <span className={s.optCount}>
               <input
                 className={s.countInput}
@@ -144,21 +122,19 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
               />
               镜
             </span>
-            <span className={s.optHint}>3–20，取最接近的一套</span>
+            <span className={s.optHint}>系统会尽量接近这个数量</span>
           </label>
         </div>
 
         {longCount > 0 && (
           <div className={s.warn}>
-            ⚠ 该方案包含 {longCount} 个较长镜头，后续可能需要分段生成。
+            ⚠ 其中 {longCount} 个镜头时长较长，生成视频时可能需要拆成多段。
           </div>
         )}
 
         <div className={s.impact}>
-          <div className={s.impactTitle}>影响说明</div>
-          重拆后，本场的镜头及其画面 / 视频提示词将重新生成；已识别的 {assetCounts.look} 着装角色 /{' '}
-          {assetCounts.location} 场景 / {assetCounts.prop} 道具继续保留
-          {otherScenes > 0 ? `，其他 ${otherScenes} 场不受影响` : ''}。你对本场分镜的手动修改将被替换。
+          <div className={s.impactTitle}>重新拆分后</div>
+          重新拆分后，本场的镜头和提示词将重新生成。已有角色造型、场景和道具会保留，其他场景不会改变。你手动修改过的本场分镜将被替换。
         </div>
 
         <div className={d.actions}>
@@ -166,7 +142,7 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
             取消
           </button>
           <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={confirm}>
-            确认重拆
+            确认重新拆分
           </button>
         </div>
       </div>

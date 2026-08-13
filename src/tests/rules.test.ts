@@ -296,7 +296,7 @@ describe('R9 资产完整性提示', () => {
       { kind: 'location', assetId: A.living },
     ]
     const issues = mountIssues(shot, p.assets)
-    expect(issues.some((i) => i.level === 'hint' && i.text.includes('未指定着装'))).toBe(true)
+    expect(issues.some((i) => i.level === 'hint' && i.text.includes('还没有选择造型'))).toBe(true)
   })
 
   it('规则 3：没有任何场景挂载 → hint「未指定场景」', () => {
@@ -309,7 +309,7 @@ describe('R9 资产完整性提示', () => {
     shot.sourceQuote = ''
     shot.mounts = [{ kind: 'look', assetId: A.lookSuke }]
     const issues = mountIssues(shot, p.assets)
-    expect(issues.some((i) => i.level === 'hint' && i.text === '未指定场景')).toBe(true)
+    expect(issues.some((i) => i.level === 'hint' && i.text === '请选择场景')).toBe(true)
   })
 
   it('反向：挂好 look + 场景的正常镜头不产生任何提示', () => {

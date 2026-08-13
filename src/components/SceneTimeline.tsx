@@ -58,7 +58,7 @@ export function SceneTimeline({ scene, shots, activeId, onHover }: Props) {
           {scene.shotIds.length} 镜 · 全场 {fmt(total)}
         </span>
         <button className={s.settingsBtn} onClick={openSettings} title="情绪走向 / 配乐建议">
-          ⚙ 场级设定
+          ⚙ 情绪与配乐
         </button>
         <span className={[s.readout, active ? s.on : ''].join(' ')}>
           <i className={s.dot} />

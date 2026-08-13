@@ -10,6 +10,8 @@ interface Props {
   mounts: MountRef[]
   disabled?: boolean
   kinds?: MountableKind[]
+  // 'add' = 只画一颗虚线「+」圆钮（分组内按类目追加）；默认是「挂载资产」文字按钮。
+  variant?: 'default' | 'add'
 }
 
 // 每个资产右侧的说明文字：着装角色→所属角色，场景→时段。服装不参与挂载（决策 3b）。
@@ -27,7 +29,7 @@ const POP_MAX_H = 380
 //
 // 弹层走 portal 挂到 body：分镜表的行是固定高度且 overflow 受限的网格单元，
 // 绝对定位的弹层会被祖先裁掉，所以这里改用 fixed 定位 + 实时测算触发器位置。
-export function MountPicker({ shotId, mounts, disabled, kinds = MOUNT_KINDS }: Props) {
+export function MountPicker({ shotId, mounts, disabled, kinds = MOUNT_KINDS, variant = 'default' }: Props) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
@@ -101,19 +103,36 @@ export function MountPicker({ shotId, mounts, disabled, kinds = MOUNT_KINDS }: P
 
   if (disabled) return null
 
+  // 单类目时，按钮标题与搜索占位随该类目走（分组内的「+」）。
+  const single = kinds.length === 1 ? KIND_LABEL[kinds[0]!] : null
+  const addTitle = single ? `添加${single}` : '添加内容'
+
   return (
     <div className={s.wrap} ref={wrapRef}>
-      <button
-        className={s.trigger}
-        onClick={(e) => {
-          e.stopPropagation()
-          setOpen((o) => !o)
-        }}
-        title="添加挂载"
-      >
-        <i className={s.plus}>+</i>
-        挂载资产
-      </button>
+      {variant === 'add' ? (
+        <button
+          className={s.addBtn}
+          onClick={(e) => {
+            e.stopPropagation()
+            setOpen((o) => !o)
+          }}
+          title={addTitle}
+        >
+          +
+        </button>
+      ) : (
+        <button
+          className={s.trigger}
+          onClick={(e) => {
+            e.stopPropagation()
+            setOpen((o) => !o)
+          }}
+          title={addTitle}
+        >
+          <i className={s.plus}>+</i>
+          添加到镜头
+        </button>
+      )}
       {open &&
         pos &&
         createPortal(
@@ -126,14 +145,14 @@ export function MountPicker({ shotId, mounts, disabled, kinds = MOUNT_KINDS }: P
             <div className={s.searchBox}>
               <input
                 className={s.search}
-                placeholder="搜索着装角色 / 场景 / 道具…"
+                placeholder={single ? `搜索${single}…` : '搜索角色造型、场景或道具…'}
                 value={q}
                 autoFocus
                 onChange={(e) => setQ(e.target.value)}
               />
             </div>
             <div className={s.list}>
-              {groups.length === 0 && <div className={s.empty}>没有匹配的资产</div>}
+              {groups.length === 0 && <div className={s.empty}>没有找到相关内容</div>}
               {groups.map((g) => (
                 <div className={s.group} key={g.kind}>
                   <div className={s.groupLabel} style={{ color: g.color }}>
@@ -158,7 +177,7 @@ export function MountPicker({ shotId, mounts, disabled, kinds = MOUNT_KINDS }: P
                 </div>
               ))}
             </div>
-            <div className={s.foot}>勾选即挂载 · 引用不复制</div>
+            <div className={s.foot}>选择后会添加到当前镜头</div>
           </div>,
           document.body,
         )}

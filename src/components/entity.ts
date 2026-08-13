@@ -22,7 +22,7 @@ export const KIND_LABEL: Record<AssetKind, string> = {
   costume: '服装',
   location: '场景',
   prop: '道具',
-  look: '着装角色',
+  look: '角色造型',
 }
 
 // 与 theme.css 的四类实体色保持一致，供 JS 内联样式（挂载弹层等）取用。look 沿用角色紫。
