@@ -1,0 +1,163 @@
+/* 行内字段格：作为分镜表 grid 的直接子项，自带内边距与右分隔线，颜色沿用仓库 token。 */
+.cell {
+  padding: 11px 11px;
+  border-right: 1px solid var(--line2);
+  overflow: hidden;
+  position: relative;
+  cursor: text;
+  transition: background 0.14s;
+}
+.editable:hover {
+  background: rgba(143, 220, 210, 0.04);
+}
+.ro {
+  cursor: default;
+}
+/* 打开编辑时给一层极淡的天青底 */
+.cellOpen {
+  background: rgba(143, 220, 210, 0.05);
+}
+
+/* ── 景别 / 镜头设计的行内展示 ── */
+.toks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+  line-height: 1.7;
+}
+/* 命中预设 → 胶囊 */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: var(--rpill);
+  background: #22262c;
+  border: 1px solid #2f353d;
+  font-size: 11.5px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--t2);
+}
+/* 导演自己写的段落 → 原样纯文本 */
+.tokPlain {
+  font-size: 11.5px;
+  color: var(--t3);
+  white-space: nowrap;
+}
+.tokArrow {
+  font-size: 11.5px;
+  color: var(--acc);
+}
+
+/* 文本字段的行内摘要 */
+.clamp2,
+.clamp3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--t2);
+}
+.clamp2 {
+  -webkit-line-clamp: 2;
+}
+.clamp3 {
+  -webkit-line-clamp: 3;
+}
+.dim {
+  font-size: 12px;
+  color: var(--t4);
+  font-style: italic;
+}
+
+/* ── 就地编辑弹窗（portal 到 body，fixed 定位覆盖单元格）── */
+.popPill,
+.popText {
+  position: fixed;
+  z-index: 60;
+  background: var(--bg2);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.62);
+}
+.popPill {
+  border: 1px solid rgba(143, 220, 210, 0.45);
+  border-radius: 12px;
+  padding: 10px;
+}
+.popText {
+  border: 1px solid rgba(143, 220, 210, 0.5);
+  border-radius: 10px;
+  padding: 7px 8px 6px;
+}
+
+.input {
+  width: 100%;
+  background: #22262c;
+  border: 1px solid rgba(143, 220, 210, 0.45);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--t1);
+  outline: none;
+}
+.textarea {
+  width: 100%;
+  min-height: 108px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--t1);
+  outline: none;
+  resize: none;
+}
+
+/* 预设 + 「→」按钮行 */
+.picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 9px;
+}
+.arrowBtn {
+  padding: 2.5px 10px;
+  border-radius: var(--rpill);
+  border: 1px dashed rgba(143, 220, 210, 0.55);
+  background: rgba(143, 220, 210, 0.1);
+  font-size: 11px;
+  color: var(--acc);
+  transition: border-style 0.14s;
+}
+.arrowBtn:hover {
+  border-style: solid;
+}
+.preset {
+  padding: 2.5px 9px;
+  border-radius: var(--rpill);
+  border: 1px solid var(--line);
+  background: #22262c;
+  font-size: 11px;
+  color: var(--t3);
+  transition: 0.16s;
+}
+.preset:hover {
+  border-color: var(--acc-line);
+  color: var(--acc);
+}
+
+.foot {
+  margin-top: 8px;
+  font-size: 10.5px;
+  color: var(--t5);
+}
+.popText .foot {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--line2);
+  font-size: 10px;
+}

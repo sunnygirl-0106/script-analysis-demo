@@ -1,6 +1,6 @@
 // Zustand：一个 project + 所有动作。不做持久化，刷新回到初始状态。
 import { create } from 'zustand'
-import type { MountRef, Project, Shot, ShotDensity, Stage } from '../data/types'
+import type { MountRef, Project, PromptState, Scene, Shot, ShotDensity, Stage } from '../data/types'
 import { seedProject } from '../data/seed'
 import { episode2Payload } from '../data/seedEpisode2'
 import { appendEpisode } from '../services/incremental'
@@ -49,6 +49,9 @@ interface UIState {
 interface StoreState extends UIState {
   project: Project
 
+  // 提示词生成状态：shotId → PromptState。第一眼全部 pending，需点「生成全部提示词」。
+  promptStates: Record<string, PromptState>
+
   // ── 派生便捷读取 ──
   currentScene: () => Project['scenes'][string] | undefined
   usageIndex: () => Record<string, AssetUsage>
@@ -65,9 +68,18 @@ interface StoreState extends UIState {
   showToast: (text: string) => void
   dismissToast: () => void
 
+  // ── 提示词生成（两步式：先生成全部提示词，再生成第一批图）──
+  generatePrompts: (shotIds: string[]) => void
+  // 直接置某镜提示词状态（弹窗里手动写完提示词后，把 pending 提为 ready）。
+  setPromptState: (shotId: string, state: PromptState) => void
+
   // ── 数据动作（受能力矩阵 can(project, cap) 约束）──
   updateShotField: (shotId: string, field: keyof Shot, value: string) => void
   setShotDuration: (shotId: string, duration: number) => void
+  // 在某场的第 index 个位置（0-based，插在该位置之前）插入一个空镜头，并顺延重编号。
+  insertShot: (sceneId: string, index: number) => void
+  // 在某集的第 index 个位置插入一个空场，并顺延重编号。
+  insertScene: (episodeId: string, index: number) => void
   addMount: (shotId: string, mount: MountRef) => void
   removeMount: (shotId: string, assetId: string) => void
   updateSceneTrack: (sceneId: string, patch: Partial<Project['scenes'][string]['track']>) => void
@@ -84,6 +96,8 @@ interface StoreState extends UIState {
 }
 
 let toastSeq = 0
+// 插入用的自增序号，保证新场 / 新镜 id 唯一，不与 seed 的 `s1_sh1` 命名撞车。
+let insSeq = 0
 
 /** targetShots → 在三套预设里选镜数最接近 N 的那套。 */
 function closestDensity(sceneId: string, target: number): ShotDensity {
@@ -96,8 +110,27 @@ function closestDensity(sceneId: string, target: number): ShotDensity {
   )
 }
 
-export const useStore = create<StoreState>((set, get) => ({
+/** 初始把某 project 下所有镜头置为 pending（第一眼没生成提示词）。 */
+function initPromptStates(project: Project): Record<string, PromptState> {
+  const m: Record<string, PromptState> = {}
+  for (const id of Object.keys(project.shots)) m[id] = 'pending'
+  return m
+}
+
+export const useStore = create<StoreState>((set, get) => {
+  // 改了某镜的「第一步字段 / 挂载」→ 若该镜提示词已就绪则落回 stale，并提示重新生成。
+  const touchPrompt = (shotId: string, notify = true) => {
+    if (get().promptStates[shotId] !== 'ready') return
+    set((s) => ({ promptStates: { ...s.promptStates, [shotId]: 'stale' } }))
+    if (notify) {
+      const no = get().project.shots[shotId]?.no
+      get().showToast(`第 ${no} 镜内容已改动，记得重新生成提示词`)
+    }
+  }
+
+  return {
   project: structuredClone(seedProject),
+  promptStates: initPromptStates(seedProject),
   activePage: 'analysis',
   selectedSceneId: 's1',
   activeTab: 'shot',
@@ -125,6 +158,33 @@ export const useStore = create<StoreState>((set, get) => ({
   },
   dismissToast: () => set({ toast: null }),
 
+  // 生成提示词：目标镜置 generating，错峰后置 ready（seed 里已有 image/videoPrompt，生成 = 揭示）。
+  generatePrompts: (shotIds) => {
+    const cur = get().promptStates
+    const targets = shotIds.filter((id) => get().project.shots[id] && cur[id] !== 'generating')
+    if (!targets.length) return
+    set((s) => {
+      const ps = { ...s.promptStates }
+      targets.forEach((id) => {
+        ps[id] = 'generating'
+      })
+      return { promptStates: ps }
+    })
+    targets.forEach((id, i) => {
+      setTimeout(() => {
+        set((s) => ({ promptStates: { ...s.promptStates, [id]: 'ready' } }))
+        if (i === targets.length - 1) {
+          get().showToast(`已合成 ${targets.length} 镜的画面提示词与视频运动提示词`)
+        }
+      }, 420 + i * 220)
+    })
+  },
+
+  setPromptState: (shotId, state) => {
+    if (!get().project.shots[shotId]) return
+    set((s) => ({ promptStates: { ...s.promptStates, [shotId]: state } }))
+  },
+
   updateShotField: (shotId, field, value) => {
     if (!can(get().project, 'editShotFields')) return
     set((s) => {
@@ -134,6 +194,8 @@ export const useStore = create<StoreState>((set, get) => ({
         project: { ...s.project, shots: { ...s.project.shots, [shotId]: { ...shot, [field]: value } } },
       }
     })
+    // 改的是「第一步字段」才标脏；直接编辑 image/videoPrompt 本身不算内容改动。
+    if (field !== 'imagePrompt' && field !== 'videoPrompt') touchPrompt(shotId)
   },
 
   setShotDuration: (shotId, duration) => {
@@ -148,30 +210,93 @@ export const useStore = create<StoreState>((set, get) => ({
     const scene = s.project.scenes[shot.sceneId]!
     const after = scene.shotIds.slice(scene.shotIds.indexOf(shotId) + 1).length
     set({ project: { ...s.project, shots: nextShots } })
+    // 时长本身已有专门 toast，这里只静默标脏，避免双弹窗；底栏 warn 行会持续提示。
+    touchPrompt(shotId, false)
     const newSceneDur = sceneDuration(scene, nextShots)
     get().showToast(
       `第 ${shot.no} 镜已调整为 ${clamped} 秒，本场共 ${newSceneDur} 秒${after > 0 ? '；后续镜头时间已自动更新。' : '。'}`,
     )
   },
 
+  insertShot: (sceneId, index) => {
+    if (!can(get().project, 'editShotFields')) return
+    set((s) => {
+      const scene = s.project.scenes[sceneId]
+      if (!scene) return s
+      const id = `ins_sh${++insSeq}`
+      const blank: Shot = {
+        id, sceneId, no: 0, title: '', duration: 3,
+        shotSize: '', lens: '', lighting: '', imagePrompt: '',
+        cameraMove: '', dialogue: '', sfx: '', videoPrompt: '',
+        mounts: [], sourceQuote: '',
+      }
+      const at = Math.max(0, Math.min(index, scene.shotIds.length))
+      const shotIds = [...scene.shotIds]
+      shotIds.splice(at, 0, id)
+      // 顺延重编号：本场镜号 = 位置 + 1，保证插入后镜号连续。
+      const shots: Record<string, Shot> = { ...s.project.shots, [id]: blank }
+      shotIds.forEach((sid, i) => {
+        const sh = shots[sid]
+        if (sh && sh.no !== i + 1) shots[sid] = { ...sh, no: i + 1 }
+      })
+      return {
+        project: { ...s.project, scenes: { ...s.project.scenes, [sceneId]: { ...scene, shotIds } }, shots },
+        promptStates: { ...s.promptStates, [id]: 'pending' as PromptState },
+      }
+    })
+    const n = get().project.scenes[sceneId]?.shotIds.length ?? 0
+    get().showToast(`已插入 1 个空镜头，本场共 ${n} 镜。填写内容后可生成提示词。`)
+  },
+
+  insertScene: (episodeId, index) => {
+    if (!can(get().project, 'editScript')) return
+    set((s) => {
+      const ep = s.project.episodes.find((e) => e.id === episodeId)
+      if (!ep) return s
+      const id = `ins_sc${++insSeq}`
+      const blank: Scene = {
+        id, episodeId, no: 0, name: '新场（待拆解）', location: '', timeOfDay: '',
+        rawText: '', shotIds: [], density: s.project.defaultDensity, track: { mood: '', bgm: '' },
+      }
+      const at = Math.max(0, Math.min(index, ep.sceneIds.length))
+      const sceneIds = [...ep.sceneIds]
+      sceneIds.splice(at, 0, id)
+      const episodes = s.project.episodes.map((e) => (e.id === episodeId ? { ...e, sceneIds } : e))
+      const scenes = { ...s.project.scenes, [id]: blank }
+      // 顺延重编号：本集场号 = 位置 + 1。
+      sceneIds.forEach((sid, i) => {
+        const sc = scenes[sid]
+        if (sc && sc.no !== i + 1) scenes[sid] = { ...sc, no: i + 1 }
+      })
+      return { project: { ...s.project, episodes, scenes }, selectedSceneId: id, sceneSettingsOpen: false }
+    })
+    get().showToast('已插入 1 个新场，可导入剧本或重新拆分补充镜头。')
+  },
+
   addMount: (shotId, mount) => {
     if (!can(get().project, 'editMounts')) return
+    const shot0 = get().project.shots[shotId]
+    const willChange = !!shot0 && !shot0.mounts.some((m) => m.assetId === mount.assetId)
     set((s) => {
       const shot = s.project.shots[shotId]
       if (!shot || shot.mounts.some((m) => m.assetId === mount.assetId)) return s
       const mounts = [...shot.mounts, mount]
       return { project: { ...s.project, shots: { ...s.project.shots, [shotId]: { ...shot, mounts } } } }
     })
+    if (willChange) touchPrompt(shotId)
   },
 
   removeMount: (shotId, assetId) => {
     if (!can(get().project, 'editMounts')) return
+    const shot0 = get().project.shots[shotId]
+    const willChange = !!shot0 && shot0.mounts.some((m) => m.assetId === assetId)
     set((s) => {
       const shot = s.project.shots[shotId]
       if (!shot) return s
       const mounts = shot.mounts.filter((m) => m.assetId !== assetId)
       return { project: { ...s.project, shots: { ...s.project.shots, [shotId]: { ...shot, mounts } } } }
     })
+    if (willChange) touchPrompt(shotId)
   },
 
   updateSceneTrack: (sceneId, patch) => {
@@ -369,4 +494,5 @@ export const useStore = create<StoreState>((set, get) => ({
     })
     if (stage === 'visual') get().showToast('已进入项目资产库，第一批资产开始生成。剧本和提示词仍可调整，角色与服装组合保持不变。')
   },
-}))
+  }
+})

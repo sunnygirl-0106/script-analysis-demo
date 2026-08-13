@@ -22,15 +22,53 @@
   overflow: auto;
 }
 .grid {
-  min-width: 1120px;
+  position: relative;
 }
 
-/* 4 列模板：镜头·时长 / 关联资产 / 画面提示词 / 视频提示词
-   画面与视频两列等宽，占据主要横向空间。 */
+/* ── 全高列宽把手层 ── */
+.handleLayer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 30;
+  pointer-events: none;
+}
+.colHandle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 11px;
+  pointer-events: auto;
+  cursor: col-resize;
+  display: flex;
+  justify-content: center;
+}
+.colHandleLine {
+  width: 1px;
+  height: 100%;
+  border-radius: 2px;
+  background: transparent;
+  transition: background 0.15s;
+}
+.colHandle:hover .colHandleLine {
+  background: rgba(143, 220, 210, 0.4);
+}
+.colHandleLineOn {
+  background: rgba(143, 220, 210, 0.6);
+}
+
+/* 9 列脚本表：镜号·时长 / 景别 / 镜头设计 / 出场的人和物 / 主要内容 / 光影氛围 / 对白·旁白 / 音效 / 最终提示词。
+   把 Shot 上本就有的字段铺开供导演一眼审完；两段长提示词收进最右侧的状态列。 */
 .header,
 .row {
   display: grid;
-  grid-template-columns: 200px 264px minmax(340px, 1fr) minmax(340px, 1fr);
+  /* 列宽由 JS 通过 --cols 变量下发，可被用户拖拽调整；下面是兜底默认 */
+  grid-template-columns: var(
+    --cols,
+    96px 88px 120px 230px minmax(240px, 1fr) 140px 220px 130px 150px
+  );
 }
 
 /* ── 表头（吸顶）── */
@@ -46,17 +84,32 @@
   white-space: nowrap;
 }
 .hCell {
-  padding: 8px 16px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
+  border-right: 1px solid var(--line2);
+  position: relative;
 }
-.hCell:nth-child(2) {
-  padding: 8px 14px;
+
+/* 最终提示词表头：钉在右侧，横向滚动时始终可见 */
+.hCell:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 21;
+  border-right: none;
+  background: #1e2227;
+  box-shadow: -8px 0 12px -8px rgba(0, 0, 0, 0.55);
+}
+/* 滚到最右端：最终提示词列已回到自然位置、音效列贴在它左侧，此时不再需要“悬浮遮挡”的投影 */
+.scrollAtEnd .hCell:last-child,
+.scrollAtEnd .cPromptStat {
+  box-shadow: none;
 }
 
 /* ── 行：固定高度的「摘要行」。全文在下方展开的 ShotDetail 里，不在格内滚动 ── */
 .row {
-  height: 176px;
+  position: relative;
+  height: 128px;
   cursor: pointer;
   border-bottom: 1px solid #262b31;
   background: #1e2127;
@@ -75,51 +128,46 @@
 .rowOn {
   background: var(--row-on-bg) !important;
 }
-
-/* ① 镜头 · 时长 */
-.cNo {
-  padding: 14px 12px 16px 16px;
+/* 字段改动后落回 stale：左侧一道琥珀，提醒该镜提示词待重新生成 */
+.rowStale {
+  box-shadow: inset 3px 0 0 var(--amber);
 }
-.noLine {
+
+/* ① 镜头 · 时长：竖排「大号镜号 / 时长步进 / 小字时间范围」 */
+.cNo {
+  padding: 12px 12px 12px 16px;
+  border-right: 1px solid var(--line2);
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 8px;
 }
-/* 镜头标题：进入第一列，允许自然换行 */
-.shotTitle {
-  margin-top: 9px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--t1);
-  line-height: 1.45;
-  text-wrap: pretty;
+/* 镜号一行：大号数字 + 小字「镜」 */
+.noRow {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
 }
-.noPill {
-  display: inline-flex;
-  align-items: center;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: var(--rpill);
-  background: #22262c;
-  border: 1px solid #2f353d;
-  font-size: 15px;
-  font-weight: 600;
+.noNum {
+  font-size: 26px;
+  font-weight: 700;
   line-height: 1;
-  color: #9aa2ad;
+  letter-spacing: -0.5px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.6px;
-  transition: background 0.24s, border-color 0.24s, color 0.24s;
+  color: #c6ccd4;
+  transition: color 0.24s;
 }
-.noPillOn {
-  background: rgba(159, 216, 228, 0.14);
-  border-color: var(--acc-line);
-  color: #e8f6fa;
+.noNumOn {
+  color: var(--acc);
+}
+.noUnit {
+  font-size: 10px;
+  color: var(--t5);
 }
 .stepper {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  margin-top: 10px;
   height: 26px;
   padding: 0 3px;
   background: #22262c;
@@ -148,26 +196,24 @@
   background: #2e343b;
 }
 .durVal {
-  min-width: 26px;
+  min-width: 30px;
   text-align: center;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--t3);
+  color: var(--t2);
   font-variant-numeric: tabular-nums;
 }
 .stepperOn .durVal {
   color: #f2f4f6;
 }
 .durStatic {
-  margin-top: 10px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--t3);
+  color: var(--t2);
   font-variant-numeric: tabular-nums;
 }
 /* 长镜头预警：非阻断，仅一行黄字 */
 .longWarn {
-  margin-top: 6px;
   font-size: 11px;
   color: #d9b978;
   white-space: nowrap;
@@ -183,9 +229,10 @@
 
 /* ② 关联资产：极端情况下资产超过行高时独立滚动，不裁掉资产 */
 .cAsset {
-  padding: 13px 14px 15px;
+  padding: 11px 12px 12px;
   overflow-y: auto;
   overflow-x: hidden;
+  border-right: 1px solid var(--line2);
 }
 /* 固定三组：角色 / 场景 / 道具。每组横排一行：左标签 + 右侧 chip/「+」，
    三行竖排即可塞进固定行高，不必拉宽拉高表格。 */
@@ -215,9 +262,20 @@
   gap: 6px;
   min-width: 0;
 }
-/* 角色行：多个角色时换行到下一行，避免同框两人把着装名互相挤没 */
+/* 角色行：每行一个角色，角色再长也不换行（靠着装名省略号收缩）；「+」固定在最后一个角色右边 */
 .groupItemsRole {
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+.roleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
 }
 /* 该类目的「+」始终占位（透明），鼠标移到本组这一行（或键盘聚焦）时才显形。
    用透明度而非 display 切换：避免 hover 时元素进出布局导致 chip 抖动 / 串行。 */
@@ -233,14 +291,15 @@
   pointer-events: auto;
 }
 
-/* 角色卡：头像 + 角色名 + 着装，装进一颗胶囊 */
+/* 角色卡：头像 + 角色名 + 着装，装进一颗胶囊。标签宽度不含删除叉（叉是 hover 时的角标浮层）。 */
 .castPill {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 24px;
-  min-width: 0;
-  padding: 0 8px 0 10px;
+  flex: none;
+  padding: 0 9px 0 10px;
   border-radius: var(--rpill);
   background: #262b31;
   border: 1px solid #30363d;
@@ -254,39 +313,80 @@
 }
 .castName {
   flex: none;
+  white-space: nowrap;
   font-size: 11.5px;
   font-weight: 600;
   color: #f2f4f6;
   line-height: 1.3;
 }
 .castCostume {
-  min-width: 0;
-  max-width: 84px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: none;
   white-space: nowrap;
   font-size: 10.5px;
   color: #8b95a3;
   line-height: 1.3;
 }
+/* 删除叉：不占标签宽度，做成右上角浮层，hover / 聚焦本卡时才出现 —— 标签平时更短 */
 .castX {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  margin-left: 1px;
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
-  color: #8a929e;
-  font-size: 9px;
+  background: #3a424c;
+  border: 1px solid var(--edge);
+  color: #e2e6ea;
+  font-size: 8px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.18s, color 0.18s;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 3;
+  transition: opacity 0.15s ease, background 0.18s, color 0.18s;
+}
+.castPill:hover .castX,
+.castPill:focus-within .castX {
+  opacity: 1;
+  pointer-events: auto;
 }
 .castX:hover {
-  background: #383f47;
-  color: #e9ecef;
+  background: #4a525c;
+  color: #fff;
 }
+/* 场景 / 道具 chip 的删除叉：同样做成右上角浮层，不占 chip 宽度，hover 本 chip 才出现 */
+.chipHover {
+  position: relative;
+}
+.chipHover .chipHoverX {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  border-radius: 50%;
+  background: #3a424c;
+  border: 1px solid var(--edge);
+  color: #e2e6ea;
+  font-size: 8px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 3;
+  transition: opacity 0.15s ease, background 0.18s, color 0.18s;
+}
+.chipHover:hover .chipHoverX,
+.chipHover:focus-within .chipHoverX {
+  opacity: 1;
+  pointer-events: auto;
+}
+.chipHover .chipHoverX:hover {
+  background: #4a525c;
+  color: #fff;
+}
+
 .assetActions {
   display: flex;
   align-items: center;
@@ -324,34 +424,140 @@
   color: var(--t5);
 }
 
-/* ③ 画面提示词 / ④ 视频提示词：行内只给摘要
-   底部渐隐用 mask 而不是叠一层写死颜色的 ::after —— 行底色有普通/斑马/悬停/展开
-   四种，任何写死的渐变色都会在其中三种上露出色带。mask 是把像素本身变透明，
-   底色是什么都对。 */
-.cPrompt {
-  padding: 13px 16px 14px;
+/* ⑨ 最终提示词：两段长提示词收进这一个状态列，钉在右侧横向滚动始终可见 */
+.cPromptStat {
+  padding: 11px 11px;
+  position: sticky;
+  right: 0;
+  z-index: 5;
+  background: inherit;
+  box-shadow: -8px 0 12px -8px rgba(0, 0, 0, 0.55);
 }
-/* 提示词格子可点开弹窗编辑，但不做 hover 高亮框 */
-.cPromptClickable {
+.pstat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-start;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--rpill);
+  font-size: 11px;
+  border: 1px solid var(--line);
+  background: var(--bg3);
+  color: var(--t4);
+}
+.badgePending {
   cursor: pointer;
+  transition: 0.16s;
 }
-/* 提示词区域：左侧一条浅竖线 + 内缩，让整段读作一个整体 */
-.promptBlock {
-  height: 100%;
-  padding-left: 12px;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+.badgePending:hover {
+  border-color: var(--edge);
+  color: var(--t2);
+  background: var(--bg2);
 }
-.promptClamp {
-  height: 100%;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 46px), transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 46px), transparent 100%);
+.badgeReady {
+  background: var(--acc-bg);
+  border-color: var(--acc-line);
+  color: var(--acc);
+  cursor: pointer;
+  transition: 0.16s;
+}
+.badgeReady:hover {
+  background: rgba(143, 220, 210, 0.2);
+}
+.badgeStale {
+  background: var(--amber-bg);
+  border-color: var(--amber-line);
+  color: var(--amber);
+  cursor: pointer;
+  transition: 0.16s;
+}
+.badgeStale:hover {
+  filter: brightness(1.08);
+}
+.badgeGen {
+  background: var(--acc-bg);
+  border-color: var(--acc-line);
+  color: var(--acc);
+}
+.sp {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.pstatNote {
+  font-size: 10.5px;
+  color: var(--t4);
+}
+.miniGen {
+  font-size: 10.5px;
+  color: var(--t4);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 0.16s;
+}
+.miniGen:hover {
+  color: var(--acc);
 }
 
 /* 收尾行 */
 .tail {
+  position: relative;
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 112px 1fr;
+}
+/* 插入一镜：悬停行上沿（或表尾上沿）这条热区时显形 */
+.insRow {
+  position: absolute;
+  left: 0;
+  top: -11px;
+  width: 100%;
+  height: 22px;
+  z-index: 38;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.insRow:hover {
+  opacity: 1;
+}
+.insRowTag {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 10px;
+  border-radius: var(--rpill);
+  background: #1e2429;
+  border: 1px solid var(--acc-line);
+  color: var(--acc);
+  font-size: 10.5px;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+.insRowBar {
+  flex: 1;
+  height: 1px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(143, 220, 210, 0.45), rgba(143, 220, 210, 0.04));
 }
 .tailNo {
   padding: 12px 10px 14px 16px;

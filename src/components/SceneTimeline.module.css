@@ -83,42 +83,52 @@
   color: var(--acc);
 }
 
-/* 分段进度条 */
+/* 分段条：对齐参考稿 .tl —— 独立分段小块 + 间隙，段内显示 Ns */
 .bar {
   position: relative;
-  height: 8px;
-  border-radius: var(--rpill);
-  background: #1e2227;
+  height: 16px;
   display: flex;
-  overflow: hidden;
+  gap: 2px;
+  align-items: stretch;
+  background: transparent;
+  overflow: visible;
 }
 .seg {
   position: relative;
-  min-width: 0;
-  background: #2a3037;
+  min-width: 16px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border-radius: 3px;
+  background: var(--bg3);
+  border: 1px solid var(--line);
   cursor: default;
-  transition: background 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: background 0.16s, border-color 0.16s, color 0.16s;
+}
+/* 段内秒数：窄段自然被 overflow 裁掉，不硬塞；颜色随 seg 走 */
+.segDur {
+  font-size: 10px;
+  line-height: 1;
+  color: var(--t4);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
 }
 .segAlt {
-  background: #31383f;
+  background: var(--bg3);
 }
+/* 当前镜高亮：非实心 —— 天青底 + 天青描边 + 天青字（对齐 html .tlseg.on） */
 .segOn {
-  background: var(--acc);
+  background: var(--acc-bg);
+  border-color: var(--acc-line);
+}
+.segOn .segDur {
+  color: var(--acc);
+  font-weight: 600;
 }
 /* 长镜头段：顶部一道黄边，不用 hover 就能一眼看出哪几段偏长 */
 .segLong {
   box-shadow: inset 0 2px 0 0 #d9b978;
-}
-.segLong.segOn {
-  box-shadow: inset 0 2px 0 0 #f0d9a6;
-}
-.segDiv {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: rgba(20, 22, 26, 0.85);
 }
 
 /* 时间刻度 */

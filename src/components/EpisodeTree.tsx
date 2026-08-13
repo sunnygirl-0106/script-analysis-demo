@@ -20,6 +20,7 @@ export function EpisodeTree() {
   const project = useStore((st) => st.project)
   const selectedSceneId = useStore((st) => st.selectedSceneId)
   const selectScene = useStore((st) => st.selectScene)
+  const insertScene = useStore((st) => st.insertScene)
   const deleteEpisode = useStore((st) => st.deleteEpisode)
   const usageIndex = useStore((st) => st.usageIndex())
   const readOnly = !useStore((st) => can(st.project, 'editScript'))
@@ -126,16 +127,46 @@ export function EpisodeTree() {
                   </div>
                 )}
               </div>
-              {scenes.map((sc) => (
-                <div
-                  key={sc.id}
-                  className={[s.sc, sc.id === selectedSceneId ? s.on : ''].join(' ')}
-                  onClick={() => selectScene(sc.id)}
-                >
-                  第 {sc.no} 场 {sc.name}
-                  <span className={s.d}>{sc.shotIds.length} 镜</span>
+              {scenes.map((sc, si) => (
+                <div className={s.scWrap} key={sc.id}>
+                  {!readOnly && (
+                    <div
+                      className={s.insLine}
+                      title="在此插入一场"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        insertScene(ep.id, si)
+                      }}
+                    >
+                      <span className={s.insBar} />
+                      <span className={s.insTag}>＋ 场</span>
+                    </div>
+                  )}
+                  <div
+                    className={[s.sc, sc.id === selectedSceneId ? s.on : ''].join(' ')}
+                    onClick={() => selectScene(sc.id)}
+                  >
+                    第 {sc.no} 场 {sc.name}
+                    <span className={s.d}>{sc.shotIds.length} 镜</span>
+                  </div>
                 </div>
               ))}
+              {!readOnly && (
+                <div className={s.scWrap}>
+                  <div
+                    className={[s.insLine, s.insLineTail].join(' ')}
+                    title="在末尾插入一场"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      insertScene(ep.id, scenes.length)
+                    }}
+                  >
+                    <span className={s.insBar} />
+                    <span className={s.insTag}>＋ 场</span>
+                  </div>
+                  <div className={s.insTailPad} />
+                </div>
+              )}
             </div>
           )
         })}

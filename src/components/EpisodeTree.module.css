@@ -113,6 +113,55 @@
   color: var(--t4);
   margin-top: 1px;
 }
+/* 场行外壳：承载「悬停两场之间插入一场」的浮层 */
+.scWrap {
+  position: relative;
+}
+/* 插入条：默认透明，悬停这条 16px 高的热区时显形（＋场 + 天青渐变线） */
+.insLine {
+  position: absolute;
+  left: 4px;
+  right: 2px;
+  top: -8px;
+  height: 16px;
+  z-index: 12;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.insLineTail {
+  position: static;
+  top: auto;
+}
+.insLine:hover {
+  opacity: 1;
+}
+.insBar {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(143, 220, 210, 0.08), rgba(143, 220, 210, 0.4) 45%, rgba(143, 220, 210, 0.4));
+}
+.insTag {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 16px;
+  padding: 0 7px;
+  border-radius: var(--rpill);
+  background: var(--acc-bg);
+  border: 1px solid var(--acc-line);
+  color: var(--acc);
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+.insTailPad {
+  height: 16px;
+}
+
 .sc {
   margin: 2px 0 2px 8px;
   padding: 7px 11px;

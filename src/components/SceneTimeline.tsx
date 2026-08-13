@@ -89,7 +89,7 @@ export function SceneTimeline({ scene, shots, activeId, onHover }: Props) {
               onMouseEnter={() => onHover(entry.shotId)}
               onMouseLeave={() => onHover(null)}
             >
-              {i > 0 && <span className={s.segDiv} />}
+              <span className={s.segDur}>{shot.duration}s</span>
             </div>
           )
         })}

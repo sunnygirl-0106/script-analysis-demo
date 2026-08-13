@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store/useStore'
 import type { Shot } from '../data/types'
 import ui from '../styles/ui.module.css'
 import s from './ShotPromptDialog.module.css'
 
-// 镜头提示词编辑弹窗：点分镜表里的「画面 / 视频提示词」格子直接打开，两段都可编辑。
-// 取代原来从底部展开的 ShotDetail 抽屉 —— 参数（景别/焦段/…）也搬进来，作为这些字段的出口。
-// 保存走 updateShotField，只写有变化的那一段。
+// 镜头提示词弹窗：画面 / 视频两段提示词的唯一出入口。
+// 待生成态：两个框留空、只给小灰字引导，右下「立即合成提示词」一键生成；
+// 已生成态：同一套框里显示合成结果，右下变「重新合成提示词」。两态版式完全一致。
+const MODELS = ['豆包 4.5', '即梦 3.0', '可灵 2.1', 'Seedance 1.0', 'Vidu 2.0']
+
 export function ShotPromptDialog({
   shot,
   focus,
@@ -19,28 +21,54 @@ export function ShotPromptDialog({
   onClose: () => void
 }) {
   const updateShotField = useStore((st) => st.updateShotField)
+  const generatePrompts = useStore((st) => st.generatePrompts)
+  const setPromptState = useStore((st) => st.setPromptState)
   const showToast = useStore((st) => st.showToast)
-  const [img, setImg] = useState(shot.imagePrompt)
-  const [vid, setVid] = useState(shot.videoPrompt)
+  const promptState = useStore((st) => st.promptStates[shot.id])
+
+  const revealed = promptState === 'ready' || promptState === 'stale'
+  const [img, setImg] = useState(revealed ? shot.imagePrompt : '')
+  const [vid, setVid] = useState(revealed ? shot.videoPrompt : '')
+  const [imgDirty, setImgDirty] = useState(false)
+  const [vidDirty, setVidDirty] = useState(false)
+  const [model, setModel] = useState(MODELS[0])
+
+  // 合成完成（generating → ready）→ 把结果揭示进两个框。
+  const prev = useRef(promptState)
+  useEffect(() => {
+    if (prev.current === 'generating' && promptState === 'ready') {
+      setImg(shot.imagePrompt)
+      setVid(shot.videoPrompt)
+      setImgDirty(false)
+      setVidDirty(false)
+    }
+    prev.current = promptState
+  }, [promptState, shot.imagePrompt, shot.videoPrompt])
+
+  const close = () => {
+    if (!readOnly) {
+      if (imgDirty && img !== shot.imagePrompt) updateShotField(shot.id, 'imagePrompt', img)
+      if (vidDirty && vid !== shot.videoPrompt) updateShotField(shot.id, 'videoPrompt', vid)
+      // 待生成态下手动写了提示词 → 提为已生成。
+      if (promptState === 'pending' && (img.trim() || vid.trim())) setPromptState(shot.id, 'ready')
+    }
+    onClose()
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') close()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  const params: [string, string][] = [
-    ['景别', shot.shotSize],
-    ['焦段', shot.lens],
-    ['光影', shot.lighting],
-    ['运镜', shot.cameraMove],
-    ['对白', shot.dialogue],
-    ['音效', shot.sfx],
-  ]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [img, vid, imgDirty, vidDirty, promptState])
 
   const copy = (label: string, text: string) => async () => {
+    if (!text.trim()) {
+      showToast('这一段还没有内容可复制。')
+      return
+    }
     try {
       await navigator.clipboard.writeText(text)
       showToast(`已复制${label}（${text.length} 字）`)
@@ -49,37 +77,42 @@ export function ShotPromptDialog({
     }
   }
 
-  const save = () => {
-    if (img !== shot.imagePrompt) updateShotField(shot.id, 'imagePrompt', img)
-    if (vid !== shot.videoPrompt) updateShotField(shot.id, 'videoPrompt', vid)
-    onClose()
-  }
+  const generating = promptState === 'generating'
+  const synthLabel = generating ? '合成中…' : revealed ? '重新合成提示词' : '立即合成提示词'
 
-  const fields: {
-    key: 'image' | 'video'
-    label: string
-    value: string
-    set: (v: string) => void
-    raw: string
-  }[] = [
-    { key: 'image', label: '画面提示词', value: img, set: setImg, raw: shot.imagePrompt },
-    { key: 'video', label: '视频提示词', value: vid, set: setVid, raw: shot.videoPrompt },
+  const fields = [
+    {
+      key: 'image' as const,
+      label: '画面提示词',
+      value: img,
+      set: (v: string) => {
+        setImg(v)
+        setImgDirty(true)
+      },
+      placeholder: '点击输入画面提示词，或点右下角「立即合成提示词」自动生成',
+    },
+    {
+      key: 'video' as const,
+      label: '视频提示词',
+      value: vid,
+      set: (v: string) => {
+        setVid(v)
+        setVidDirty(true)
+      },
+      placeholder: '点击输入视频提示词，或点右下角「立即合成提示词」自动生成',
+    },
   ]
 
   return (
-    <div className={s.overlay} onClick={onClose}>
+    <div className={s.overlay} onClick={close}>
       <div className={s.dialog} onClick={(e) => e.stopPropagation()}>
-        <div className={s.title}>
-          第 {shot.no} 镜 · {shot.title}
-        </div>
-
-        <div className={s.params}>
-          {params.map(([k, v]) => (
-            <span className={s.param} key={k}>
-              <i>{k}</i>
-              {v || '—'}
-            </span>
-          ))}
+        <div className={s.titleRow}>
+          <div className={s.title}>
+            第 {shot.no} 镜 · {shot.title}
+          </div>
+          <button className={s.close} onClick={close} title="关闭">
+            ✕
+          </button>
         </div>
 
         <div className={s.cols}>
@@ -98,6 +131,7 @@ export function ShotPromptDialog({
                 readOnly={readOnly}
                 autoFocus={f.key === focus}
                 spellCheck={false}
+                placeholder={f.placeholder}
                 onChange={(e) => f.set(e.target.value)}
               />
             </section>
@@ -105,12 +139,34 @@ export function ShotPromptDialog({
         </div>
 
         <div className={s.actions}>
-          <button className={ui.btn} onClick={onClose}>
-            {readOnly ? '关闭' : '取消'}
-          </button>
-          {!readOnly && (
-            <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={save}>
-              保存
+          <label className={s.modelPick}>
+            合成模型
+            <select
+              className={s.modelSelect}
+              value={model}
+              disabled={readOnly}
+              onChange={(e) => setModel(e.target.value)}
+            >
+              {MODELS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span className={s.spacer} />
+          {readOnly ? (
+            <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={close}>
+              关闭
+            </button>
+          ) : (
+            <button
+              className={[ui.btn, ui.btnPrimary].join(' ')}
+              disabled={generating}
+              onClick={() => generatePrompts([shot.id])}
+            >
+              {generating && <span className={s.spin} />}
+              {synthLabel}
             </button>
           )}
         </div>
