@@ -91,17 +91,24 @@
   position: relative;
 }
 
-/* 最终提示词表头：钉在右侧，横向滚动时始终可见 */
-.hCell:last-child {
+/* 最终提示词表头：钉在删除列左侧，横向滚动时始终可见 */
+.hCellPrompt {
+  position: sticky;
+  right: 46px;
+  z-index: 21;
+  background: #1e2227;
+  box-shadow: -8px 0 12px -8px rgba(0, 0, 0, 0.55);
+}
+/* 删除列表头：钉在最右，无标题 */
+.hCellDel {
   position: sticky;
   right: 0;
   z-index: 21;
   border-right: none;
   background: #1e2227;
-  box-shadow: -8px 0 12px -8px rgba(0, 0, 0, 0.55);
 }
-/* 滚到最右端：最终提示词列已回到自然位置、音效列贴在它左侧，此时不再需要“悬浮遮挡”的投影 */
-.scrollAtEnd .hCell:last-child,
+/* 滚到最右端：不再需要“悬浮遮挡”的投影 */
+.scrollAtEnd .hCellPrompt,
 .scrollAtEnd .cPromptStat {
   box-shadow: none;
 }
@@ -114,7 +121,53 @@
   border-bottom: 1px solid #262b31;
   background: #1e2127;
   cursor: default;
-  transition: background 0.24s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: background 0.24s cubic-bezier(0.22, 0.61, 0.36, 1), height 0.24s ease,
+    opacity 0.24s ease, transform 0.24s ease;
+}
+/* 删除折叠动画：高度塌陷 + 淡出 + 轻微左移，下方镜头随之平滑上移 */
+.rowRemoving {
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-bottom-color: transparent;
+  transform: translateX(-8px);
+}
+
+/* ⑩ 删除列：钉在最右（最终提示词右侧），悬停本行时显现删除键 */
+.cDel {
+  padding: 11px 0;
+  position: sticky;
+  right: 0;
+  z-index: 6;
+  background: inherit;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.delBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--t4);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.16s, border-color 0.16s, background 0.16s;
+}
+.row:hover .delBtn {
+  opacity: 1;
+}
+.delBtn:hover {
+  color: #ff8a80;
+  border-color: rgba(255, 138, 128, 0.5);
+  background: rgba(255, 138, 128, 0.1);
+}
+.delBtn:disabled {
+  opacity: 0;
 }
 /* Grid 子项统一允许收缩并裁掉溢出，长文本不得继续撑高行 */
 .row > * {
@@ -428,9 +481,10 @@
 .cPromptStat {
   padding: 11px 11px;
   position: sticky;
-  right: 0;
+  right: 46px;
   z-index: 5;
   background: inherit;
+  border-right: 1px solid var(--line2);
   box-shadow: -8px 0 12px -8px rgba(0, 0, 0, 0.55);
 }
 .pstat {
@@ -535,7 +589,7 @@
   opacity: 0;
   transition: opacity 0.15s ease;
 }
-.insRow:hover {
+.insRowShow {
   opacity: 1;
 }
 .insRowTag {

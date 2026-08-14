@@ -25,6 +25,23 @@
   background: var(--acc);
   flex: none;
 }
+/* 撤销按钮：紧贴文案右侧的天青胶囊 */
+.action {
+  flex: none;
+  margin-left: 3px;
+  padding: 3px 11px;
+  border-radius: var(--rpill);
+  border: 1px solid var(--acc-line);
+  background: var(--acc-bg);
+  color: var(--acc);
+  font-size: 12px;
+  font-weight: 600;
+  transition: 0.16s;
+}
+.action:hover {
+  background: rgba(143, 220, 210, 0.2);
+  color: #cdeef5;
+}
 @keyframes rise {
   from {
     opacity: 0;

@@ -7,9 +7,7 @@
   cursor: text;
   transition: background 0.14s;
 }
-.editable:hover {
-  background: rgba(143, 220, 210, 0.04);
-}
+/* 单元格不再单独 hover 高亮：整行的浅高亮已足够，避免行 + 格双重高亮。 */
 .ro {
   cursor: default;
 }

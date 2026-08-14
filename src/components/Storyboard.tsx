@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react'
 import { useStore } from '../store/useStore'
+import { useAutoHideHover } from '../hooks/useAutoHideHover'
 import type { Scene } from '../data/types'
 import { computeTimeline, sceneDuration } from '../services/timeline'
 import { SceneTimeline } from './SceneTimeline'
@@ -16,11 +17,16 @@ function fmt(sec: number): string {
 const HEAD = ['镜号 · 时长', '景别', '镜头设计', '出场的人和物', '主要内容', '光影氛围', '对白 · 旁白', '音效', '最终提示词']
 const DEFAULT_WIDTHS = [112, 96, 136, 230, 320, 150, 220, 130, 150]
 const MIN_WIDTHS = [96, 76, 100, 150, 240, 100, 140, 96, 130]
+// 最右侧固定的删除列宽（钉在「最终提示词」右边，不参与拖拽）。需与 CSS 中 .cPromptStat 的 right 偏移一致。
+const DEL_W = 46
 
 export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolean }) {
   const shots = useStore((st) => st.project.shots)
   const promptStates = useStore((st) => st.promptStates)
   const insertShot = useStore((st) => st.insertShot)
+  const deleteShot = useStore((st) => st.deleteShot)
+  // 表尾「在末尾插入一镜」热区：悬停显形、停住几秒自动隐藏。
+  const appendIns = useAutoHideHover()
 
   // 高亮完全由悬停驱动：不悬停就没有任何镜被高亮。
   const [hoverId, setHoverId] = useState<string | null>(null)
@@ -69,11 +75,12 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
     }
   }, [])
 
-  const template = widths.map((w) => `${w}px`).join(' ')
-  const gridW = widths.reduce((a, w) => a + w, 0)
+  // 九列可拖宽 + 末尾固定删除列。
+  const template = widths.map((w) => `${w}px`).join(' ') + ` ${DEL_W}px`
+  const gridW = widths.reduce((a, w) => a + w, 0) + DEL_W
   const gridStyle = { '--cols': template, width: gridW, minWidth: '100%' } as CSSProperties
 
-  // 全高列宽把手：压在每条竖分隔线上，整列任意高度都可拖。最后一列（最终提示词）钉右不参与。
+  // 全高列宽把手：压在每条竖分隔线上，整列任意高度都可拖。最终提示词列与删除列钉右不参与。
   const handles: { i: number; left: number }[] = []
   {
     let acc = 0
@@ -112,10 +119,11 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
         <div className={s.grid} style={gridStyle}>
           <div className={s.header}>
             {HEAD.map((h, i) => (
-              <div className={s.hCell} key={i}>
+              <div className={[s.hCell, i === HEAD.length - 1 ? s.hCellPrompt : ''].join(' ')} key={i}>
                 {h}
               </div>
             ))}
+            <div className={[s.hCell, s.hCellDel].join(' ')} />
           </div>
 
           {timeline.map((entry, i) => {
@@ -133,6 +141,7 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
                 promptState={promptStates[shot.id] ?? 'pending'}
                 onHover={setHoverId}
                 onInsertAbove={readOnly ? undefined : () => insertShot(scene.id, i)}
+                onDelete={readOnly ? undefined : () => deleteShot(shot.id)}
               />
             )
           })}
@@ -140,11 +149,16 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
           <div className={s.tail}>
             {!readOnly && (
               <div
-                className={s.insRow}
+                className={[s.insRow, appendIns.visible ? s.insRowShow : ''].join(' ')}
                 title="在末尾插入一镜"
-                onClick={() => insertShot(scene.id, timeline.length)}
+                onMouseEnter={appendIns.onMouseEnter}
+                onMouseMove={appendIns.onMouseMove}
+                onMouseLeave={appendIns.onMouseLeave}
+                onClick={() => {
+                  if (appendIns.isVisible()) insertShot(scene.id, timeline.length)
+                }}
               >
-                <span className={s.insRowTag}>＋ 在末尾插入一镜</span>
+                <span className={s.insRowTag}>＋ 镜</span>
                 <span className={s.insRowBar} />
               </div>
             )}

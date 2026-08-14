@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react'
 import { useStore } from '../store/useStore'
 import { useClickOutside } from '../hooks/useClickOutside'
+import { useAutoHideHover } from '../hooks/useAutoHideHover'
 import { can } from '../services/capability'
 import { sceneDuration } from '../services/timeline'
 import { ScriptImportDialog } from './ScriptImportDialog'
 import { ResplitEpisodeDialog } from './ResplitEpisodeDialog'
+import { ResplitSceneDialog } from './ResplitSceneDialog'
 import ui from '../styles/ui.module.css'
 import di from './ScriptImportDialog.module.css'
 import s from './EpisodeTree.module.css'
@@ -14,21 +16,61 @@ type Dialog =
   | { type: 'append' }
   | { type: 'replace'; epId: string }
   | { type: 'delete'; epId: string }
+  | { type: 'deleteScene'; sceneId: string }
+  | { type: 'resplitScene'; sceneId: string }
   | null
+
+// 「＋ 场」插入线：悬停显形、停住几秒自动隐藏，避免误搁在两场之间一直亮着。
+function SceneInsertLine({ tail = false, onInsert }: { tail?: boolean; onInsert: () => void }) {
+  const h = useAutoHideHover()
+  return (
+    <div
+      className={[s.insLine, tail ? s.insLineTail : '', h.visible ? s.insLineShow : ''].join(' ')}
+      title={tail ? '在末尾插入一场' : '在此插入一场'}
+      onMouseEnter={h.onMouseEnter}
+      onMouseMove={h.onMouseMove}
+      onMouseLeave={h.onMouseLeave}
+      onClick={(e) => {
+        e.stopPropagation()
+        if (h.isVisible()) onInsert()
+      }}
+    >
+      <span className={s.insBar} />
+      <span className={s.insTag}>＋ 场</span>
+    </div>
+  )
+}
 
 export function EpisodeTree() {
   const project = useStore((st) => st.project)
   const selectedSceneId = useStore((st) => st.selectedSceneId)
   const selectScene = useStore((st) => st.selectScene)
   const insertScene = useStore((st) => st.insertScene)
+  const renameScene = useStore((st) => st.renameScene)
+  const deleteScene = useStore((st) => st.deleteScene)
   const deleteEpisode = useStore((st) => st.deleteEpisode)
   const usageIndex = useStore((st) => st.usageIndex())
   const readOnly = !useStore((st) => can(st.project, 'editScript'))
 
   const [menuEp, setMenuEp] = useState<string | null>(null)
+  const [menuScene, setMenuScene] = useState<string | null>(null)
   const [dialog, setDialog] = useState<Dialog>(null)
+  // 就地改场名：记录正在编辑的场 id 与草稿。
+  const [editScene, setEditScene] = useState<string | null>(null)
+  const [nameDraft, setNameDraft] = useState('')
+
+  const startRename = (id: string, name: string) => {
+    setEditScene(id)
+    setNameDraft(name)
+  }
+  const commitRename = () => {
+    if (editScene) renameScene(editScene, nameDraft)
+    setEditScene(null)
+  }
   const menuRef = useRef<HTMLDivElement>(null)
   useClickOutside(menuRef, () => setMenuEp(null), menuEp !== null)
+  const menuSceneRef = useRef<HTMLDivElement>(null)
+  useClickOutside(menuSceneRef, () => setMenuScene(null), menuScene !== null)
 
   const episodeCount = project.episodes.length
   const sceneCount = Object.keys(project.scenes).length
@@ -46,6 +88,20 @@ export function EpisodeTree() {
         return { scenes: scenes.length, shots, onlyInEp }
       })()
     : null
+
+  // 单场删除确认：本场镜数 + 仅在本场出现的独有资产数。
+  const delSc = dialog?.type === 'deleteScene' ? project.scenes[dialog.sceneId] : undefined
+  const delScEp = delSc ? project.episodes.find((e) => e.sceneIds.includes(delSc.id)) : undefined
+  const delScStat =
+    delSc && delScEp
+      ? {
+          shots: delSc.shotIds.length,
+          onlyInScene: Object.values(project.assets).filter((a) => {
+            const apps = usageIndex[a.id]?.appearances ?? []
+            return apps.length > 0 && apps.every((ap) => ap.episodeNo === delScEp.no && ap.sceneNo === delSc.no)
+          }).length,
+        }
+      : null
 
   return (
     <div className={s.side}>
@@ -129,41 +185,103 @@ export function EpisodeTree() {
               </div>
               {scenes.map((sc, si) => (
                 <div className={s.scWrap} key={sc.id}>
-                  {!readOnly && (
-                    <div
-                      className={s.insLine}
-                      title="在此插入一场"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        insertScene(ep.id, si)
-                      }}
-                    >
-                      <span className={s.insBar} />
-                      <span className={s.insTag}>＋ 场</span>
-                    </div>
-                  )}
+                  {!readOnly && <SceneInsertLine onInsert={() => insertScene(ep.id, si)} />}
                   <div
                     className={[s.sc, sc.id === selectedSceneId ? s.on : ''].join(' ')}
                     onClick={() => selectScene(sc.id)}
+                    onDoubleClick={readOnly ? undefined : () => startRename(sc.id, sc.name)}
+                    onContextMenu={
+                      readOnly
+                        ? undefined
+                        : (e) => {
+                            e.preventDefault()
+                            setMenuScene(sc.id)
+                          }
+                    }
+                    title={readOnly ? undefined : '双击改场名 · 右键或 ⋯ 更多操作'}
                   >
-                    第 {sc.no} 场 {sc.name}
+                    第 {sc.no} 场{' '}
+                    {editScene === sc.id ? (
+                      <input
+                        className={s.scInput}
+                        value={nameDraft}
+                        autoFocus
+                        spellCheck={false}
+                        onChange={(e) => setNameDraft(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onFocus={(e) => e.target.select()}
+                        onBlur={commitRename}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') commitRename()
+                          else if (e.key === 'Escape') setEditScene(null)
+                        }}
+                      />
+                    ) : (
+                      sc.name
+                    )}
                     <span className={s.d}>{sc.shotIds.length} 镜</span>
                   </div>
+                  {!readOnly && (
+                    <div className={s.scMenuWrap} ref={menuScene === sc.id ? menuSceneRef : undefined}>
+                      <button
+                        className={[s.scDots, menuScene === sc.id ? s.scDotsOn : ''].join(' ')}
+                        title="本场操作"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setMenuScene((m) => (m === sc.id ? null : sc.id))
+                        }}
+                      >
+                        ⋯
+                      </button>
+                      {menuScene === sc.id && (
+                        <div className={s.menu}>
+                          <button
+                            className={s.menuItem}
+                            onClick={() => {
+                              startRename(sc.id, sc.name)
+                              setMenuScene(null)
+                            }}
+                          >
+                            重命名
+                          </button>
+                          <button
+                            className={s.menuItem}
+                            onClick={() => {
+                              insertScene(ep.id, si + 1)
+                              setMenuScene(null)
+                            }}
+                          >
+                            在下方插入一场
+                          </button>
+                          <button
+                            className={s.menuItem}
+                            onClick={() => {
+                              selectScene(sc.id)
+                              setDialog({ type: 'resplitScene', sceneId: sc.id })
+                              setMenuScene(null)
+                            }}
+                          >
+                            重新拆分本场镜头
+                          </button>
+                          <button
+                            className={[s.menuItem, s.menuDanger].join(' ')}
+                            onClick={() => {
+                              if (sc.shotIds.length === 0) deleteScene(sc.id)
+                              else setDialog({ type: 'deleteScene', sceneId: sc.id })
+                              setMenuScene(null)
+                            }}
+                          >
+                            删除本场
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
               {!readOnly && (
                 <div className={s.scWrap}>
-                  <div
-                    className={[s.insLine, s.insLineTail].join(' ')}
-                    title="在末尾插入一场"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      insertScene(ep.id, scenes.length)
-                    }}
-                  >
-                    <span className={s.insBar} />
-                    <span className={s.insTag}>＋ 场</span>
-                  </div>
+                  <SceneInsertLine tail onInsert={() => insertScene(ep.id, scenes.length)} />
                   <div className={s.insTailPad} />
                 </div>
               )}
@@ -205,6 +323,40 @@ export function EpisodeTree() {
                 className={[ui.btn, ui.btnDanger].join(' ')}
                 onClick={() => {
                   deleteEpisode(delEp.id)
+                  setDialog(null)
+                }}
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 场级弹窗 */}
+      {dialog?.type === 'resplitScene' && (
+        <ResplitSceneDialog sceneId={dialog.sceneId} onClose={() => setDialog(null)} />
+      )}
+
+      {dialog?.type === 'deleteScene' && delSc && delScStat && (
+        <div className={di.overlay} onClick={() => setDialog(null)}>
+          <div className={di.dialog} onClick={(e) => e.stopPropagation()}>
+            <div className={di.title}>删除第 {delSc.no} 场「{delSc.name}」？</div>
+            <div className={di.danger}>
+              将同时删除本场的 {delScStat.shots} 个镜头
+              {delScStat.onlyInScene > 0
+                ? `，以及仅在本场出现的 ${delScStat.onlyInScene} 项独有资产；其他场仍在使用的内容会保留`
+                : ''}
+              。删除后可在底部「撤销」。
+            </div>
+            <div className={di.actions}>
+              <button className={ui.btn} onClick={() => setDialog(null)}>
+                取消
+              </button>
+              <button
+                className={[ui.btn, ui.btnDanger].join(' ')}
+                onClick={() => {
+                  deleteScene(delSc.id)
                   setDialog(null)
                 }}
               >

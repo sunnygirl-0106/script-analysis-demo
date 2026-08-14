@@ -136,7 +136,7 @@
   position: static;
   top: auto;
 }
-.insLine:hover {
+.insLineShow {
   opacity: 1;
 }
 .insBar {
@@ -183,10 +183,58 @@
   color: var(--acc);
   font-weight: 600;
 }
+/* 就地改场名的输入框：嵌在场胶囊里，贴合行高 */
+.scInput {
+  flex: 1;
+  min-width: 0;
+  margin: -2px 0;
+  background: var(--bg3);
+  border: 1px solid var(--acc-line);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--t1);
+  outline: none;
+}
 .sc .d {
   margin-left: auto;
   font-size: 10px;
   color: var(--t4);
+  transition: opacity 0.14s;
+}
+/* 场行 ⋯ 菜单：hover 时在右侧显现（顶掉「N 镜」计数的位置） */
+.scMenuWrap {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  z-index: 20;
+}
+.scDots {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--rsm);
+  color: var(--t3);
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.16s, color 0.16s;
+}
+.scWrap:hover .scDots,
+.scDots:focus-visible,
+.scDotsOn {
+  opacity: 1;
+}
+.scWrap:hover .d {
+  opacity: 0;
+}
+.scDots:hover {
+  background: var(--bg3);
+  color: var(--t1);
 }
 .sc.on .d {
   color: var(--acc);

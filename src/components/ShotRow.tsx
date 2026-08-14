@@ -12,6 +12,7 @@ import {
 import { chipClass, KIND_LABEL } from './entity'
 import { mountIssues } from '../services/completeness'
 import { isLongShot } from '../services/duration'
+import { useAutoHideHover } from '../hooks/useAutoHideHover'
 import { MountPicker } from './MountPicker'
 import { ShotFieldCell } from './ShotFieldCell'
 import { DialogueCell } from './DialogueCell'
@@ -34,9 +35,11 @@ interface Props {
   onHover: (id: string | null) => void
   // 悬停本行上沿 → 在本行之前插入一镜。只读时为 undefined，不渲染插入条。
   onInsertAbove?: () => void
+  // 删除本镜（左侧操作栏的删除键）。只读时为 undefined。
+  onDelete?: () => void
 }
 
-export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptState, onHover, onInsertAbove }: Props) {
+export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptState, onHover, onInsertAbove, onDelete }: Props) {
   const assets = useStore((st) => st.project.assets)
   const addMount = useStore((st) => st.addMount)
   const removeMount = useStore((st) => st.removeMount)
@@ -45,6 +48,15 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
 
   // 点「查看提示词」→ 打开编辑弹窗，focus 记录点开时定位哪一段。
   const [editing, setEditing] = useState<'image' | 'video' | null>(null)
+  // 「在此插入一镜」热区：悬停显形、停住几秒自动隐藏。
+  const ins = useAutoHideHover()
+  // 删除：先播放折叠动画，动画结束再真正从 store 移除（配合可撤销 toast）。
+  const [removing, setRemoving] = useState(false)
+  const runDelete = () => {
+    if (removing || !onDelete) return
+    setRemoving(true)
+    window.setTimeout(onDelete, 240)
+  }
 
   const nameOf = (m: MountRef) => assets[m.assetId]?.name ?? '该内容已移除'
 
@@ -161,20 +173,29 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
 
   return (
     <div
-      className={[s.row, alt ? s.rowAlt : '', active ? s.rowOn : '', promptState === 'stale' ? s.rowStale : ''].join(' ')}
+      className={[
+        s.row,
+        alt ? s.rowAlt : '',
+        active ? s.rowOn : '',
+        promptState === 'stale' ? s.rowStale : '',
+        removing ? s.rowRemoving : '',
+      ].join(' ')}
       onMouseEnter={() => onHover(shot.id)}
       onMouseLeave={() => onHover(null)}
     >
       {onInsertAbove && (
         <div
-          className={s.insRow}
+          className={[s.insRow, ins.visible ? s.insRowShow : ''].join(' ')}
           title="在此插入一镜"
+          onMouseEnter={ins.onMouseEnter}
+          onMouseMove={ins.onMouseMove}
+          onMouseLeave={ins.onMouseLeave}
           onClick={(e) => {
             e.stopPropagation()
-            onInsertAbove()
+            if (ins.isVisible()) onInsertAbove()
           }}
         >
-          <span className={s.insRowTag}>＋ 在此插入一镜</span>
+          <span className={s.insRowTag}>＋ 镜</span>
           <span className={s.insRowBar} />
         </div>
       )}
@@ -350,6 +371,25 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
 
       {/* ⑨ 最终提示词状态 */}
       <div className={s.cPromptStat}>{promptCell()}</div>
+
+      {/* ⑩ 删除列：钉在最右，悬停本行时显现删除键 */}
+      <div className={s.cDel}>
+        {onDelete && (
+          <button
+            className={s.delBtn}
+            title="删除本镜"
+            disabled={removing}
+            onClick={(e) => {
+              e.stopPropagation()
+              runDelete()
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={1.7}>
+              <path d="M5 7h14M10 7V5h4v2M6 7l1 12h10l1-12" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
+      </div>
 
       {editing && (
         <ShotPromptDialog

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../store/useStore'
 import type { Shot } from '../data/types'
+import { armEditSwallow, consumeEditSwallow } from '../services/editGuard'
 import s from './ShotFieldCell.module.css'
 
 // 分镜表里的行内可编辑字段格。点击就地弹出小弹窗（对齐设计稿）：
@@ -81,6 +82,7 @@ export function ShotFieldCell({
       const t = e.target as Node
       if (wrapRef.current?.contains(t)) return
       if (popRef.current?.contains(t)) return
+      armEditSwallow()
       commit()
       setOpen(false)
     }
@@ -163,7 +165,9 @@ export function ShotFieldCell({
       className={cellCls}
       ref={wrapRef}
       onClick={() => {
-        if (!readOnly) setOpen((o) => !o)
+        if (readOnly) return
+        if (consumeEditSwallow()) return
+        setOpen((o) => !o)
       }}
       title={readOnly ? undefined : `点击编辑${label}`}
     >

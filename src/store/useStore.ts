@@ -1,6 +1,6 @@
 // Zustand：一个 project + 所有动作。不做持久化，刷新回到初始状态。
 import { create } from 'zustand'
-import type { MountRef, Project, PromptState, Scene, Shot, ShotDensity, Stage } from '../data/types'
+import type { Asset, MountRef, Project, PromptState, Scene, Shot, ShotDensity, Stage } from '../data/types'
 import { seedProject } from '../data/seed'
 import { episode2Payload } from '../data/seedEpisode2'
 import { appendEpisode } from '../services/incremental'
@@ -25,9 +25,15 @@ function usageIndexOf(project: Project): Record<string, AssetUsage> {
 
 export type Tab = 'character' | 'costume' | 'location' | 'prop' | 'shot'
 
+export interface ToastAction {
+  label: string
+  run: () => void
+}
+
 export interface Toast {
   id: number
   text: string
+  action?: ToastAction
 }
 
 const DENSITY_LABEL: Record<ShotDensity, string> = {
@@ -65,7 +71,7 @@ interface StoreState extends UIState {
   toggleScript: () => void
   openSceneSettings: () => void
   closeSceneSettings: () => void
-  showToast: (text: string) => void
+  showToast: (text: string, action?: ToastAction) => void
   dismissToast: () => void
 
   // ── 提示词生成（两步式：先生成全部提示词，再生成第一批图）──
@@ -80,6 +86,12 @@ interface StoreState extends UIState {
   insertShot: (sceneId: string, index: number) => void
   // 在某集的第 index 个位置插入一个空场，并顺延重编号。
   insertScene: (episodeId: string, index: number) => void
+  // 改场名（双击场名就地编辑，失焦/回车自动保存）。清空则回落到「（未命名）」。
+  renameScene: (sceneId: string, name: string) => void
+  // 删除一个场（级联删镜 + 清理只在本场出现的孤儿资产 + 顺延重编号），并弹出可撤销的 toast。
+  deleteScene: (sceneId: string) => void
+  // 删除一个镜头（顺延重编号），并弹出可撤销的 toast。
+  deleteShot: (shotId: string) => void
   addMount: (shotId: string, mount: MountRef) => void
   removeMount: (shotId: string, assetId: string) => void
   updateSceneTrack: (sceneId: string, patch: Partial<Project['scenes'][string]['track']>) => void
@@ -152,9 +164,9 @@ export const useStore = create<StoreState>((set, get) => {
   toggleScript: () => set((s) => ({ scriptOpen: !s.scriptOpen })),
   openSceneSettings: () => set({ sceneSettingsOpen: true }),
   closeSceneSettings: () => set({ sceneSettingsOpen: false }),
-  showToast: (text) => {
+  showToast: (text, action) => {
     const id = ++toastSeq
-    set({ toast: { id, text } })
+    set({ toast: { id, text, action } })
   },
   dismissToast: () => set({ toast: null }),
 
@@ -255,7 +267,7 @@ export const useStore = create<StoreState>((set, get) => {
       if (!ep) return s
       const id = `ins_sc${++insSeq}`
       const blank: Scene = {
-        id, episodeId, no: 0, name: '新场（待拆解）', location: '', timeOfDay: '',
+        id, episodeId, no: 0, name: '（未命名）', location: '', timeOfDay: '',
         rawText: '', shotIds: [], density: s.project.defaultDensity, track: { mood: '', bgm: '' },
       }
       const at = Math.max(0, Math.min(index, ep.sceneIds.length))
@@ -271,6 +283,163 @@ export const useStore = create<StoreState>((set, get) => {
       return { project: { ...s.project, episodes, scenes }, selectedSceneId: id, sceneSettingsOpen: false }
     })
     get().showToast('已插入 1 个新场，可导入剧本或重新拆分补充镜头。')
+  },
+
+  renameScene: (sceneId, name) => {
+    if (!can(get().project, 'editScript')) return
+    const trimmed = name.trim() || '（未命名）'
+    set((s) => {
+      const scene = s.project.scenes[sceneId]
+      if (!scene || scene.name === trimmed) return s
+      return { project: { ...s.project, scenes: { ...s.project.scenes, [sceneId]: { ...scene, name: trimmed } } } }
+    })
+  },
+
+  deleteScene: (sceneId) => {
+    if (!can(get().project, 'editScript')) return
+    const st0 = get()
+    const scene = st0.project.scenes[sceneId]
+    if (!scene) return
+    const ep = st0.project.episodes.find((e) => e.sceneIds.includes(sceneId))
+    if (!ep) return
+    const epId = ep.id
+    const index = ep.sceneIds.indexOf(sceneId)
+    const oldNo = scene.no
+    const shotIds = [...scene.shotIds]
+    const wasSelected = st0.selectedSceneId === sceneId
+
+    // 孤儿资产：仅在本场出现的资产（删除前用 usageIndex 判定），与集删除同一判据、收窄到单场。
+    const idx = st0.usageIndex()
+    const orphanIds = Object.values(st0.project.assets)
+      .filter((a) => {
+        const apps = idx[a.id]?.appearances ?? []
+        return apps.length > 0 && apps.every((ap) => ap.episodeNo === ep.no && ap.sceneNo === scene.no)
+      })
+      .map((a) => a.id)
+
+    // 快照（撤销原位还原用）
+    const sceneSnap = structuredClone(scene)
+    const shotSnaps = shotIds
+      .map((id) => st0.project.shots[id])
+      .filter(Boolean)
+      .map((sh) => structuredClone(sh!)) as Shot[]
+    const assetSnaps = orphanIds.map((id) => structuredClone(st0.project.assets[id]!)) as Asset[]
+    const promptSnap: Record<string, PromptState> = {}
+    shotIds.forEach((id) => {
+      promptSnap[id] = st0.promptStates[id] ?? 'pending'
+    })
+
+    set((s) => {
+      const e = s.project.episodes.find((x) => x.id === epId)
+      if (!e) return s
+      const nextSceneIds = e.sceneIds.filter((id) => id !== sceneId)
+      const episodes = s.project.episodes.map((x) => (x.id === epId ? { ...x, sceneIds: nextSceneIds } : x))
+      const scenes = { ...s.project.scenes }
+      delete scenes[sceneId]
+      nextSceneIds.forEach((sid, i) => {
+        const sc = scenes[sid]
+        if (sc && sc.no !== i + 1) scenes[sid] = { ...sc, no: i + 1 }
+      })
+      const shots = { ...s.project.shots }
+      shotIds.forEach((id) => delete shots[id])
+      const assets = { ...s.project.assets }
+      orphanIds.forEach((id) => delete assets[id])
+      const promptStates = { ...s.promptStates }
+      shotIds.forEach((id) => delete promptStates[id])
+      // 重指选中场：同集就近；本集空了取全剧第一个场；再无则空。
+      let selectedSceneId = s.selectedSceneId
+      if (wasSelected) {
+        if (nextSceneIds.length) selectedSceneId = nextSceneIds[Math.min(index, nextSceneIds.length - 1)]
+        else selectedSceneId = episodes.find((x) => x.sceneIds.length > 0)?.sceneIds[0] ?? ''
+      }
+      return {
+        project: { ...s.project, episodes, scenes, shots, assets },
+        promptStates,
+        selectedSceneId,
+        sceneSettingsOpen: false,
+      }
+    })
+
+    const restore = () => {
+      set((s) => {
+        if (s.project.scenes[sceneSnap.id]) return s
+        const e = s.project.episodes.find((x) => x.id === epId)
+        if (!e) return s
+        const nextSceneIds = [...e.sceneIds]
+        nextSceneIds.splice(Math.min(index, nextSceneIds.length), 0, sceneSnap.id)
+        const episodes = s.project.episodes.map((x) => (x.id === epId ? { ...x, sceneIds: nextSceneIds } : x))
+        const scenes = { ...s.project.scenes, [sceneSnap.id]: structuredClone(sceneSnap) }
+        nextSceneIds.forEach((sid, i) => {
+          const sc = scenes[sid]
+          if (sc && sc.no !== i + 1) scenes[sid] = { ...sc, no: i + 1 }
+        })
+        const shots = { ...s.project.shots }
+        shotSnaps.forEach((sh) => (shots[sh.id] = structuredClone(sh)))
+        const assets = { ...s.project.assets }
+        assetSnaps.forEach((a) => (assets[a.id] = structuredClone(a)))
+        const promptStates = { ...s.promptStates }
+        Object.entries(promptSnap).forEach(([id, ps]) => (promptStates[id] = ps))
+        return {
+          project: { ...s.project, episodes, scenes, shots, assets },
+          promptStates,
+          selectedSceneId: sceneSnap.id,
+        }
+      })
+    }
+
+    get().showToast(`已删除第 ${oldNo} 场`, { label: '撤销', run: restore })
+  },
+
+  deleteShot: (shotId) => {
+    if (!can(get().project, 'editShotFields')) return
+    const st0 = get()
+    const shot = st0.project.shots[shotId]
+    if (!shot) return
+    const scene0 = st0.project.scenes[shot.sceneId]
+    if (!scene0) return
+    const index = scene0.shotIds.indexOf(shotId)
+    const oldNo = index + 1
+    // 快照 + 原状态，供撤销时原位放回。
+    const snapshot = structuredClone(shot)
+    const prevPrompt = st0.promptStates[shotId] ?? 'pending'
+
+    set((s) => {
+      const scene = s.project.scenes[shot.sceneId]
+      if (!scene) return s
+      const shotIds = scene.shotIds.filter((id) => id !== shotId)
+      const shots = { ...s.project.shots }
+      delete shots[shotId]
+      shotIds.forEach((sid, i) => {
+        const sh = shots[sid]
+        if (sh && sh.no !== i + 1) shots[sid] = { ...sh, no: i + 1 }
+      })
+      const promptStates = { ...s.promptStates }
+      delete promptStates[shotId]
+      return {
+        project: { ...s.project, scenes: { ...s.project.scenes, [shot.sceneId]: { ...scene, shotIds } }, shots },
+        promptStates,
+      }
+    })
+
+    const restore = () => {
+      set((s) => {
+        const scene = s.project.scenes[snapshot.sceneId]
+        if (!scene || s.project.shots[snapshot.id]) return s
+        const shotIds = [...scene.shotIds]
+        shotIds.splice(Math.min(index, shotIds.length), 0, snapshot.id)
+        const shots = { ...s.project.shots, [snapshot.id]: structuredClone(snapshot) }
+        shotIds.forEach((sid, i) => {
+          const sh = shots[sid]
+          if (sh && sh.no !== i + 1) shots[sid] = { ...sh, no: i + 1 }
+        })
+        return {
+          project: { ...s.project, scenes: { ...s.project.scenes, [snapshot.sceneId]: { ...scene, shotIds } }, shots },
+          promptStates: { ...s.promptStates, [snapshot.id]: prevPrompt },
+        }
+      })
+    }
+
+    get().showToast(`已删除第 ${oldNo} 镜`, { label: '撤销', run: restore })
   },
 
   addMount: (shotId, mount) => {

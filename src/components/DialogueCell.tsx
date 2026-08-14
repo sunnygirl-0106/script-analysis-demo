@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../store/useStore'
+import { armEditSwallow, consumeEditSwallow } from '../services/editGuard'
 import s from './DialogueCell.module.css'
 
 // 对白 · 旁白：结构化行内编辑。类型（台词 / 旁白）+ 说话人（台词限本剧角色）+ 内容。
@@ -93,6 +94,7 @@ export function DialogueCell({ shotId, value, readOnly }: Props) {
       const t = e.target as Node
       if (wrapRef.current?.contains(t)) return
       if (popRef.current?.contains(t)) return
+      armEditSwallow()
       setOpen(false)
     }
     const id = window.setTimeout(() => document.addEventListener('mousedown', handle), 0)
@@ -132,7 +134,9 @@ export function DialogueCell({ shotId, value, readOnly }: Props) {
       className={[s.cell, readOnly ? s.ro : s.editable, open ? s.cellOpen : ''].join(' ')}
       ref={wrapRef}
       onClick={() => {
-        if (!readOnly) setOpen((o) => !o)
+        if (readOnly) return
+        if (consumeEditSwallow()) return
+        setOpen((o) => !o)
       }}
       title={readOnly ? undefined : '点击编辑对白 · 旁白'}
     >

@@ -8,7 +8,8 @@ export function Toast() {
 
   useEffect(() => {
     if (!toast) return
-    const id = window.setTimeout(dismiss, 3200)
+    // 带撤销的 toast 多留一会儿，给用户点「撤销」的时间。
+    const id = window.setTimeout(dismiss, toast.action ? 5200 : 3200)
     return () => window.clearTimeout(id)
   }, [toast, dismiss])
 
@@ -16,7 +17,18 @@ export function Toast() {
   return (
     <div className={s.toast} key={toast.id}>
       <span className={s.dot} />
-      {toast.text}
+      <span>{toast.text}</span>
+      {toast.action && (
+        <button
+          className={s.action}
+          onClick={() => {
+            toast.action!.run()
+            dismiss()
+          }}
+        >
+          {toast.action.label}
+        </button>
+      )}
     </div>
   )
 }
