@@ -25,8 +25,9 @@
   letter-spacing: 3px;
 }
 
+/* 面板容器：308px 换取正文可读性（对齐原文对照稿） */
 .col {
-  width: 262px;
+  width: 308px;
   flex: none;
   background: var(--bg2);
   border-right: 1px solid var(--line);
@@ -34,47 +35,123 @@
   flex-direction: column;
   min-height: 0;
 }
+
+/* 表头：标签 · 分隔 · 场名 · 右侧 meta + 收起 */
 .head {
   height: 44px;
+  flex: none;
   display: flex;
   align-items: center;
+  gap: 8px;
   padding: 0 14px;
+  border-bottom: 1px solid var(--line2);
+}
+.head .lbl {
   font-size: 11px;
   color: var(--t4);
   letter-spacing: 0.6px;
-  border-bottom: 1px solid var(--line2);
-  flex: none;
 }
-.head .rt {
+.head .meta {
   margin-left: auto;
+  flex: none;
+  font-size: 10.5px;
+  color: var(--t4);
+  font-variant-numeric: tabular-nums;
 }
+.head .fold {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--t4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.14s;
+}
+.head .fold:hover {
+  background: var(--bg3);
+  color: var(--t1);
+}
+
+/* 正文：衬线（系统兜底）+ 左侧段号栏 */
 .script {
-  padding: 14px 16px;
+  padding: 8px 18px 28px;
   overflow: auto;
   flex: 1;
-  font-size: 12px;
+  font-family: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+  font-size: 13px;
   line-height: 2.05;
   color: var(--t2);
-  white-space: pre-line;
 }
-.lbl {
-  color: var(--t4);
+/* 场头：SCENE 03 / 场名，正文顶部的报头 */
+.masthead {
+  padding: 14px 0 18px;
+}
+.eyebrow {
+  font-family: -apple-system, 'PingFang SC', sans-serif;
   font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--t4);
 }
-.e {
+.title {
+  margin-top: 8px;
+  font-size: 23px;
   font-weight: 600;
-  border-bottom: 1px dotted currentColor;
-  padding-bottom: 1px;
+  line-height: 1.25;
+  color: var(--t1);
+  text-wrap: balance;
+}
+
+.beat {
+  display: flex;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line2);
+  transition: background 0.14s;
+}
+.beat:first-child {
+  border-top: none;
+}
+.beat:hover {
+  background: rgb(var(--acc-rgb) / 0.03);
+}
+.beat .n {
+  flex: none;
+  width: 16px;
+  text-align: right;
+  padding-top: 6px;
+  font-family: -apple-system, 'PingFang SC', sans-serif;
+  font-size: 10px;
+  color: var(--gutter);
+  font-variant-numeric: tabular-nums;
+}
+.beat p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+/* 实体高亮：同色细下划线，不改动原文字重 */
+.e {
+  border-bottom: 1px solid currentColor;
 }
 .role {
   color: var(--role);
+  border-bottom-color: rgb(var(--role-rgb) / 0.4);
 }
 .scene {
   color: var(--scene);
+  border-bottom-color: rgb(var(--scene-rgb) / 0.4);
 }
 .prop {
   color: var(--prop);
+  border-bottom-color: rgb(var(--prop-rgb) / 0.4);
 }
 .cloth {
   color: var(--cloth);
+  border-bottom-color: rgb(var(--cloth-rgb) / 0.4);
 }

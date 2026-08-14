@@ -69,43 +69,81 @@
   background: var(--bg3);
   color: var(--t1);
 }
+/* 固定定位：在光标/按钮的右下方弹出（left/top 由 JS 就地写入），
+   脱离窄侧栏的 overflow 裁剪，符合右键菜单的习惯朝向。 */
 .menu {
-  position: absolute;
-  top: 26px;
-  right: 0;
-  z-index: 30;
-  min-width: 116px;
-  padding: 5px;
-  background: var(--bg2);
-  border: 1px solid var(--edge);
+  position: fixed;
+  z-index: 60;
+  min-width: 168px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: var(--rlg);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.42);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(0 0 0 / 0.2);
   display: flex;
   flex-direction: column;
   gap: 1px;
+  animation: menuIn 0.14s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transform-origin: top left;
+}
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
 }
 .menuItem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   text-align: left;
-  padding: 7px 10px;
+  padding: 8px 12px 8px 9px;
   border-radius: var(--rsm);
-  font-size: 12px;
+  font-size: 12.5px;
+  white-space: nowrap;
   color: var(--t2);
   background: transparent;
-  transition: 0.14s;
+  transition: background 0.14s, color 0.14s;
+}
+/* 灰色小图标：默认弱灰，hover 时随文字一起提亮 */
+.mIcon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--t4);
+  transition: color 0.14s;
 }
 .menuItem:hover:not(:disabled) {
   background: var(--bg3);
   color: var(--t1);
 }
+.menuItem:hover:not(:disabled) .mIcon {
+  color: var(--t2);
+}
 .menuItem:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
+/* 危险项前的细分割线 */
+.menuSep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--line2);
+}
 .menuDanger {
   color: var(--prop);
 }
+.menuDanger .mIcon {
+  color: rgb(var(--prop-rgb) / 0.7);
+}
 .menuDanger:hover:not(:disabled) {
   background: var(--prop-bg);
+  color: var(--prop);
+}
+.menuDanger:hover:not(:disabled) .mIcon {
   color: var(--prop);
 }
 .epSub {
@@ -116,50 +154,6 @@
 /* 场行外壳：承载「悬停两场之间插入一场」的浮层 */
 .scWrap {
   position: relative;
-}
-/* 插入条：默认透明，悬停这条 16px 高的热区时显形（＋场 + 天青渐变线） */
-.insLine {
-  position: absolute;
-  left: 4px;
-  right: 2px;
-  top: -8px;
-  height: 16px;
-  z-index: 12;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-.insLineTail {
-  position: static;
-  top: auto;
-}
-.insLineShow {
-  opacity: 1;
-}
-.insBar {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(143, 220, 210, 0.08), rgba(143, 220, 210, 0.4) 45%, rgba(143, 220, 210, 0.4));
-}
-.insTag {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 16px;
-  padding: 0 7px;
-  border-radius: var(--rpill);
-  background: var(--acc-bg);
-  border: 1px solid var(--acc-line);
-  color: var(--acc);
-  font-size: 9.5px;
-  white-space: nowrap;
-}
-.insTailPad {
-  height: 16px;
 }
 
 .sc {

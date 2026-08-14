@@ -119,7 +119,15 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
         <div className={s.grid} style={gridStyle}>
           <div className={s.header}>
             {HEAD.map((h, i) => (
-              <div className={[s.hCell, i === HEAD.length - 1 ? s.hCellPrompt : ''].join(' ')} key={i}>
+              <div
+                className={[
+                  s.hCell,
+                  i === HEAD.length - 1 ? s.hCellPrompt : '',
+                  // 镜号 / 景别 / 镜头设计 / 最终提示词 四列居中
+                  i === 0 || i === 1 || i === 2 || i === HEAD.length - 1 ? s.hCellCenter : '',
+                ].join(' ')}
+                key={i}
+              >
                 {h}
               </div>
             ))}
@@ -158,7 +166,8 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
                   if (appendIns.isVisible()) insertShot(scene.id, timeline.length)
                 }}
               >
-                <span className={s.insRowTag}>＋ 镜</span>
+                <span className={s.insRowBar} />
+                <span className={s.insRowPlus}>＋</span>
                 <span className={s.insRowBar} />
               </div>
             )}

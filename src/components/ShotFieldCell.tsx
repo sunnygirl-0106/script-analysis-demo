@@ -158,7 +158,8 @@ export function ShotFieldCell({
   }
 
   const empty = !value.trim()
-  const cellCls = [s.cell, readOnly ? s.ro : s.editable, open ? s.cellOpen : ''].join(' ')
+  // pill 变体（景别 / 镜头设计）整格内容居中；text 变体保持左对齐。
+  const cellCls = [s.cell, variant === 'pill' ? s.cellPill : '', readOnly ? s.ro : s.editable, open ? s.cellOpen : ''].join(' ')
 
   return (
     <div

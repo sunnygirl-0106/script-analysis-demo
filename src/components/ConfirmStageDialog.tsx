@@ -60,10 +60,6 @@ export function ConfirmStageDialog({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        <div className={s.desc}>
-          进入项目资产库后仍可调整剧本和提示词，但不能直接修改角色与服装的组合。
-        </div>
-
         <div className={d.actions}>
           <button className={ui.btn} onClick={onClose}>返回修改</button>
           <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={confirm}>开始生成第一批</button>

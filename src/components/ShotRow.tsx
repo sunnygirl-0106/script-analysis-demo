@@ -44,7 +44,6 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
   const addMount = useStore((st) => st.addMount)
   const removeMount = useStore((st) => st.removeMount)
   const setDuration = useStore((st) => st.setShotDuration)
-  const generatePrompts = useStore((st) => st.generatePrompts)
 
   // 点「查看提示词」→ 打开编辑弹窗，focus 记录点开时定位哪一段。
   const [editing, setEditing] = useState<'image' | 'video' | null>(null)
@@ -142,7 +141,6 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
           <button className={[s.badge, s.badgeReady].join(' ')} onClick={() => setEditing('image')}>
             查看提示词
           </button>
-          <span className={s.pstatNote}>画面 + 视频运动</span>
         </div>
       )
     }
@@ -151,9 +149,6 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
         <div className={s.pstat}>
           <button className={[s.badge, s.badgeStale].join(' ')} onClick={() => setEditing('image')}>
             ⚠ 待更新
-          </button>
-          <button className={s.miniGen} onClick={() => generatePrompts([shot.id])}>
-            重新生成本镜
           </button>
         </div>
       )
@@ -195,7 +190,8 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
             if (ins.isVisible()) onInsertAbove()
           }}
         >
-          <span className={s.insRowTag}>＋ 镜</span>
+          <span className={s.insRowBar} />
+          <span className={s.insRowPlus}>＋</span>
           <span className={s.insRowBar} />
         </div>
       )}

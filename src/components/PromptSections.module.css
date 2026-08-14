@@ -9,12 +9,12 @@
 .tc {
   font-size: 11px;
   line-height: 1.75;
-  color: #8a929d;
+  color: var(--t5);
   white-space: pre-line;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.2px;
   padding-bottom: 2px;
-  border-bottom: 1px dashed #2c313a;
+  border-bottom: 1px dashed var(--line);
   margin-bottom: 1px;
 }
 
@@ -23,23 +23,23 @@
   margin: 0;
   font-size: 12px;
   line-height: 2.05;
-  color: #dce0e5;
+  color: var(--t2);
   text-wrap: pretty;
 }
 .segTag {
-  color: #9aa2ad;
+  color: var(--t3);
   font-weight: 600;
   margin-right: 3px;
 }
 .segBody {
-  color: #dce0e5;
+  color: var(--t2);
 }
 
 /* 【禁止】：完整显示，仅用较淡文字弱化，不折叠不隐藏 */
 .segForbid .segTag {
-  color: #79818c;
+  color: var(--t4);
   font-weight: 600;
 }
 .segForbid .segBody {
-  color: #868e99;
+  color: var(--t5);
 }

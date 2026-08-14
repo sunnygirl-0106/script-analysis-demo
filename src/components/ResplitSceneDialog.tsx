@@ -69,12 +69,6 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
           当前为 {curCount} 个镜头，共 {total} 秒
         </div>
 
-        {!hasPresets && (
-          <div className={s.presetNote}>
-            当前演示仅为第 1 场准备了多套镜头方案；本场重新拆分后将按原方案重新生成，镜数不变。
-          </div>
-        )}
-
         <div className={s.groupTitle}>镜头节奏</div>
         <div className={s.opts}>
           {DENSITY_META.map((m) => {

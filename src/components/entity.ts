@@ -26,12 +26,24 @@ export const KIND_LABEL: Record<AssetKind, string> = {
 }
 
 // 与 theme.css 的四类实体色保持一致，供 JS 内联样式（挂载弹层等）取用。look 沿用角色紫。
+// 直接引用 CSS 变量字符串——浏览器会在内联样式里解析，theme.css 是唯一颜色来源。
 export const KIND_COLOR: Record<AssetKind, string> = {
-  character: '#a78bfa',
-  costume: '#f472b6',
-  location: '#34d399',
-  prop: '#fbbf24',
-  look: '#a78bfa',
+  character: 'var(--role)',
+  costume: 'var(--cloth)',
+  location: 'var(--scene)',
+  prop: 'var(--prop)',
+  look: 'var(--role)',
+}
+
+// 「安静版」资产表格用的压暗类目色：保留四个色相，压低饱和与明度，只点一颗小圆点，
+// 其余（名称 / 标签 / 数字）全走灰阶，把注意力留给提示词与后续要加的分镜脚本列。
+// 令牌定义在 theme.css（--role-dim 等），取值对齐参考稿《资产提取清单.html》。
+export const KIND_DOT: Record<AssetKind, string> = {
+  character: 'var(--role-dim)',
+  costume: 'var(--cloth-dim)',
+  location: 'var(--scene-dim)',
+  prop: 'var(--prop-dim)',
+  look: 'var(--role-dim)',
 }
 
 // 四类基础资产的固定顺序（资产 tab / 概览遍历用）。

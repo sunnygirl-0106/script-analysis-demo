@@ -13,7 +13,19 @@
 }
 /* 打开编辑时给一层极淡的天青底 */
 .cellOpen {
-  background: rgba(143, 220, 210, 0.05);
+  background: rgb(var(--acc-rgb) / 0.05);
+}
+
+/* 景别 / 镜头设计：整格内容纵横双向居中（含空态占位符与胶囊组），并尽量单行 */
+.cellPill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.cellPill .toks {
+  flex-wrap: nowrap;
+  justify-content: center;
 }
 
 /* ── 景别 / 镜头设计的行内展示 ── */
@@ -31,8 +43,8 @@
   height: 22px;
   padding: 0 9px;
   border-radius: var(--rpill);
-  background: #22262c;
-  border: 1px solid #2f353d;
+  background: var(--bg3);
+  border: 1px solid var(--line);
   font-size: 11.5px;
   line-height: 1;
   white-space: nowrap;
@@ -77,23 +89,23 @@
   position: fixed;
   z-index: 60;
   background: var(--bg2);
-  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.62);
+  box-shadow: 0 16px 44px rgb(0 0 0 / 0.62);
 }
 .popPill {
-  border: 1px solid rgba(143, 220, 210, 0.45);
+  border: 1px solid rgb(var(--acc-rgb) / 0.45);
   border-radius: 12px;
   padding: 10px;
 }
 .popText {
-  border: 1px solid rgba(143, 220, 210, 0.5);
+  border: 1px solid rgb(var(--acc-rgb) / 0.5);
   border-radius: 10px;
   padding: 7px 8px 6px;
 }
 
 .input {
   width: 100%;
-  background: #22262c;
-  border: 1px solid rgba(143, 220, 210, 0.45);
+  background: var(--bg3);
+  border: 1px solid rgb(var(--acc-rgb) / 0.45);
   border-radius: 8px;
   padding: 7px 9px;
   font: inherit;
@@ -125,8 +137,8 @@
 .arrowBtn {
   padding: 2.5px 10px;
   border-radius: var(--rpill);
-  border: 1px dashed rgba(143, 220, 210, 0.55);
-  background: rgba(143, 220, 210, 0.1);
+  border: 1px dashed rgb(var(--acc-rgb) / 0.55);
+  background: rgb(var(--acc-rgb) / 0.1);
   font-size: 11px;
   color: var(--acc);
   transition: border-style 0.14s;
@@ -138,7 +150,7 @@
   padding: 2.5px 9px;
   border-radius: var(--rpill);
   border: 1px solid var(--line);
-  background: #22262c;
+  background: var(--bg3);
   font-size: 11px;
   color: var(--t3);
   transition: 0.16s;

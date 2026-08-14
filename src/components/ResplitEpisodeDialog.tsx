@@ -90,7 +90,6 @@ export function ResplitEpisodeDialog({ episodeId, onClose }: { episodeId: string
         <div className={s.impact}>
           <div className={s.impactTitle}>影响说明</div>
           本集 {stats.scenes} 场 {stats.shots} 镜将全部重新生成；已识别的角色 / 服装 / 场景 / 道具继续保留；其他集不受影响。
-          第 1 场可选择不同镜头节奏，其他场景将按原有方式重新生成。
         </div>
 
         <div className={d.actions}>

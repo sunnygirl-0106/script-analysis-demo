@@ -37,6 +37,21 @@ function highlight(text: string, assets: Asset[]): ReactNode {
   })
 }
 
+// 原文按自然段拆成「beat」，供左侧段号栏逐段标号。空行不占号。
+function toBeats(raw: string): string[] {
+  return raw
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+}
+
+// 秒 → mm:ss
+function fmtDuration(sec: number): string {
+  const m = Math.floor(sec / 60)
+  const s = Math.round(sec % 60)
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
 export function ScriptPanel() {
   const project = useStore((st) => st.project)
   const sceneId = useStore((st) => st.selectedSceneId)
@@ -55,21 +70,45 @@ export function ScriptPanel() {
     )
   }
 
+  const beats = scene ? toBeats(scene.rawText) : []
+  const shotCount = scene?.shotIds.length ?? 0
+  const totalSec = scene
+    ? scene.shotIds.reduce((sum, id) => sum + (project.shots[id]?.duration ?? 0), 0)
+    : 0
+
   return (
     <div className={s.col}>
       <div className={s.head}>
-        本场剧本
-        <span className={s.rt}>
-          <button
-            style={{ border: 'none', background: 'none', color: 'var(--t4)', cursor: 'pointer', fontSize: 13 }}
-            onClick={toggle}
-            title="收起"
-          >
-            ⊟
-          </button>
-        </span>
+        <span className={s.lbl}>本场剧本</span>
+        {scene && (
+          <span className={s.meta}>
+            {shotCount} 镜 · {fmtDuration(totalSec)}
+          </span>
+        )}
+        <button className={s.fold} onClick={toggle} title="收起">
+          ⊟
+        </button>
       </div>
-      <div className={s.script}>{scene ? highlight(scene.rawText, assets) : '—'}</div>
+      <div className={s.script}>
+        {scene && (
+          <div className={s.masthead}>
+            <div className={s.eyebrow}>SCENE {String(scene.no).padStart(2, '0')}</div>
+            <div className={s.title}>{scene.name}</div>
+          </div>
+        )}
+        {beats.length > 0 ? (
+          beats.map((beat, i) => (
+            <div className={s.beat} key={i}>
+              <span className={s.n}>{String(i + 1).padStart(2, '0')}</span>
+              <p>{highlight(beat, assets)}</p>
+            </div>
+          ))
+        ) : (
+          <div className={s.beat}>
+            <p>—</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -4,10 +4,11 @@ import { EpisodeTree } from '../components/EpisodeTree'
 import { ScriptPanel } from '../components/ScriptPanel'
 import { TabBar } from '../components/TabBar'
 import { AssetList } from '../components/AssetList'
+import { SORT_LABEL, type AssetSort } from '../components/AssetOverviewBar'
 import { Storyboard } from '../components/Storyboard'
 import { ScriptImportDialog } from '../components/ScriptImportDialog'
 import { ResplitSceneDialog } from '../components/ResplitSceneDialog'
-import { ConfirmStageDialog } from '../components/ConfirmStageDialog'
+import { ConfirmPromptDialog } from '../components/ConfirmPromptDialog'
 import { can } from '../services/capability'
 import { sceneDuration } from '../services/timeline'
 import ui from '../styles/ui.module.css'
@@ -20,12 +21,16 @@ export function ScriptAnalysis() {
   const generatePrompts = useStore((st) => st.generatePrompts)
   const sceneId = useStore((st) => st.selectedSceneId)
   const activeTab = useStore((st) => st.activeTab)
+  const showToast = useStore((st) => st.showToast)
+  const setStage = useStore((st) => st.setStage)
   // 分镜编辑不再整页锁死；能否改镜头字段 / 挂载由能力矩阵决定（analysis 阶段恒可编辑）。
   const readOnly = !useStore((st) => can(st.project, 'editShotFields'))
 
+  const [assetSort, setAssetSort] = useState<AssetSort>('first') // 资产表排序：四类共用
+  const isAssetTab = activeTab !== 'shot'
   const [importOpen, setImportOpen] = useState(false)
   const [resplitOpen, setResplitOpen] = useState(false)
-  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [promptConfirmOpen, setPromptConfirmOpen] = useState(false)
 
   const scene = project.scenes[sceneId]
 
@@ -60,9 +65,31 @@ export function ScriptAnalysis() {
           <TabBar scene={scene} />
           <div className={s.tbr}>
             {activeTab === 'shot' && (
-              <button className={ui.btn} disabled={readOnly} onClick={() => setResplitOpen(true)}>
-                重新拆分本场镜头
-              </button>
+              <>
+                <button className={ui.btn} disabled={readOnly} onClick={() => setResplitOpen(true)}>
+                  重新拆分本场镜头
+                </button>
+                <button className={ui.btn} onClick={() => showToast('已导出分镜脚本（示例，不落盘）')}>
+                  导出分镜脚本
+                </button>
+              </>
+            )}
+            {isAssetTab && (
+              <>
+                <span className={s.sortLabel}>排序</span>
+                <select
+                  className={s.sortSel}
+                  value={assetSort}
+                  onChange={(e) => setAssetSort(e.target.value as AssetSort)}
+                >
+                  {(['first', 'freq', 'name'] as AssetSort[]).map((k) => (
+                    <option key={k} value={k}>{SORT_LABEL[k]}</option>
+                  ))}
+                </select>
+                <button className={ui.btn} onClick={() => showToast('已导出资产表（示例，不落盘）')}>
+                  导出资产表
+                </button>
+              </>
             )}
             <button className={ui.btn} disabled={readOnly} onClick={() => setImportOpen(true)}>
               导入剧本
@@ -72,10 +99,10 @@ export function ScriptAnalysis() {
 
         <div className={s.paneScroll}>
           {activeTab === 'shot' && scene && <Storyboard scene={scene} readOnly={readOnly} />}
-          {activeTab === 'character' && <AssetList kind="character" />}
-          {activeTab === 'costume' && <AssetList kind="costume" />}
-          {activeTab === 'location' && <AssetList kind="location" />}
-          {activeTab === 'prop' && <AssetList kind="prop" />}
+          {activeTab === 'character' && <AssetList kind="character" sort={assetSort} />}
+          {activeTab === 'costume' && <AssetList kind="costume" sort={assetSort} />}
+          {activeTab === 'location' && <AssetList kind="location" sort={assetSort} />}
+          {activeTab === 'prop' && <AssetList kind="prop" sort={assetSort} />}
         </div>
 
         <div className={s.foot}>
@@ -90,17 +117,16 @@ export function ScriptAnalysis() {
             </div>
           )}
           {allReady ? (
-            <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={() => setConfirmOpen(true)}>
-              生成第一批图 →
+            <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={() => setStage('visual')}>
+              进入资产库生图 →
             </button>
           ) : (
             <button
               className={[ui.btn, ui.btnPrimary].join(' ')}
               disabled={busy || needIds.length === 0}
-              onClick={() => generatePrompts(needIds)}
+              onClick={() => setPromptConfirmOpen(true)}
             >
               {busy ? '提示词合成中…' : genLabel}
-              {!busy && needIds.length > 0 && <span className={s.zap}> ⚡{needIds.length * 2}</span>}
             </button>
           )}
         </div>
@@ -115,7 +141,16 @@ export function ScriptAnalysis() {
       {resplitOpen && scene && (
         <ResplitSceneDialog sceneId={scene.id} onClose={() => setResplitOpen(false)} />
       )}
-      {confirmOpen && <ConfirmStageDialog onClose={() => setConfirmOpen(false)} />}
+      {promptConfirmOpen && (
+        <ConfirmPromptDialog
+          shotIds={needIds}
+          onConfirm={(ids) => {
+            generatePrompts(ids)
+            setPromptConfirmOpen(false)
+          }}
+          onClose={() => setPromptConfirmOpen(false)}
+        />
+      )}
     </div>
   )
 }

@@ -70,13 +70,7 @@ export function SceneSettingsDrawer() {
               placeholder="这一场的配乐走向…"
               onChange={(e) => updateTrack(scene.id, { bgm: e.target.value })}
             />
-            {/* 去向标注，不是按钮 —— 声音归属拍摄台。 */}
-            <span className={s.dest}>将在拍摄台用于生成整场配乐</span>
           </label>
-        </div>
-
-        <div className={s.note}>
-          ⓘ 这里的配乐方向将用于生成整场配乐，无需逐个镜头填写。
         </div>
       </aside>
     </div>

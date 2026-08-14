@@ -118,8 +118,8 @@
   height: 14px;
   padding: 0 3px;
   border-radius: 8px;
-  background: #e5484d;
-  color: #fff;
+  background: var(--danger);
+  color: var(--on-solid);
   font-size: 9px;
   font-style: normal;
   line-height: 14px;

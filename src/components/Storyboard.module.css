@@ -53,10 +53,10 @@
   transition: background 0.15s;
 }
 .colHandle:hover .colHandleLine {
-  background: rgba(143, 220, 210, 0.4);
+  background: rgb(var(--acc-rgb) / 0.4);
 }
 .colHandleLineOn {
-  background: rgba(143, 220, 210, 0.6);
+  background: rgb(var(--acc-rgb) / 0.6);
 }
 
 /* 9 列脚本表：镜号·时长 / 景别 / 镜头设计 / 出场的人和物 / 主要内容 / 光影氛围 / 对白·旁白 / 音效 / 最终提示词。
@@ -76,10 +76,10 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  border-bottom: 1px solid #2f353d;
-  background: #1e2227;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
   font-size: 10.5px;
-  color: #9aa2ad;
+  color: var(--t3);
   letter-spacing: 0.6px;
   white-space: nowrap;
 }
@@ -90,14 +90,18 @@
   border-right: 1px solid var(--line2);
   position: relative;
 }
+/* 居中表头：镜号 / 景别 / 镜头设计 / 最终提示词 */
+.hCellCenter {
+  justify-content: center;
+}
 
 /* 最终提示词表头：钉在删除列左侧，横向滚动时始终可见 */
 .hCellPrompt {
   position: sticky;
   right: 46px;
   z-index: 21;
-  background: #1e2227;
-  box-shadow: -8px 0 12px -8px rgba(0, 0, 0, 0.55);
+  background: var(--panel);
+  box-shadow: -8px 0 12px -8px rgb(0 0 0 / 0.55);
 }
 /* 删除列表头：钉在最右，无标题 */
 .hCellDel {
@@ -105,7 +109,7 @@
   right: 0;
   z-index: 21;
   border-right: none;
-  background: #1e2227;
+  background: var(--panel);
 }
 /* 滚到最右端：不再需要“悬浮遮挡”的投影 */
 .scrollAtEnd .hCellPrompt,
@@ -118,8 +122,8 @@
   position: relative;
   height: 128px;
   cursor: pointer;
-  border-bottom: 1px solid #262b31;
-  background: #1e2127;
+  border-bottom: 1px solid var(--line2);
+  background: var(--panel);
   cursor: default;
   transition: background 0.24s cubic-bezier(0.22, 0.61, 0.36, 1), height 0.24s ease,
     opacity 0.24s ease, transform 0.24s ease;
@@ -142,7 +146,7 @@
   z-index: 6;
   background: inherit;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
 }
 .delBtn {
@@ -162,9 +166,9 @@
   opacity: 1;
 }
 .delBtn:hover {
-  color: #ff8a80;
-  border-color: rgba(255, 138, 128, 0.5);
-  background: rgba(255, 138, 128, 0.1);
+  color: var(--danger);
+  border-color: rgb(var(--danger-rgb) / 0.5);
+  background: rgb(var(--danger-rgb) / 0.1);
 }
 .delBtn:disabled {
   opacity: 0;
@@ -176,7 +180,7 @@
 }
 /* 斑马纹：展开面板是行的兄弟节点，会打乱 nth-child，所以由 JS 传 alt 显式指定 */
 .rowAlt {
-  background: #1b1e23;
+  background: var(--panel);
 }
 .rowOn {
   background: var(--row-on-bg) !important;
@@ -188,11 +192,12 @@
 
 /* ① 镜头 · 时长：竖排「大号镜号 / 时长步进 / 小字时间范围」 */
 .cNo {
-  padding: 12px 12px 12px 16px;
+  padding: 12px 12px;
   border-right: 1px solid var(--line2);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 /* 镜号一行：大号数字 + 小字「镜」 */
@@ -202,12 +207,12 @@
   gap: 5px;
 }
 .noNum {
-  font-size: 26px;
+  font-size: 21px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.5px;
   font-variant-numeric: tabular-nums;
-  color: #c6ccd4;
+  color: var(--t2);
   transition: color 0.24s;
 }
 .noNumOn {
@@ -221,23 +226,23 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  height: 26px;
+  height: 24px;
   padding: 0 3px;
-  background: #22262c;
-  border: 1px solid #333941;
+  background: var(--bg3);
+  border: 1px solid var(--line);
   border-radius: var(--rpill);
   transition: background 0.22s, border-color 0.22s;
 }
 .stepperOn {
-  background: #1c2126;
-  border-color: #48505a;
+  background: var(--panel);
+  border-color: var(--ctrl-hover);
 }
 .stepBtn {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   color: var(--t3);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -246,21 +251,21 @@
 }
 .stepBtn:hover {
   color: var(--acc);
-  background: #2e343b;
+  background: var(--raise);
 }
 .durVal {
-  min-width: 30px;
+  min-width: 28px;
   text-align: center;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--t2);
   font-variant-numeric: tabular-nums;
 }
 .stepperOn .durVal {
-  color: #f2f4f6;
+  color: var(--t1);
 }
 .durStatic {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--t2);
   font-variant-numeric: tabular-nums;
@@ -268,13 +273,13 @@
 /* 长镜头预警：非阻断，仅一行黄字 */
 .longWarn {
   font-size: 11px;
-  color: #d9b978;
+  color: var(--gold);
   white-space: nowrap;
   cursor: help;
 }
 .tcRange {
   font-size: 10.5px;
-  color: #8a929e;
+  color: var(--t5);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.2px;
   white-space: nowrap;
@@ -354,29 +359,29 @@
   flex: none;
   padding: 0 9px 0 10px;
   border-radius: var(--rpill);
-  background: #262b31;
-  border: 1px solid #30363d;
+  background: var(--line2);
+  border: 1px solid var(--line);
 }
 .roleDot {
   width: 7px;
   height: 7px;
   flex: none;
   border-radius: 50%;
-  background: #a78bfa;
+  background: var(--role);
 }
 .castName {
   flex: none;
   white-space: nowrap;
   font-size: 11.5px;
   font-weight: 600;
-  color: #f2f4f6;
+  color: var(--t1);
   line-height: 1.3;
 }
 .castCostume {
   flex: none;
   white-space: nowrap;
   font-size: 10.5px;
-  color: #8b95a3;
+  color: var(--t5);
   line-height: 1.3;
 }
 /* 删除叉：不占标签宽度，做成右上角浮层，hover / 聚焦本卡时才出现 —— 标签平时更短 */
@@ -387,9 +392,9 @@
   width: 15px;
   height: 15px;
   border-radius: 50%;
-  background: #3a424c;
+  background: var(--ctrl);
   border: 1px solid var(--edge);
-  color: #e2e6ea;
+  color: var(--t2);
   font-size: 8px;
   line-height: 1;
   display: inline-flex;
@@ -406,8 +411,8 @@
   pointer-events: auto;
 }
 .castX:hover {
-  background: #4a525c;
-  color: #fff;
+  background: var(--ctrl-hover);
+  color: var(--on-solid);
 }
 /* 场景 / 道具 chip 的删除叉：同样做成右上角浮层，不占 chip 宽度，hover 本 chip 才出现 */
 .chipHover {
@@ -421,9 +426,9 @@
   height: 15px;
   margin: 0;
   border-radius: 50%;
-  background: #3a424c;
+  background: var(--ctrl);
   border: 1px solid var(--edge);
-  color: #e2e6ea;
+  color: var(--t2);
   font-size: 8px;
   opacity: 0;
   pointer-events: none;
@@ -436,8 +441,8 @@
   pointer-events: auto;
 }
 .chipHover .chipHoverX:hover {
-  background: #4a525c;
-  color: #fff;
+  background: var(--ctrl-hover);
+  color: var(--on-solid);
 }
 
 .assetActions {
@@ -453,16 +458,16 @@
   height: 20px;
   padding: 0 9px;
   border-radius: var(--rpill);
-  background: rgba(163, 137, 78, 0.16);
-  border: 1px solid rgba(200, 163, 92, 0.4);
+  background: rgb(var(--gold-rgb) / 0.16);
+  border: 1px solid rgb(var(--gold-rgb) / 0.4);
   font-size: 10px;
-  color: #d9b978;
+  color: var(--gold);
   cursor: pointer;
   transition: 0.16s;
 }
 .issueAction:hover:not(:disabled) {
-  background: rgba(200, 163, 92, 0.24);
-  color: #f0d9a6;
+  background: rgb(var(--gold-rgb) / 0.24);
+  color: var(--gold-hi);
 }
 .issueAction:disabled {
   cursor: default;
@@ -485,13 +490,16 @@
   z-index: 5;
   background: inherit;
   border-right: 1px solid var(--line2);
-  box-shadow: -8px 0 12px -8px rgba(0, 0, 0, 0.55);
+  box-shadow: -8px 0 12px -8px rgb(0 0 0 / 0.55);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .pstat {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  align-items: flex-start;
+  align-items: center;
 }
 .badge {
   display: inline-flex;
@@ -521,7 +529,7 @@
   transition: 0.16s;
 }
 .badgeReady:hover {
-  background: rgba(143, 220, 210, 0.2);
+  background: rgb(var(--acc-rgb) / 0.2);
 }
 .badgeStale {
   background: var(--amber-bg);
@@ -551,22 +559,6 @@
     transform: rotate(360deg);
   }
 }
-.pstatNote {
-  font-size: 10.5px;
-  color: var(--t4);
-}
-.miniGen {
-  font-size: 10.5px;
-  color: var(--t4);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-  transition: color 0.16s;
-}
-.miniGen:hover {
-  color: var(--acc);
-}
-
 /* 收尾行 */
 .tail {
   position: relative;
@@ -584,43 +576,49 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 14px;
+  gap: 10px;
+  padding: 0 16px;
   opacity: 0;
   transition: opacity 0.15s ease;
 }
 .insRowShow {
   opacity: 1;
 }
-.insRowTag {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 20px;
-  padding: 0 10px;
-  border-radius: var(--rpill);
-  background: #1e2429;
-  border: 1px solid var(--acc-line);
-  color: var(--acc);
-  font-size: 10.5px;
-  white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
-}
+/* 与「场」列统一：两侧细线朝中间的淡「＋」渐浓、末端淡出 */
 .insRowBar {
   flex: 1;
   height: 1px;
   border-radius: 2px;
-  background: linear-gradient(90deg, rgba(143, 220, 210, 0.45), rgba(143, 220, 210, 0.04));
+  background: linear-gradient(90deg, rgb(var(--acc-rgb) / 0.04), rgb(var(--acc-rgb) / 0.34));
+}
+.insRowBar:last-child {
+  background: linear-gradient(90deg, rgb(var(--acc-rgb) / 0.34), rgb(var(--acc-rgb) / 0.04));
+}
+/* 居中的淡「＋」：无描边、无填充胶囊，仅一个 accent 字符 */
+.insRowPlus {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--acc);
+  transition: background 0.14s;
+}
+.insRow:hover .insRowPlus {
+  background: var(--acc-bg);
 }
 .tailNo {
   padding: 12px 10px 14px 16px;
   font-size: 11.5px;
-  color: #737b87;
+  color: var(--t4);
   font-variant-numeric: tabular-nums;
 }
 .tailText {
   padding: 12px 16px;
   font-size: 10.5px;
-  color: #737b87;
+  color: var(--t4);
 }

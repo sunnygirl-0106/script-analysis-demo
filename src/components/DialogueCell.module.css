@@ -13,7 +13,7 @@
   cursor: default;
 }
 .cellOpen {
-  background: rgba(143, 220, 210, 0.05);
+  background: rgb(var(--acc-rgb) / 0.05);
 }
 .dim {
   font-size: 12px;
@@ -37,12 +37,12 @@
   padding: 1px 5px;
   border-radius: 4px;
   margin-top: 1px;
-  background: rgba(167, 139, 250, 0.16);
+  background: rgb(var(--role-rgb) / 0.16);
   color: var(--role);
-  border: 1px solid rgba(167, 139, 250, 0.3);
+  border: 1px solid rgb(var(--role-rgb) / 0.3);
 }
 .typeVo {
-  background: rgba(143, 220, 210, 0.13);
+  background: rgb(var(--acc-rgb) / 0.13);
   color: var(--acc);
   border-color: var(--acc-line);
 }
@@ -63,7 +63,7 @@
   background: var(--bg2);
   border: 1px solid var(--edge);
   border-radius: var(--rlg);
-  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 14px 44px rgb(0 0 0 / 0.6);
   padding: 13px;
 }
 .head {
@@ -120,7 +120,7 @@
   transition: color 0.16s;
 }
 .del:hover {
-  color: #f87171;
+  color: var(--danger);
 }
 .textarea {
   width: 100%;

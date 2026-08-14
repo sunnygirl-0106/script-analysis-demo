@@ -1,7 +1,6 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode, type MouseEvent as ReactMouseEvent } from 'react'
 import { useStore } from '../store/useStore'
 import { useClickOutside } from '../hooks/useClickOutside'
-import { useAutoHideHover } from '../hooks/useAutoHideHover'
 import { can } from '../services/capability'
 import { sceneDuration } from '../services/timeline'
 import { ScriptImportDialog } from './ScriptImportDialog'
@@ -11,6 +10,41 @@ import ui from '../styles/ui.module.css'
 import di from './ScriptImportDialog.module.css'
 import s from './EpisodeTree.module.css'
 
+// 菜单项左侧的灰色小图标：统一 24×24 描边风格（对齐 AppShell / ShotRow）。
+const svg = (d: ReactNode) => (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={1.7}>
+    {d}
+  </svg>
+)
+const ic = {
+  rename: svg(
+    <>
+      <path d="M4 20h4L19 9a2 2 0 0 0-3-3L5 17v3z" strokeLinejoin="round" />
+      <path d="M14 7l3 3" strokeLinecap="round" />
+    </>,
+  ),
+  insert: svg(
+    <>
+      <path d="M4 9h16" strokeLinecap="round" />
+      <path d="M12 13.5v6M9 16.5h6" strokeLinecap="round" />
+    </>,
+  ),
+  resplit: svg(
+    <>
+      <circle cx="6.5" cy="7" r="2" />
+      <circle cx="6.5" cy="17" r="2" />
+      <path d="M8.3 8.1 20 15.5M8.3 15.9 20 8.5" strokeLinecap="round" />
+    </>,
+  ),
+  append: svg(<path d="M12 5v14M5 12h14" strokeLinecap="round" />),
+  replace: svg(
+    <>
+      <path d="M4 9h13l-3.2-3.2M20 15H7l3.2 3.2" strokeLinecap="round" strokeLinejoin="round" />
+    </>,
+  ),
+  trash: svg(<path d="M5 7h14M10 7V5h4v2M6 7l1 12h10l1-12" strokeLinecap="round" strokeLinejoin="round" />),
+}
+
 type Dialog =
   | { type: 'resplit'; epId: string }
   | { type: 'append' }
@@ -19,27 +53,6 @@ type Dialog =
   | { type: 'deleteScene'; sceneId: string }
   | { type: 'resplitScene'; sceneId: string }
   | null
-
-// 「＋ 场」插入线：悬停显形、停住几秒自动隐藏，避免误搁在两场之间一直亮着。
-function SceneInsertLine({ tail = false, onInsert }: { tail?: boolean; onInsert: () => void }) {
-  const h = useAutoHideHover()
-  return (
-    <div
-      className={[s.insLine, tail ? s.insLineTail : '', h.visible ? s.insLineShow : ''].join(' ')}
-      title={tail ? '在末尾插入一场' : '在此插入一场'}
-      onMouseEnter={h.onMouseEnter}
-      onMouseMove={h.onMouseMove}
-      onMouseLeave={h.onMouseLeave}
-      onClick={(e) => {
-        e.stopPropagation()
-        if (h.isVisible()) onInsert()
-      }}
-    >
-      <span className={s.insBar} />
-      <span className={s.insTag}>＋ 场</span>
-    </div>
-  )
-}
 
 export function EpisodeTree() {
   const project = useStore((st) => st.project)
@@ -54,6 +67,21 @@ export function EpisodeTree() {
 
   const [menuEp, setMenuEp] = useState<string | null>(null)
   const [menuScene, setMenuScene] = useState<string | null>(null)
+  // 菜单固定定位：在光标/按钮的右下方弹出，脱离窄侧栏的 overflow 裁剪，并夹在视口内。
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+  const openMenuAt = (x: number, y: number) => {
+    const w = 182
+    const h = 218
+    const pad = 8
+    setMenuPos({
+      x: Math.min(x, window.innerWidth - w - pad),
+      y: Math.min(y, window.innerHeight - h - pad),
+    })
+  }
+  const openMenuFromBtn = (e: ReactMouseEvent) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    openMenuAt(r.left, r.bottom + 4)
+  }
   const [dialog, setDialog] = useState<Dialog>(null)
   // 就地改场名：记录正在编辑的场 id 与草稿。
   const [editScene, setEditScene] = useState<string | null>(null)
@@ -133,12 +161,15 @@ export function EpisodeTree() {
                     <button
                       className={s.dots}
                       title="本集操作"
-                      onClick={() => setMenuEp((m) => (m === ep.id ? null : ep.id))}
+                      onClick={(e) => {
+                        openMenuFromBtn(e)
+                        setMenuEp((m) => (m === ep.id ? null : ep.id))
+                      }}
                     >
                       ⋯
                     </button>
-                    {menuEp === ep.id && (
-                      <div className={s.menu}>
+                    {menuEp === ep.id && menuPos && (
+                      <div className={s.menu} style={{ left: menuPos.x, top: menuPos.y }}>
                         <button
                           className={s.menuItem}
                           onClick={() => {
@@ -146,7 +177,7 @@ export function EpisodeTree() {
                             setMenuEp(null)
                           }}
                         >
-                          重新拆分本集
+                          <i className={s.mIcon}>{ic.resplit}</i>重新拆分本集
                         </button>
                         <button
                           className={s.menuItem}
@@ -155,7 +186,7 @@ export function EpisodeTree() {
                             setMenuEp(null)
                           }}
                         >
-                          追加剧集
+                          <i className={s.mIcon}>{ic.append}</i>追加剧集
                         </button>
                         <button
                           className={s.menuItem}
@@ -164,8 +195,9 @@ export function EpisodeTree() {
                             setMenuEp(null)
                           }}
                         >
-                          替换本集
+                          <i className={s.mIcon}>{ic.replace}</i>替换本集
                         </button>
+                        <div className={s.menuSep} />
                         <button
                           className={[s.menuItem, s.menuDanger].join(' ')}
                           disabled={onlyOne}
@@ -176,7 +208,7 @@ export function EpisodeTree() {
                             setMenuEp(null)
                           }}
                         >
-                          删除本集
+                          <i className={s.mIcon}>{ic.trash}</i>删除本集
                         </button>
                       </div>
                     )}
@@ -185,7 +217,6 @@ export function EpisodeTree() {
               </div>
               {scenes.map((sc, si) => (
                 <div className={s.scWrap} key={sc.id}>
-                  {!readOnly && <SceneInsertLine onInsert={() => insertScene(ep.id, si)} />}
                   <div
                     className={[s.sc, sc.id === selectedSceneId ? s.on : ''].join(' ')}
                     onClick={() => selectScene(sc.id)}
@@ -195,6 +226,7 @@ export function EpisodeTree() {
                         ? undefined
                         : (e) => {
                             e.preventDefault()
+                            openMenuAt(e.clientX, e.clientY)
                             setMenuScene(sc.id)
                           }
                     }
@@ -228,13 +260,14 @@ export function EpisodeTree() {
                         title="本场操作"
                         onClick={(e) => {
                           e.stopPropagation()
+                          openMenuFromBtn(e)
                           setMenuScene((m) => (m === sc.id ? null : sc.id))
                         }}
                       >
                         ⋯
                       </button>
-                      {menuScene === sc.id && (
-                        <div className={s.menu}>
+                      {menuScene === sc.id && menuPos && (
+                        <div className={s.menu} style={{ left: menuPos.x, top: menuPos.y }}>
                           <button
                             className={s.menuItem}
                             onClick={() => {
@@ -242,7 +275,7 @@ export function EpisodeTree() {
                               setMenuScene(null)
                             }}
                           >
-                            重命名
+                            <i className={s.mIcon}>{ic.rename}</i>重命名
                           </button>
                           <button
                             className={s.menuItem}
@@ -251,7 +284,7 @@ export function EpisodeTree() {
                               setMenuScene(null)
                             }}
                           >
-                            在下方插入一场
+                            <i className={s.mIcon}>{ic.insert}</i>在下方插入一场
                           </button>
                           <button
                             className={s.menuItem}
@@ -261,8 +294,9 @@ export function EpisodeTree() {
                               setMenuScene(null)
                             }}
                           >
-                            重新拆分本场镜头
+                            <i className={s.mIcon}>{ic.resplit}</i>重新拆分本场镜头
                           </button>
+                          <div className={s.menuSep} />
                           <button
                             className={[s.menuItem, s.menuDanger].join(' ')}
                             onClick={() => {
@@ -271,7 +305,7 @@ export function EpisodeTree() {
                               setMenuScene(null)
                             }}
                           >
-                            删除本场
+                            <i className={s.mIcon}>{ic.trash}</i>删除本场
                           </button>
                         </div>
                       )}
@@ -279,12 +313,6 @@ export function EpisodeTree() {
                   )}
                 </div>
               ))}
-              {!readOnly && (
-                <div className={s.scWrap}>
-                  <SceneInsertLine tail onInsert={() => insertScene(ep.id, scenes.length)} />
-                  <div className={s.insTailPad} />
-                </div>
-              )}
             </div>
           )
         })}
