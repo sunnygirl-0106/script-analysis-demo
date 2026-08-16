@@ -178,9 +178,10 @@
   min-height: 0;
   overflow: hidden;
 }
-/* 斑马纹：展开面板是行的兄弟节点，会打乱 nth-child，所以由 JS 传 alt 显式指定 */
+/* 斑马纹：奇偶行深浅交替（基础行 --panel 浅，交替行 --bg2 深）。
+   展开面板是行的兄弟节点，会打乱 nth-child，所以由 JS 传 alt 显式指定。 */
 .rowAlt {
-  background: var(--panel);
+  background: var(--bg2);
 }
 .rowOn {
   background: var(--row-on-bg) !important;

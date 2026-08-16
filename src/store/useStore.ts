@@ -162,8 +162,7 @@ export const useStore = create<StoreState>((set, get) => {
     if (get().promptStates[shotId] !== 'ready') return
     set((s) => ({ promptStates: { ...s.promptStates, [shotId]: 'stale' } }))
     if (notify) {
-      const no = get().project.shots[shotId]?.no
-      get().showToast(`第 ${no} 镜内容已改动，记得重新生成提示词`)
+      get().showToast('已保存，提示词待更新')
     }
   }
 
