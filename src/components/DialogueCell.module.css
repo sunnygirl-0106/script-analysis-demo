@@ -55,63 +55,107 @@
   color: var(--role);
   font-weight: 500;
 }
+/* 自填的声音来源（非已识别角色）：与角色紫区分开，走冷灰蓝 */
+.spkFree {
+  color: #9fb4c4;
+}
+/* 只读派生标记：说话人是本剧角色、但不在本镜画面中 */
+.offMark {
+  font-size: 9.5px;
+  color: var(--t4);
+  font-weight: 400;
+  margin: 0 4px 0 1px;
+  border-bottom: 1px dotted var(--t4);
+  cursor: help;
+}
 
 /* ── 编辑 popover（portal 到 body）── */
+/* 描边 / 圆角 / 阴影对齐 ShotFieldCell 的就地弹窗（景别 · 镜头设计），保持整套一致的主色轮廓。 */
 .pop {
   position: fixed;
   z-index: 60;
   background: var(--bg2);
-  border: 1px solid var(--edge);
+  border: 1px solid var(--acc-line);
   border-radius: var(--rlg);
-  box-shadow: 0 14px 44px rgb(0 0 0 / 0.6);
-  padding: 13px;
+  box-shadow: 0 16px 44px rgb(0 0 0 / 0.62);
+  padding: 15px 16px 13px;
 }
 .head {
   font-size: 11.5px;
   color: var(--t5);
-  margin-bottom: 9px;
+  margin-bottom: 11px;
   font-weight: 500;
   letter-spacing: 0.3px;
-}
-.hint {
-  color: var(--t4);
-  font-weight: 400;
-  font-size: 10.5px;
-  margin-left: 5px;
 }
 
 .editList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 300px;
+  gap: 10px;
+  max-height: 320px;
   overflow-y: auto;
 }
 .item {
   background: var(--bg3);
   border: 1px solid var(--line);
   border-radius: var(--rsm);
-  padding: 8px;
+  padding: 11px 11px 10px;
 }
 .itemHead {
   display: flex;
   gap: 6px;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
-.select {
+
+/* ── 说话人：按钮 / 行内自填框 ── */
+.spkBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 260px;
   background: var(--bg2);
   border: 1px solid var(--line);
   border-radius: 6px;
-  padding: 3px 7px;
+  padding: 3px 8px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--t1);
+  transition: border-color 0.16s;
+}
+.spkBtn:hover {
+  border-color: var(--edge);
+}
+.spkBtn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spkBtn i {
+  flex: none;
+  font-style: normal;
+  font-size: 8px;
+  color: var(--t4);
+  transform: translateY(1px);
+}
+.spkBtnBlank {
+  color: var(--t4);
+}
+.spkInput {
+  width: 260px;
+  background: var(--bg2);
+  border: 1px solid var(--acc-line);
+  border-radius: 6px;
+  padding: 3px 8px;
   font: inherit;
   font-size: 11px;
   color: var(--t1);
   outline: none;
 }
-.select:focus {
-  border-color: var(--acc-line);
+.spkInput::placeholder {
+  color: var(--t4);
 }
+
 .del {
   margin-left: auto;
   color: var(--t4);
@@ -124,20 +168,23 @@
 }
 .textarea {
   width: 100%;
-  min-height: 44px;
+  min-height: 66px;
   background: var(--bg2);
   border: 1px solid var(--line);
   border-radius: var(--rsm);
-  padding: 7px 9px;
+  padding: 9px 11px;
   font: inherit;
   font-size: 12px;
   color: var(--t1);
   outline: none;
-  line-height: 1.6;
+  line-height: 1.65;
   resize: vertical;
 }
 .textarea:focus {
   border-color: var(--acc-line);
+}
+.textarea::placeholder {
+  color: var(--t4);
 }
 
 .addRow {
@@ -160,29 +207,135 @@
   background: var(--acc-bg);
 }
 
-.poprow {
-  display: flex;
-  gap: 7px;
-  margin-top: 11px;
-  align-items: center;
-}
-.spacer {
-  flex: 1;
-}
 .tiny {
   font-size: 10.5px;
   color: var(--t4);
 }
-.done {
-  padding: 5px 12px;
-  border-radius: var(--rsm);
-  border: 1px solid var(--line);
-  background: var(--bg3);
-  color: var(--t2);
-  font-size: 11.5px;
-  transition: 0.16s;
+/* 底部「自动保存」提示，与 ShotFieldCell 一致的口径 */
+.foot {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line2);
+  font-size: 10px;
+  color: var(--t5);
 }
-.done:hover {
-  border-color: var(--edge);
-  color: var(--t1);
+
+/* ── 说话人浮层（portal 到 body）：下拉 与 联想 共用 ── */
+.spkPop {
+  position: fixed;
+  z-index: 70;
+  background: var(--bg2);
+  border: 1px solid var(--edge);
+  border-radius: var(--rsm);
+  box-shadow: 0 14px 40px rgb(0 0 0 / 0.62);
+  padding: 5px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.spkOpt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--t2);
+  cursor: pointer;
+}
+.spkOpt:hover {
+  background: var(--raise);
+}
+.spkOptOn {
+  background: rgb(var(--acc-rgb) / 0.13);
+  color: var(--acc);
+}
+.spkOptAct {
+  color: var(--t3);
+}
+.spkOptAct:hover {
+  color: var(--acc);
+}
+/* 「其他声音来源」：标题 + 说明两行 */
+.spkOptOther {
+  align-items: flex-start;
+}
+.spkOptOther .spkDot {
+  margin-top: 5px;
+}
+.spkOtherText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.spkOtherTitle {
+  color: var(--t2);
+}
+.spkOtherDesc {
+  font-size: 10px;
+  color: var(--t5);
+  line-height: 1.4;
+}
+.spkOptOther .qm {
+  margin-top: 3px;
+}
+.spkDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--role);
+  margin: 0 1px;
+}
+/* 「其他」用灰点，与角色的紫点区分 */
+.spkDotOther {
+  background: var(--t4);
+}
+.spkSub {
+  color: var(--t5);
+  font-size: 10.5px;
+}
+.spkTail {
+  margin-left: auto;
+  font-size: 9.5px;
+  color: var(--t4);
+}
+.spkSep {
+  height: 1px;
+  background: var(--line2);
+  margin: 4px 8px;
+}
+
+/* 问号 + 悬停/点击说明 */
+.qm {
+  margin-left: auto;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  color: var(--t5);
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  transition: 0.14s;
+}
+.qm:hover {
+  border-color: var(--acc-line);
+  color: var(--acc);
+}
+/* 问号说明浮层：portal 到 body，fixed 定位到问号右下方 */
+.tip {
+  position: fixed;
+  z-index: 80;
+  padding: 9px 11px;
+  background: var(--bg0);
+  border: 1px solid var(--edge);
+  border-radius: var(--rsm);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);
+  font-size: 10.5px;
+  line-height: 1.7;
+  color: var(--t3);
 }

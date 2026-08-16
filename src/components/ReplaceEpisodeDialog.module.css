@@ -1,0 +1,186 @@
+/* 替换本集剧本弹窗。遮罩 / 标题 / 危险条 / 操作栏沿用 ScriptImportDialog 的类，
+   容器与上传区、tab、对照行等自成一套。全部取仓库 token。 */
+.dialog {
+  width: 480px;
+  max-width: calc(100vw - 40px);
+  background: var(--bg2);
+  border: 1px solid var(--edge);
+  border-radius: var(--rlg);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.5);
+  padding: 20px 22px;
+}
+.sub {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--t3);
+  margin: -6px 0 14px;
+}
+
+/* tab 切换 */
+.tabs {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--rpill);
+  background: var(--bg1);
+  margin-bottom: 12px;
+}
+.tab {
+  padding: 5px 16px;
+  font-size: 12.5px;
+  color: var(--t3);
+  border-radius: var(--rpill);
+  cursor: pointer;
+  transition: 0.14s;
+}
+.tab:hover {
+  color: var(--t1);
+}
+.tabOn {
+  background: var(--bg3);
+  color: var(--t1);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+/* 上传拖拽区 */
+.drop {
+  display: block;
+  width: 100%;
+  padding: 30px 16px;
+  border: 1.5px dashed var(--line);
+  border-radius: var(--rlg);
+  background: var(--bg1);
+  text-align: center;
+  cursor: pointer;
+  transition: 0.14s;
+}
+.drop:hover {
+  border-color: var(--edge);
+  background: var(--bg3);
+}
+.dropOn {
+  border-style: solid;
+  border-color: var(--acc-line);
+  background: var(--acc-bg);
+}
+.dropName {
+  font-size: 13px;
+  color: var(--t1);
+}
+.dropHint {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--t4);
+}
+
+/* 粘贴文本 */
+.paste {
+  width: 100%;
+  height: 118px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--t1);
+  background: var(--bg1);
+  border: 1px solid var(--line);
+  border-radius: var(--rlg);
+  resize: none;
+}
+.paste:focus {
+  outline: none;
+  border-color: var(--acc-line);
+}
+
+/* 底部灰字提示 */
+.foot {
+  margin-top: 12px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--t4);
+}
+
+/* 多集选择 */
+.pickList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 1px solid var(--line2);
+  border-radius: var(--rlg);
+  background: var(--bg1);
+  font-size: 12.5px;
+  color: var(--t2);
+  cursor: pointer;
+  transition: 0.14s;
+}
+.pick:hover {
+  border-color: var(--edge);
+}
+.pickOn {
+  border-color: var(--acc-line);
+  background: var(--acc-bg);
+}
+.pick input {
+  accent-color: var(--acc);
+}
+
+/* 确认页对照 */
+.meta {
+  font-size: 12.5px;
+  color: var(--t2);
+  margin-bottom: 8px;
+}
+.compare {
+  font-size: 12.5px;
+  color: var(--t1);
+  padding: 9px 12px;
+  background: var(--bg1);
+  border: 1px solid var(--line2);
+  border-radius: var(--rsm);
+  margin-bottom: 12px;
+}
+
+/* demo 专用触发器：极弱化到几乎不可见 */
+.demoHint {
+  display: block;
+  margin: 12px auto 0;
+  font-size: 10.5px;
+  color: var(--t5);
+  opacity: 0.45;
+  cursor: pointer;
+  transition: 0.14s;
+}
+.demoHint:hover {
+  opacity: 0.9;
+  text-decoration: underline;
+}
+
+/* 拆解中 */
+.running {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 26px 12px;
+  font-size: 13px;
+  color: var(--t2);
+}
+.spin {
+  width: 15px;
+  height: 15px;
+  border: 2px solid var(--acc);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: reSpin 0.7s linear infinite;
+}
+@keyframes reSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

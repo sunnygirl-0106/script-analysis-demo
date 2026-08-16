@@ -7,7 +7,8 @@ function normalize(name: string): string {
   return name.replace(/\s+/g, '').toLowerCase()
 }
 
-const assetKey = (a: Pick<Asset, 'kind' | 'name'>) => `${a.kind}::${normalize(a.name)}`
+/** 资产归一化 key：kind + 归一化名称。跨模块复用（替换 diff 也走这套匹配）。 */
+export const assetKey = (a: Pick<Asset, 'kind' | 'name'>) => `${a.kind}::${normalize(a.name)}`
 
 /**
  * 追加一集：

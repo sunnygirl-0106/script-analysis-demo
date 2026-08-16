@@ -20,7 +20,7 @@ export function looksOfCharacter(characterId: string, assets: Record<string, Ass
   )
 }
 
-/** 引用了某件服装的所有着装角色（一件服装可被多个 look 使用，决策 3a）。 */
+/** 某件服装关联的全部角色造型（一件服装可被多个 look 使用，决策 3a）。 */
 export function looksUsingCostume(costumeId: string, assets: Record<string, Asset>): Look[] {
   return Object.values(assets).filter(
     (a): a is Look => a.kind === 'look' && a.costumeIds.includes(costumeId),

@@ -4,6 +4,7 @@ import { useClickOutside } from '../hooks/useClickOutside'
 import { can } from '../services/capability'
 import { sceneDuration } from '../services/timeline'
 import { ScriptImportDialog } from './ScriptImportDialog'
+import { ReplaceEpisodeDialog } from './ReplaceEpisodeDialog'
 import { ResplitEpisodeDialog } from './ResplitEpisodeDialog'
 import { ResplitSceneDialog } from './ResplitSceneDialog'
 import ui from '../styles/ui.module.css'
@@ -177,7 +178,7 @@ export function EpisodeTree() {
                             setMenuEp(null)
                           }}
                         >
-                          <i className={s.mIcon}>{ic.resplit}</i>重新拆分本集
+                          <i className={s.mIcon}>{ic.resplit}</i>重新拆分本集镜头
                         </button>
                         <button
                           className={s.menuItem}
@@ -195,7 +196,7 @@ export function EpisodeTree() {
                             setMenuEp(null)
                           }}
                         >
-                          <i className={s.mIcon}>{ic.replace}</i>替换本集
+                          <i className={s.mIcon}>{ic.replace}</i>替换本集剧本
                         </button>
                         <div className={s.menuSep} />
                         <button
@@ -324,17 +325,12 @@ export function EpisodeTree() {
       )}
       <ScriptImportDialog
         open={dialog?.type === 'append'}
-        scope="project"
         defaultMode="append"
         onClose={() => setDialog(null)}
       />
-      <ScriptImportDialog
-        open={dialog?.type === 'replace'}
-        scope="episode"
-        defaultMode="overwrite"
-        episodeId={dialog?.type === 'replace' ? dialog.epId : undefined}
-        onClose={() => setDialog(null)}
-      />
+      {dialog?.type === 'replace' && (
+        <ReplaceEpisodeDialog episodeId={dialog.epId} onClose={() => setDialog(null)} />
+      )}
 
       {dialog?.type === 'delete' && delEp && delStat && (
         <div className={di.overlay} onClick={() => setDialog(null)}>

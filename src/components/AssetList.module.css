@@ -160,6 +160,10 @@
 .usedLabel {
   color: var(--t5);
 }
+/* 服装未关联造型的空状态：比普通 meta 再弱一档。 */
+.metaEmpty {
+  color: var(--t4);
+}
 .miniChip {
   display: inline-flex;
   align-items: center;
@@ -173,11 +177,11 @@
 }
 .miniChip::before {
   content: '';
-  width: 5px;
-  height: 5px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
-  background: var(--cloth);
-  opacity: 0.7;
+  background: transparent;
+  border: 1px solid rgb(var(--cloth-rgb) / 0.5);
 }
 
 /* 提示词列 */

@@ -58,6 +58,10 @@ interface StoreState extends UIState {
   // 提示词生成状态：shotId → PromptState。第一眼全部 pending，需点「生成全部提示词」。
   promptStates: Record<string, PromptState>
 
+  /** 镜头提示词是否被手动编辑过。与 promptStates 是两个正交维度：
+   *  一个镜头可以同时是「已手动编辑」和「待更新」。UI 态，不进 Shot 数据模型。 */
+  promptEdited: Record<string, boolean>
+
   // ── 派生便捷读取 ──
   currentScene: () => Project['scenes'][string] | undefined
   usageIndex: () => Record<string, AssetUsage>
@@ -78,6 +82,8 @@ interface StoreState extends UIState {
   generatePrompts: (shotIds: string[]) => void
   // 直接置某镜提示词状态（弹窗里手动写完提示词后，把 pending 提为 ready）。
   setPromptState: (shotId: string, state: PromptState) => void
+  // 标记某镜提示词被手动编辑过（ShotPromptDialog 手动改写并保存时调用）。
+  markPromptEdited: (shotId: string) => void
 
   // ── 数据动作（受能力矩阵 can(project, cap) 约束）──
   updateShotField: (shotId: string, field: keyof Shot, value: string) => void
@@ -129,6 +135,27 @@ function initPromptStates(project: Project): Record<string, PromptState> {
   return m
 }
 
+/** 初始的手动编辑标记：空对象（没人编辑过）。 */
+function initPromptEdited(_project: Project): Record<string, boolean> {
+  return {}
+}
+
+/** 结构性改动后，把两张提示词映射对齐到新 project 的镜头集合：
+ *  幸存镜头沿用旧状态 / 编辑标记，新镜头回落 pending，被删镜头的孤儿键一并清掉。 */
+function reconcilePrompts(
+  project: Project,
+  states: Record<string, PromptState>,
+  edited: Record<string, boolean>,
+): { promptStates: Record<string, PromptState>; promptEdited: Record<string, boolean> } {
+  const promptStates: Record<string, PromptState> = {}
+  const promptEdited: Record<string, boolean> = {}
+  for (const id of Object.keys(project.shots)) {
+    promptStates[id] = states[id] ?? 'pending'
+    if (edited[id]) promptEdited[id] = true
+  }
+  return { promptStates, promptEdited }
+}
+
 export const useStore = create<StoreState>((set, get) => {
   // 改了某镜的「第一步字段 / 挂载」→ 若该镜提示词已就绪则落回 stale，并提示重新生成。
   const touchPrompt = (shotId: string, notify = true) => {
@@ -143,6 +170,7 @@ export const useStore = create<StoreState>((set, get) => {
   return {
   project: structuredClone(seedProject),
   promptStates: initPromptStates(seedProject),
+  promptEdited: initPromptEdited(seedProject),
   activePage: 'analysis',
   selectedSceneId: 's1',
   activeTab: 'shot',
@@ -177,16 +205,19 @@ export const useStore = create<StoreState>((set, get) => {
     if (!targets.length) return
     set((s) => {
       const ps = { ...s.promptStates }
+      const pe = { ...s.promptEdited }
       targets.forEach((id) => {
         ps[id] = 'generating'
+        // 重新生成即覆盖，手动编辑痕迹消失。
+        delete pe[id]
       })
-      return { promptStates: ps }
+      return { promptStates: ps, promptEdited: pe }
     })
     targets.forEach((id, i) => {
       setTimeout(() => {
         set((s) => ({ promptStates: { ...s.promptStates, [id]: 'ready' } }))
         if (i === targets.length - 1) {
-          get().showToast(`已合成 ${targets.length} 镜的画面提示词与视频运动提示词`)
+          get().showToast(`已生成 ${targets.length} 镜的画面提示词与视频运动提示词`)
         }
       }, 420 + i * 220)
     })
@@ -195,6 +226,11 @@ export const useStore = create<StoreState>((set, get) => {
   setPromptState: (shotId, state) => {
     if (!get().project.shots[shotId]) return
     set((s) => ({ promptStates: { ...s.promptStates, [shotId]: state } }))
+  },
+
+  markPromptEdited: (shotId) => {
+    if (!get().project.shots[shotId]) return
+    set((s) => ({ promptEdited: { ...s.promptEdited, [shotId]: true } }))
   },
 
   updateShotField: (shotId, field, value) => {
@@ -222,8 +258,7 @@ export const useStore = create<StoreState>((set, get) => {
     const scene = s.project.scenes[shot.sceneId]!
     const after = scene.shotIds.slice(scene.shotIds.indexOf(shotId) + 1).length
     set({ project: { ...s.project, shots: nextShots } })
-    // 时长本身已有专门 toast，这里只静默标脏，避免双弹窗；底栏 warn 行会持续提示。
-    touchPrompt(shotId, false)
+    // 时长只影响时间轴，不改变提示词内容，故不触发「待更新」标脏。
     const newSceneDur = sceneDuration(scene, nextShots)
     get().showToast(
       `第 ${shot.no} 镜已调整为 ${clamped} 秒，本场共 ${newSceneDur} 秒${after > 0 ? '；后续镜头时间已自动更新。' : '。'}`,
@@ -325,8 +360,10 @@ export const useStore = create<StoreState>((set, get) => {
       .map((sh) => structuredClone(sh!)) as Shot[]
     const assetSnaps = orphanIds.map((id) => structuredClone(st0.project.assets[id]!)) as Asset[]
     const promptSnap: Record<string, PromptState> = {}
+    const editedSnap: Record<string, boolean> = {}
     shotIds.forEach((id) => {
       promptSnap[id] = st0.promptStates[id] ?? 'pending'
+      if (st0.promptEdited[id]) editedSnap[id] = true
     })
 
     set((s) => {
@@ -345,7 +382,11 @@ export const useStore = create<StoreState>((set, get) => {
       const assets = { ...s.project.assets }
       orphanIds.forEach((id) => delete assets[id])
       const promptStates = { ...s.promptStates }
-      shotIds.forEach((id) => delete promptStates[id])
+      const promptEdited = { ...s.promptEdited }
+      shotIds.forEach((id) => {
+        delete promptStates[id]
+        delete promptEdited[id]
+      })
       // 重指选中场：同集就近；本集空了取全剧第一个场；再无则空。
       let selectedSceneId = s.selectedSceneId
       if (wasSelected) {
@@ -355,6 +396,7 @@ export const useStore = create<StoreState>((set, get) => {
       return {
         project: { ...s.project, episodes, scenes, shots, assets },
         promptStates,
+        promptEdited,
         selectedSceneId,
         sceneSettingsOpen: false,
       }
@@ -379,9 +421,12 @@ export const useStore = create<StoreState>((set, get) => {
         assetSnaps.forEach((a) => (assets[a.id] = structuredClone(a)))
         const promptStates = { ...s.promptStates }
         Object.entries(promptSnap).forEach(([id, ps]) => (promptStates[id] = ps))
+        const promptEdited = { ...s.promptEdited }
+        Object.keys(editedSnap).forEach((id) => (promptEdited[id] = true))
         return {
           project: { ...s.project, episodes, scenes, shots, assets },
           promptStates,
+          promptEdited,
           selectedSceneId: sceneSnap.id,
         }
       })
@@ -402,6 +447,7 @@ export const useStore = create<StoreState>((set, get) => {
     // 快照 + 原状态，供撤销时原位放回。
     const snapshot = structuredClone(shot)
     const prevPrompt = st0.promptStates[shotId] ?? 'pending'
+    const prevEdited = !!st0.promptEdited[shotId]
 
     set((s) => {
       const scene = s.project.scenes[shot.sceneId]
@@ -415,9 +461,12 @@ export const useStore = create<StoreState>((set, get) => {
       })
       const promptStates = { ...s.promptStates }
       delete promptStates[shotId]
+      const promptEdited = { ...s.promptEdited }
+      delete promptEdited[shotId]
       return {
         project: { ...s.project, scenes: { ...s.project.scenes, [shot.sceneId]: { ...scene, shotIds } }, shots },
         promptStates,
+        promptEdited,
       }
     })
 
@@ -435,6 +484,9 @@ export const useStore = create<StoreState>((set, get) => {
         return {
           project: { ...s.project, scenes: { ...s.project.scenes, [snapshot.sceneId]: { ...scene, shotIds } }, shots },
           promptStates: { ...s.promptStates, [snapshot.id]: prevPrompt },
+          promptEdited: prevEdited
+            ? { ...s.promptEdited, [snapshot.id]: true }
+            : s.promptEdited,
         }
       })
     }
@@ -534,7 +586,7 @@ export const useStore = create<StoreState>((set, get) => {
       return
     }
     const next = appendEpisode(s.project, episode2Payload)
-    set({ project: next })
+    set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited) })
     get().showToast('第 2 集已添加。已有角色资料已自动沿用，新角色资料也已创建。')
   },
 
@@ -543,7 +595,14 @@ export const useStore = create<StoreState>((set, get) => {
     const s = get()
     const next = replaceScriptSvc(s.project, payload)
     const firstScene = next.episodes[0]?.sceneIds[0] ?? ''
-    set({ project: next, selectedSceneId: firstScene, sceneSettingsOpen: false, activeTab: 'shot' })
+    // 整本替换：全部镜头都是新 id，reconcile 后自然全回 pending、手动痕迹清空。
+    set({
+      project: next,
+      ...reconcilePrompts(next, s.promptStates, s.promptEdited),
+      selectedSceneId: firstScene,
+      sceneSettingsOpen: false,
+      activeTab: 'shot',
+    })
     get().showToast(`已导入《${payload.title}》，原剧本内容已替换。`)
   },
 
@@ -566,7 +625,14 @@ export const useStore = create<StoreState>((set, get) => {
     const renum = { ...appended, episodes: appended.episodes.map((e, i) => ({ ...e, no: i + 1 })) }
     const newEp = renum.episodes.find((e) => e.id === 'e2')
     const firstScene = newEp?.sceneIds[0] ?? renum.episodes[0]?.sceneIds[0] ?? ''
-    set({ project: renum, selectedSceneId: firstScene, sceneSettingsOpen: false, activeTab: 'shot' })
+    // 新集镜头都是新 id → reconcile 后全回 pending、手动痕迹清空；其他集状态照旧。
+    set({
+      project: renum,
+      ...reconcilePrompts(renum, s.promptStates, s.promptEdited),
+      selectedSceneId: firstScene,
+      sceneSettingsOpen: false,
+      activeTab: 'shot',
+    })
     get().showToast(`第 ${ep.no} 集已替换，其他剧集没有改变。`)
   },
 
@@ -585,7 +651,13 @@ export const useStore = create<StoreState>((set, get) => {
     const cleaned = before - Object.keys(next.assets).length
     const renum = { ...next, episodes: next.episodes.map((e, i) => ({ ...e, no: i + 1 })) }
     const firstScene = renum.episodes[0]?.sceneIds[0] ?? ''
-    set({ project: renum, selectedSceneId: firstScene, sceneSettingsOpen: false, activeTab: 'shot' })
+    set({
+      project: renum,
+      ...reconcilePrompts(renum, s.promptStates, s.promptEdited),
+      selectedSceneId: firstScene,
+      sceneSettingsOpen: false,
+      activeTab: 'shot',
+    })
     get().showToast(`第 ${ep.no} 集已删除。本集独有的 ${cleaned} 项内容已一并删除，其他剧集使用的内容仍会保留。`)
   },
 
@@ -600,7 +672,7 @@ export const useStore = create<StoreState>((set, get) => {
       const reset = resplitScene(s.project, sceneId)
       const rscene = reset.scenes[sceneId]!
       const next = { ...reset, scenes: { ...reset.scenes, [sceneId]: { ...rscene, density: 'standard' as ShotDensity } } }
-      set({ project: next, sceneSettingsOpen: false })
+      set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited), sceneSettingsOpen: false })
       get().showToast('当前演示仅第 1 场支持不同镜头节奏，本场已按原方式重新生成')
       return
     }
@@ -609,7 +681,7 @@ export const useStore = create<StoreState>((set, get) => {
     if (opts.targetShots != null && opts.density == null) {
       const density = closestDensity(sceneId, opts.targetShots)
       const next = resplitSceneDensity(s.project, sceneId, density)
-      set({ project: next, sceneSettingsOpen: false })
+      set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited), sceneSettingsOpen: false })
       get().showToast(
         `已按「期望 ${opts.targetShots} 个镜头」重新拆分：当前演示中最接近的方案为「${DENSITY_LABEL[density]}」，共 ${densityShots(sceneId, density).length} 个镜头`,
       )
@@ -619,7 +691,7 @@ export const useStore = create<StoreState>((set, get) => {
     // 指定颗粒度（或照原颗粒度重拆一次）。
     const density = opts.density ?? scene.density
     const next = resplitSceneDensity(s.project, sceneId, density)
-    set({ project: next, sceneSettingsOpen: false })
+    set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited), sceneSettingsOpen: false })
     get().showToast(`「${scene.name}」已按${DENSITY_LABEL[density]}节奏重新拆分为 ${densityShots(sceneId, density).length} 个镜头，其他场景没有改变。`)
   },
 
@@ -645,7 +717,12 @@ export const useStore = create<StoreState>((set, get) => {
         kept.push(scene.no)
       }
     }
-    set({ project: proj, selectedSceneId: ep.sceneIds[0] ?? s.selectedSceneId, sceneSettingsOpen: false })
+    set({
+      project: proj,
+      ...reconcilePrompts(proj, s.promptStates, s.promptEdited),
+      selectedSceneId: ep.sceneIds[0] ?? s.selectedSceneId,
+      sceneSettingsOpen: false,
+    })
 
     let msg = applied.length
       ? `已重新拆分第 ${ep.no} 集：${applied.join('，')}`

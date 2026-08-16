@@ -5,8 +5,9 @@ import ui from '../styles/ui.module.css'
 import s from './ShotPromptDialog.module.css'
 
 // 镜头提示词弹窗：画面 / 视频两段提示词的唯一出入口。
-// 待生成态：两个框留空、只给小灰字引导，右下「立即合成提示词」一键生成；
-// 已生成态：同一套框里显示合成结果，右下变「重新合成提示词」。两态版式完全一致。
+// 待生成态：两个框留空、只给小灰字引导，右下「立即生成提示词」一键生成；
+// 已生成态：同一套框里显示生成结果，右下变「重新生成提示词」。两态版式完全一致。
+// 用户手动改写并保存任一段 → markPromptEdited，落一个 ✎ 标记（重新生成会覆盖）。
 const MODELS = ['豆包 4.5', '即梦 3.0', '可灵 2.1', 'Seedance 1.0', 'Vidu 2.0']
 
 export function ShotPromptDialog({
@@ -23,6 +24,7 @@ export function ShotPromptDialog({
   const updateShotField = useStore((st) => st.updateShotField)
   const generatePrompts = useStore((st) => st.generatePrompts)
   const setPromptState = useStore((st) => st.setPromptState)
+  const markPromptEdited = useStore((st) => st.markPromptEdited)
   const showToast = useStore((st) => st.showToast)
   const promptState = useStore((st) => st.promptStates[shot.id])
 
@@ -33,7 +35,7 @@ export function ShotPromptDialog({
   const [vidDirty, setVidDirty] = useState(false)
   const [model, setModel] = useState(MODELS[0])
 
-  // 合成完成（generating → ready）→ 把结果揭示进两个框。
+  // 生成完成（generating → ready）→ 把结果揭示进两个框。
   const prev = useRef(promptState)
   useEffect(() => {
     if (prev.current === 'generating' && promptState === 'ready') {
@@ -47,10 +49,19 @@ export function ShotPromptDialog({
 
   const close = () => {
     if (!readOnly) {
-      if (imgDirty && img !== shot.imagePrompt) updateShotField(shot.id, 'imagePrompt', img)
-      if (vidDirty && vid !== shot.videoPrompt) updateShotField(shot.id, 'videoPrompt', vid)
+      let touched = false
+      if (imgDirty && img !== shot.imagePrompt) {
+        updateShotField(shot.id, 'imagePrompt', img)
+        touched = true
+      }
+      if (vidDirty && vid !== shot.videoPrompt) {
+        updateShotField(shot.id, 'videoPrompt', vid)
+        touched = true
+      }
       // 待生成态下手动写了提示词 → 提为已生成。
       if (promptState === 'pending' && (img.trim() || vid.trim())) setPromptState(shot.id, 'ready')
+      // 手动改写了任一段提示词 → 落 ✎ 手动标记。
+      if (touched) markPromptEdited(shot.id)
     }
     onClose()
   }
@@ -78,7 +89,7 @@ export function ShotPromptDialog({
   }
 
   const generating = promptState === 'generating'
-  const synthLabel = generating ? '合成中…' : revealed ? '重新合成提示词' : '立即合成提示词'
+  const synthLabel = generating ? '生成中…' : revealed ? '重新生成提示词' : '立即生成提示词'
 
   const fields = [
     {
@@ -89,7 +100,7 @@ export function ShotPromptDialog({
         setImg(v)
         setImgDirty(true)
       },
-      placeholder: '点击输入画面提示词，或点右下角「立即合成提示词」自动生成',
+      placeholder: '点击输入画面提示词，或点右下角「立即生成提示词」自动生成',
     },
     {
       key: 'video' as const,
@@ -99,7 +110,7 @@ export function ShotPromptDialog({
         setVid(v)
         setVidDirty(true)
       },
-      placeholder: '点击输入视频提示词，或点右下角「立即合成提示词」自动生成',
+      placeholder: '点击输入视频提示词，或点右下角「立即生成提示词」自动生成',
     },
   ]
 
@@ -140,7 +151,7 @@ export function ShotPromptDialog({
 
         <div className={s.actions}>
           <label className={s.modelPick}>
-            合成模型
+            生成模型
             <select
               className={s.modelSelect}
               value={model}

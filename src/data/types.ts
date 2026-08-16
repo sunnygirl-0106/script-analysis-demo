@@ -4,7 +4,7 @@ export type Stage = 'analysis' | 'visual' | 'studio'
 export type ShotDensity = 'compact' | 'standard' | 'loose'
 
 /** 提示词生成状态（UI 态，不进 Shot 数据模型）。
- *  pending 还没生成 / generating 合成中 / ready 已就绪 / stale 字段改动待重新生成。 */
+ *  pending 还没生成 / generating 生成中 / ready 已就绪 / stale 字段改动待重新生成。 */
 export type PromptState = 'pending' | 'generating' | 'ready' | 'stale'
 export type AssetKind = 'character' | 'costume' | 'location' | 'prop' | 'look'
 

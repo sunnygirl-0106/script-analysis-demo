@@ -74,7 +74,7 @@ export function AssetRow({ asset, sub, onOpenPrompt }: Props) {
   const dot = KIND_DOT[asset.kind]
   const name = asset.kind === 'look' ? lookName(asset, assets) : asset.name
 
-  // 名称下方 meta 行：服装显示「用于 X 造型」，其余显示首现。
+  // 名称下方 meta 行：服装显示「已搭配 + 造型 chips」，其余显示首现。
   const usedBy = asset.kind === 'costume' ? looksUsingCostume(asset.id, assets) : []
   const meta =
     asset.kind === 'costume'
@@ -108,11 +108,13 @@ export function AssetRow({ asset, sub, onOpenPrompt }: Props) {
         </span>
         {usedBy.length > 0 ? (
           <span className={s.metaLine}>
-            <span className={s.usedLabel}>用于</span>
+            <span className={s.usedLabel}>已搭配</span>
             {usedBy.map((lk) => (
               <span key={lk.id} className={s.miniChip}>{lookName(lk, assets)}</span>
             ))}
           </span>
+        ) : asset.kind === 'costume' ? (
+          <span className={[s.metaLine, s.metaEmpty].join(' ')}>暂未关联角色造型</span>
         ) : (
           meta && <span className={s.metaLine}>{meta}</span>
         )}

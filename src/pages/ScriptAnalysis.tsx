@@ -9,6 +9,7 @@ import { Storyboard } from '../components/Storyboard'
 import { ScriptImportDialog } from '../components/ScriptImportDialog'
 import { ResplitSceneDialog } from '../components/ResplitSceneDialog'
 import { ConfirmPromptDialog } from '../components/ConfirmPromptDialog'
+import type { PromptScope } from '../services/promptScope'
 import { can } from '../services/capability'
 import { sceneDuration } from '../services/timeline'
 import ui from '../styles/ui.module.css'
@@ -30,7 +31,8 @@ export function ScriptAnalysis() {
   const isAssetTab = activeTab !== 'shot'
   const [importOpen, setImportOpen] = useState(false)
   const [resplitOpen, setResplitOpen] = useState(false)
-  const [promptConfirmOpen, setPromptConfirmOpen] = useState(false)
+  // 生成弹窗：null = 关闭；打开时记住本次范围（页脚按钮=本场，完成度提示=全剧）。
+  const [promptScope, setPromptScope] = useState<PromptScope | null>(null)
 
   const scene = project.scenes[sceneId]
 
@@ -44,16 +46,16 @@ export function ScriptAnalysis() {
     look: Object.values(project.assets).filter((a) => a.kind === 'look').length,
   }
 
-  // 两步式 CTA：先「生成全部提示词」，全部就绪后按钮才变「生成第一批图」。
-  // 口径为全剧：need = 全部待生成 + 待更新的镜头。
+  // 两步式 CTA：「生成提示词」（次要，恒可点）与「进入资产库生图」（主，全就绪才可点）共存。
+  // 口径为全剧：need = 全部待生成 + 待更新的镜头。数量统计只进完成度提示行，不进按钮文案。
   const allShotIds = Object.keys(project.shots)
   const stateOf = (id: string) => promptStates[id] ?? 'pending'
   const needIds = allShotIds.filter((id) => stateOf(id) === 'pending' || stateOf(id) === 'stale')
   const staleCount = allShotIds.filter((id) => stateOf(id) === 'stale').length
   const busy = allShotIds.some((id) => stateOf(id) === 'generating')
   const allReady = needIds.length === 0 && !busy && allShotIds.length > 0
-  const genLabel =
-    needIds.length === allShotIds.length ? '生成全部提示词' : `生成 ${needIds.length} 镜提示词`
+  // 含至少一个待生成镜头的场数。
+  const needSceneCount = new Set(needIds.map((id) => project.shots[id]?.sceneId)).size
 
   return (
     <div className={s.page}>
@@ -111,44 +113,50 @@ export function ScriptAnalysis() {
             <b>{shotTotal} 个镜头</b> · 约 {durTotal} 秒　　{counts.character} 角色（{counts.look} 角色造型）/{' '}
             {counts.costume} 服装 / {counts.location} 场景 / {counts.prop} 道具
           </div>
-          {staleCount > 0 && (
-            <div className={s.warn}>
-              ⚠ {staleCount} 镜字段已改动，重新生成提示词后才能生成第一批图
-            </div>
-          )}
-          {allReady ? (
-            <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={() => setStage('visual')}>
-              进入资产库生图 →
+          {needIds.length > 0 ? (
+            <button className={s.doneLink} onClick={() => setPromptScope('project')}>
+              {needSceneCount} 场 {needIds.length} 个镜头待生成提示词
+              {staleCount > 0 && `（含 ${staleCount} 镜内容已改动待更新）`} →
             </button>
           ) : (
-            <button
-              className={[ui.btn, ui.btnPrimary].join(' ')}
-              disabled={busy || needIds.length === 0}
-              onClick={() => setPromptConfirmOpen(true)}
-            >
-              {busy ? '提示词合成中…' : genLabel}
-            </button>
+            allShotIds.length > 0 && (
+              <span className={s.doneStatic}>全剧 {allShotIds.length} 个镜头提示词已就绪</span>
+            )
           )}
+          <button
+            className={ui.btn}
+            disabled={busy}
+            onClick={() => setPromptScope('scene')}
+          >
+            {busy ? '生成中…' : '生成提示词'}
+          </button>
+          <button
+            className={[ui.btn, ui.btnPrimary].join(' ')}
+            disabled={!allReady}
+            title={allReady ? undefined : `还有 ${needIds.length} 个镜头的提示词未生成`}
+            onClick={() => setStage('visual')}
+          >
+            进入资产库生图 →
+          </button>
         </div>
       </div>
 
       <ScriptImportDialog
         open={importOpen}
-        scope="project"
         defaultMode="append"
         onClose={() => setImportOpen(false)}
       />
       {resplitOpen && scene && (
         <ResplitSceneDialog sceneId={scene.id} onClose={() => setResplitOpen(false)} />
       )}
-      {promptConfirmOpen && (
+      {promptScope && (
         <ConfirmPromptDialog
-          shotIds={needIds}
+          defaultScope={promptScope}
           onConfirm={(ids) => {
             generatePrompts(ids)
-            setPromptConfirmOpen(false)
+            setPromptScope(null)
           }}
-          onClose={() => setPromptConfirmOpen(false)}
+          onClose={() => setPromptScope(null)}
         />
       )}
     </div>

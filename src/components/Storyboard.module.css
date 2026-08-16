@@ -497,9 +497,18 @@
 }
 .pstat {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 5px;
   align-items: center;
+  justify-content: center;
+}
+/* 手动编辑角标：badge 右侧的小 ✎，与状态正交。 */
+.editMark {
+  flex: none;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--amber);
+  cursor: default;
 }
 .badge {
   display: inline-flex;

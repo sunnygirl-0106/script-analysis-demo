@@ -5,19 +5,16 @@ import ui from '../styles/ui.module.css'
 import s from './ScriptImportDialog.module.css'
 
 type Mode = 'append' | 'overwrite'
-type Scope = 'project' | 'episode'
 
 interface Props {
   open: boolean
   defaultMode?: Mode
-  scope?: Scope
-  episodeId?: string
   onClose: () => void
 }
 
-// ★ 导入剧本：分「追加到末尾 / 覆盖重来」两条路。受控组件，供工具栏（全剧）与集级菜单（本集）复用。
-// scope='episode' 时覆盖分支收窄为「替换本集」——语义诚实地实现为删除本集 + 追加新集。
-export function ScriptImportDialog({ open, defaultMode = 'append', scope = 'project', episodeId, onClose }: Props) {
+// ★ 导入新剧本：分「追加到末尾 / 替换整个剧本」两条路。受控组件，供工具栏与集级菜单「追加剧集」复用。
+// 「替换本集剧本」是另一条独立流程（见 ReplaceEpisodeDialog），不走这里。
+export function ScriptImportDialog({ open, defaultMode = 'append', onClose }: Props) {
   const [mode, setMode] = useState<Mode>(defaultMode)
   const [step, setStep] = useState<1 | 2>(1)
   const [ack, setAck] = useState(false)
@@ -25,7 +22,6 @@ export function ScriptImportDialog({ open, defaultMode = 'append', scope = 'proj
   const project = useStore((st) => st.project)
   const appendEpisode2 = useStore((st) => st.appendEpisode2)
   const replaceScript = useStore((st) => st.replaceScript)
-  const replaceEpisode = useStore((st) => st.replaceEpisode)
   const hasEp2 = project.episodes.some((e) => e.id === 'e2')
 
   // 每次打开时按传入的默认值复位内部状态。
@@ -38,9 +34,6 @@ export function ScriptImportDialog({ open, defaultMode = 'append', scope = 'proj
   }, [open, defaultMode])
 
   if (!open) return null
-
-  const isEpisode = scope === 'episode'
-  const targetEp = episodeId ? project.episodes.find((e) => e.id === episodeId) : undefined
 
   const counts = {
     ep: project.episodes.length,
@@ -59,8 +52,7 @@ export function ScriptImportDialog({ open, defaultMode = 'append', scope = 'proj
   }
 
   const onConfirmOverwrite = () => {
-    if (isEpisode && episodeId) replaceEpisode(episodeId)
-    else replaceScript(altScriptPayload)
+    replaceScript(altScriptPayload)
     onClose()
   }
 
@@ -69,7 +61,7 @@ export function ScriptImportDialog({ open, defaultMode = 'append', scope = 'proj
       <div className={s.dialog} onClick={(e) => e.stopPropagation()}>
         {step === 1 ? (
           <>
-            <div className={s.title}>{isEpisode ? `重新导入 · 第 ${targetEp?.no ?? ''} 集` : '导入新剧本'}</div>
+            <div className={s.title}>导入新剧本</div>
             <div className={s.options}>
               <label className={[s.opt, mode === 'append' ? s.on : ''].join(' ')}>
                 <input type="radio" checked={mode === 'append'} onChange={() => setMode('append')} />
@@ -86,11 +78,9 @@ export function ScriptImportDialog({ open, defaultMode = 'append', scope = 'proj
               <label className={[s.opt, mode === 'overwrite' ? s.on : ''].join(' ')}>
                 <input type="radio" checked={mode === 'overwrite'} onChange={() => setMode('overwrite')} />
                 <div className={s.optBody}>
-                  <div className={s.optHead}>{isEpisode ? '替换本集' : '替换整个剧本'}</div>
+                  <div className={s.optHead}>替换整个剧本</div>
                   <div className={s.optDesc}>
-                    {isEpisode
-                      ? `替换第 ${targetEp?.no ?? ''} 集的全部解析结果，其他集不受影响。`
-                      : '当前的剧本分析内容将被替换。你修改过的镜头时长、提示词以及出场人物和物品将无法保留。'}
+                    当前的剧本分析内容将被替换。你修改过的镜头时长、提示词以及出场人物和物品将无法保留。
                   </div>
                 </div>
               </label>
@@ -106,32 +96,26 @@ export function ScriptImportDialog({ open, defaultMode = 'append', scope = 'proj
           </>
         ) : (
           <>
-            <div className={s.title}>{isEpisode ? `确认替换第 ${targetEp?.no ?? ''} 集` : '确定替换整个剧本？'}</div>
+            <div className={s.title}>确定替换整个剧本？</div>
             <div className={s.danger}>
-              {isEpisode ? (
-                <>⚠️ 第 {targetEp?.no ?? ''} 集的全部分析内容将被替换为新剧本《{altScriptPayload.title}》。其他集不受影响，此操作无法恢复。</>
-              ) : (
-                <>⚠️ 新剧本《{altScriptPayload.title}》将替换当前剧本及全部分析内容。你此前的修改在替换后将无法恢复。</>
-              )}
+              ⚠️ 新剧本《{altScriptPayload.title}》将替换当前剧本及全部分析内容。你此前的修改在替换后将无法恢复。
             </div>
-            {!isEpisode && (
-              <label className={s.ackRow}>
-                <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} />
-                <span>
-                  我已了解：当前 <b>{counts.ep} 集 / {counts.scene} 场 / {counts.shot} 个镜头 / {counts.asset} 项相关素材</b> 将被替换
-                </span>
-              </label>
-            )}
+            <label className={s.ackRow}>
+              <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} />
+              <span>
+                我已了解：当前 <b>{counts.ep} 集 / {counts.scene} 场 / {counts.shot} 个镜头 / {counts.asset} 项相关素材</b> 将被替换
+              </span>
+            </label>
             <div className={s.actions}>
               <button className={ui.btn} onClick={() => setStep(1)}>
                 返回
               </button>
               <button
                 className={[ui.btn, ui.btnDanger].join(' ')}
-                disabled={!isEpisode && !ack}
+                disabled={!ack}
                 onClick={onConfirmOverwrite}
               >
-                {isEpisode ? '替换本集' : '替换剧本'}
+                替换剧本
               </button>
             </div>
           </>

@@ -22,7 +22,7 @@ export function AssetSummary({
     return <><b>{list.length}</b> 个角色 · <b>{looks.length}</b> 套角色造型 · 提示词改动只影响下一步出图</>
   }
   if (kind === 'costume') {
-    return <><b>{list.length}</b> 件服装 · 被 <b>{looks.length}</b> 套角色造型使用</>
+    return <><b>{list.length}</b> 件服装 · 已关联 <b>{looks.length}</b> 套角色造型</>
   }
   if (kind === 'location') return <><b>{list.length}</b> 个场景</>
   const out = list.filter((a) => !a.excluded).length

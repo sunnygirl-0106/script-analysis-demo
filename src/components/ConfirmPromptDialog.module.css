@@ -493,17 +493,7 @@
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
-}
-.hint {
-  font-size: 11px;
-  color: #6b7280;
-  white-space: nowrap;
-}
-.footRight {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 16px;
+  flex: none;
 }
 .model {
   font-size: 12px;
@@ -515,10 +505,23 @@
   white-space: nowrap;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex: none;
 }
 .model:hover {
   background: rgba(143, 220, 210, 0.1);
   border-color: #8fdcd2;
+}
+.hint {
+  font-size: 11px;
+  color: #6b7280;
+  white-space: nowrap;
+  flex: none;
+}
+.footRight {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
 }
 .modes {
   display: inline-flex;

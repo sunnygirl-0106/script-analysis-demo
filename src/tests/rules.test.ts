@@ -27,7 +27,7 @@ import { mountIssues } from '../services/completeness'
 import { isLongShot, LONG_SHOT_SEC } from '../services/duration'
 
 /** 规则基线版本。整体版本升级时改这里，单条规则/断言的局部变更用行内标记覆盖。 */
-export const RULES_VERSION = 'v1.2' // 2026-08-12 · 对应技术规划 v2
+export const RULES_VERSION = 'v1.3' // 2026-08-15 · 对应改动方案 v1.3
 
 // 每个用例都从 seed 深拷贝，互不污染。
 const fresh = () => structuredClone(seedProject)
@@ -463,5 +463,35 @@ describe('R14 第一批范围', () => {
     )
     expect(firstBatch.some((a) => a.id === A.napkin)).toBe(false)
     expect(firstBatch.length).toBe(15)
+  })
+})
+
+// ── R15 提示词手动编辑标记与替换本集重置 · since v1.3 · updated v1.3 ──
+// promptEdited 与 promptStates 是两个正交维度；重新生成 / 替换本集都会清掉手动痕迹。
+describe('R15 提示词手动编辑标记与替换本集重置', () => {
+  it('generatePrompts 执行到某镜即清掉其 promptEdited', () => {
+    // v1.3
+    useStore.setState({ project: structuredClone(seedProject), promptStates: {}, promptEdited: {} })
+    const id = 's1_sh1'
+    useStore.getState().markPromptEdited(id)
+    expect(useStore.getState().promptEdited[id]).toBe(true)
+    useStore.getState().generatePrompts([id])
+    expect(useStore.getState().promptEdited[id]).toBeFalsy()
+  })
+
+  it('替换本集后镜头 promptStates 全部回 pending、promptEdited 清空、无孤儿键', () => {
+    // v1.3
+    useStore.setState({ project: structuredClone(seedProject), promptStates: {}, promptEdited: {} })
+    // 先制造一个已就绪且被手动编辑过的镜头。
+    useStore.getState().setPromptState('s1_sh1', 'ready')
+    useStore.getState().markPromptEdited('s1_sh1')
+    useStore.getState().replaceEpisode('e1')
+    const st = useStore.getState()
+    for (const shotId of Object.keys(st.project.shots)) {
+      expect(st.promptStates[shotId]).toBe('pending')
+    }
+    expect(Object.keys(st.promptEdited).length).toBe(0)
+    // 旧镜随替换消失，不留孤儿键。
+    expect(st.promptStates.s1_sh1).toBeUndefined()
   })
 })
