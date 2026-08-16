@@ -7,7 +7,6 @@ import {
   shotIdsOfScope,
   type PromptScope,
 } from '../services/promptScope'
-import ui from '../styles/ui.module.css'
 import d from './ScriptImportDialog.module.css'
 import c from './ConfirmPromptDialog.module.css'
 
@@ -252,7 +251,6 @@ export function ConfirmPromptDialog({
                   shownIds.map((id) => {
                     const shot = project.shots[id]
                     if (!shot) return null
-                    const isReady = stateOf(id) === 'ready'
                     const isEdited = !!edited[id]
                     const checked = selected.has(id)
                     const isExpanded = expanded.has(id)
@@ -261,8 +259,8 @@ export function ConfirmPromptDialog({
                       <div
                         className={[
                           c.shotRow,
+                          checked ? c.shotChecked : '',
                           isExpanded ? c.shotExpanded : '',
-                          isReady && !checked ? c.shotDim : '',
                         ].join(' ')}
                         key={id}
                       >
@@ -327,7 +325,7 @@ export function ConfirmPromptDialog({
             </div>
             <span className={c.cost}>⚡ {cost}</span>
             <button
-              className={[ui.btn, ui.btnPrimary].join(' ')}
+              className={c.cta}
               disabled={selCount === 0}
               onClick={() => onConfirm([...selected])}
             >
