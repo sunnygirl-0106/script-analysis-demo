@@ -353,7 +353,7 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
         label="主要内容"
         hint="这一镜演什么，取材自剧本原文"
         rows={5}
-        clamp={3}
+        clamp={4}
       />
       <ShotFieldCell
         shotId={shot.id}

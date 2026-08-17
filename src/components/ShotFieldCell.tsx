@@ -20,7 +20,7 @@ interface Props {
   hint?: string
   presets?: readonly string[]
   rows?: number
-  clamp?: 2 | 3
+  clamp?: 2 | 3 | 4
   placeholder?: string
 }
 
@@ -197,7 +197,7 @@ export function ShotFieldCell({
       ) : empty ? (
         <span className={s.dim}>{placeholder}</span>
       ) : (
-        <div className={clamp === 2 ? s.clamp2 : s.clamp3}>{value}</div>
+        <div className={clamp === 2 ? s.clamp2 : clamp === 4 ? s.clamp4 : s.clamp3}>{value}</div>
       )}
 
       {open &&
