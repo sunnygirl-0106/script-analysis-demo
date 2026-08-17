@@ -301,8 +301,7 @@ export function EpisodeTree() {
                           <button
                             className={[s.menuItem, s.menuDanger].join(' ')}
                             onClick={() => {
-                              if (sc.shotIds.length === 0) deleteScene(sc.id)
-                              else setDialog({ type: 'deleteScene', sceneId: sc.id })
+                              setDialog({ type: 'deleteScene', sceneId: sc.id })
                               setMenuScene(null)
                             }}
                           >
@@ -367,11 +366,11 @@ export function EpisodeTree() {
           <div className={di.dialog} onClick={(e) => e.stopPropagation()}>
             <div className={di.title}>删除第 {delSc.no} 场「{delSc.name}」？</div>
             <div className={di.danger}>
-              将同时删除本场的 {delScStat.shots} 个镜头
+              {delScStat.shots > 0 ? `将同时删除本场的 ${delScStat.shots} 个镜头` : '本场暂无镜头'}
               {delScStat.onlyInScene > 0
                 ? `，以及仅在本场出现的 ${delScStat.onlyInScene} 项独有资产；其他场仍在使用的内容会保留`
                 : ''}
-              。删除后可在底部「撤销」。
+              。此操作不可撤销。
             </div>
             <div className={di.actions}>
               <button className={ui.btn} onClick={() => setDialog(null)}>

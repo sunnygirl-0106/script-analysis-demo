@@ -128,7 +128,7 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
 
         <div className={s.impact}>
           <div className={s.impactTitle}>重新拆分后</div>
-          重新拆分后，本场的镜头和提示词将重新生成。已有角色造型、场景和道具会保留，其他场景不会改变。你手动修改过的本场分镜将被替换。
+          重新拆分后，本场的镜头和提示词将重新生成。已有角色造型、场景和道具会保留，其他场景不会改变。手动修改过的本场分镜将被替换。
         </div>
 
         <div className={d.actions}>

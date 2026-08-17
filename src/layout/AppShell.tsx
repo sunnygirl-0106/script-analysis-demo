@@ -57,6 +57,31 @@ export function AppShell({ children }: { children: ReactNode }) {
   const setPage = useStore((st) => st.setPage)
   const navCollapsed = useStore((st) => st.navCollapsed)
   const toggleNav = useStore((st) => st.toggleNav)
+  const analysisPhase = useStore((st) => st.analysisPhase)
+  const replayDemo = useStore((st) => st.replayDemo)
+  const setAnalysisPhase = useStore((st) => st.setAnalysisPhase)
+  const setTab = useStore((st) => st.setTab)
+
+  // 演示控制器 pill：解析中可「跳过」直达完整页；完整页可「重新演示」复位重播。空态不显示（空态自带 CTA）。
+  const running = analysisPhase === 'uploading' || analysisPhase === 'analyzing'
+  const demoPill =
+    activePage === 'analysis' && analysisPhase !== 'empty' ? (
+      running ? (
+        <button
+          className={s.demoPill}
+          onClick={() => {
+            setTab('shot')
+            setAnalysisPhase('done')
+          }}
+        >
+          跳过 ⏭
+        </button>
+      ) : (
+        <button className={[s.demoPill, s.demoPillReplay].join(' ')} onClick={replayDemo}>
+          ▶ 重新演示
+        </button>
+      )
+    ) : null
 
   const aspectLabel = project.aspect === '16:9' ? '16:9 横屏' : '9:16 竖屏'
   const styleLabel = project.style === 'realistic' ? '写实' : '电影感'
@@ -71,6 +96,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             PhanthyMovie
           </div>
           <div className={s.right}>
+            {demoPill}
             <span className={s.recharge}>充值中心</span>
             <span className={s.credits}>✦ 10</span>
             <span className={s.bell}>

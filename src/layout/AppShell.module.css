@@ -88,6 +88,33 @@
   font-size: 12px;
   color: var(--t2);
 }
+/* 演示控制 pill（跳过 / 重新演示） */
+.demoPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: var(--rpill);
+  border: 1px solid var(--line);
+  background: var(--bg3);
+  color: var(--t3);
+  font-size: 11px;
+  transition: 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.demoPill:hover {
+  color: var(--t1);
+  border-color: var(--edge);
+  transform: translateY(-1px);
+}
+.demoPillReplay {
+  border-color: var(--acc-line);
+  color: var(--acc);
+  background: var(--acc-bg);
+}
+.demoPillReplay:hover {
+  color: var(--acc-hi);
+  border-color: var(--acc);
+}
 .recharge {
   color: var(--acc);
   cursor: pointer;

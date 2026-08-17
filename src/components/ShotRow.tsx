@@ -18,6 +18,7 @@ import { ShotFieldCell } from './ShotFieldCell'
 import { DialogueCell } from './DialogueCell'
 import { ShotPromptDialog } from './ShotPromptDialog'
 import ui from '../styles/ui.module.css'
+import di from './ScriptImportDialog.module.css'
 import s from './Storyboard.module.css'
 
 function fmt(sec: number): string {
@@ -51,8 +52,9 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
   const [editing, setEditing] = useState<'image' | 'video' | null>(null)
   // 「在此插入一镜」热区：悬停显形、停住几秒自动隐藏。
   const ins = useAutoHideHover()
-  // 删除：先播放折叠动画，动画结束再真正从 store 移除（配合可撤销 toast）。
+  // 删除：点删除键先弹二次确认；确认后播放折叠动画，动画结束再真正从 store 移除。
   const [removing, setRemoving] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const runDelete = () => {
     if (removing || !onDelete) return
     setRemoving(true)
@@ -390,7 +392,7 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
             disabled={removing}
             onClick={(e) => {
               e.stopPropagation()
-              runDelete()
+              setConfirming(true)
             }}
           >
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={1.7}>
@@ -407,6 +409,31 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
           readOnly={readOnly}
           onClose={() => setEditing(null)}
         />
+      )}
+
+      {confirming && (
+        <div className={di.overlay} onClick={() => setConfirming(false)}>
+          <div className={di.dialog} onClick={(e) => e.stopPropagation()}>
+            <div className={di.title}>删除第 {shot.no} 镜？</div>
+            <div className={di.danger}>
+              本镜的镜头设计、出场的人和物以及已生成的提示词将一并移除，此操作不可撤销。
+            </div>
+            <div className={di.actions}>
+              <button className={ui.btn} onClick={() => setConfirming(false)}>
+                取消
+              </button>
+              <button
+                className={[ui.btn, ui.btnDanger].join(' ')}
+                onClick={() => {
+                  setConfirming(false)
+                  runDelete()
+                }}
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

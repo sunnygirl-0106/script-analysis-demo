@@ -1,0 +1,282 @@
+/* 空态 2a：占满 content 区。配色走 theme.css 令牌。 */
+.wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg1);
+  animation: 0.4s ease both global(an-fade-in);
+}
+
+/* 顶部工具栏，与拆解页对齐（52px） */
+.toolbar {
+  height: 52px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--line);
+}
+.ghost {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--t3);
+  padding: 5px 13px;
+  border-radius: var(--rpill);
+  font-size: 11.5px;
+  transition: 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.ghost:hover:not(:disabled) {
+  border-color: var(--edge);
+  color: var(--t1);
+}
+.ghost:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Hero */
+.hero {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  overflow: hidden;
+}
+.glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(680px 420px at 50% 34%, rgb(var(--acc-rgb) / 0.07), transparent 70%);
+  pointer-events: none;
+}
+.dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgb(255 255 255 / 0.045) 1px, transparent 1px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(460px 320px at 50% 40%, #000, transparent 78%);
+  mask-image: radial-gradient(460px 320px at 50% 40%, #000, transparent 78%);
+  pointer-events: none;
+}
+
+/* 文档堆叠插画 */
+.doc {
+  position: relative;
+  width: 190px;
+  height: 158px;
+  margin-bottom: 34px;
+}
+.ring1,
+.ring2 {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+.ring1 {
+  width: 150px;
+  height: 150px;
+  border: 1px solid rgb(var(--acc-rgb) / 0.14);
+}
+.ring2 {
+  width: 196px;
+  height: 196px;
+  border: 1px solid rgb(var(--acc-rgb) / 0.06);
+}
+.card {
+  position: absolute;
+  border-radius: 11px;
+}
+.card1 {
+  left: 26px;
+  top: 26px;
+  width: 76px;
+  height: 100px;
+  border: 1px solid #2b3138;
+  background: linear-gradient(180deg, #1c2025, #181b1f);
+  transform: rotate(-11deg);
+  box-shadow: 0 10px 26px rgb(0 0 0 / 0.4);
+}
+.card2 {
+  left: 44px;
+  top: 20px;
+  width: 76px;
+  height: 100px;
+  border: 1px solid #363d46;
+  background: linear-gradient(180deg, #20242a, #1b1f24);
+  transform: rotate(-5deg);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 0.45);
+}
+.cardFront {
+  left: 64px;
+  top: 12px;
+  width: 78px;
+  height: 104px;
+  border: 1px solid var(--acc-line);
+  background: linear-gradient(180deg, #252b31, #1e2328);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 16px 14px;
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.05);
+  animation: 4.5s ease-in-out infinite global(an-float);
+}
+.lineAcc {
+  height: 5px;
+  width: 32px;
+  border-radius: 3px;
+  background: var(--acc);
+}
+.line {
+  height: 4px;
+  border-radius: 3px;
+  background: #3d454e;
+}
+.spark1,
+.spark2 {
+  position: absolute;
+  border-radius: 50%;
+}
+.spark1 {
+  right: 8px;
+  top: 8px;
+  width: 11px;
+  height: 11px;
+  background: rgb(var(--acc-rgb) / 0.5);
+  box-shadow: 0 0 14px rgb(var(--acc-rgb) / 0.3);
+}
+.spark2 {
+  left: 10px;
+  bottom: 24px;
+  width: 7px;
+  height: 7px;
+  background: rgb(var(--acc-rgb) / 0.28);
+}
+
+.title {
+  position: relative;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--t1);
+  letter-spacing: 0.6px;
+}
+.sub {
+  position: relative;
+  margin-top: 11px;
+  font-size: 13px;
+  color: var(--t3);
+  line-height: 1.75;
+  text-align: center;
+  max-width: 392px;
+  text-wrap: pretty;
+}
+
+.cta {
+  position: relative;
+  margin-top: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: linear-gradient(180deg, rgb(var(--acc-rgb) / 0.2), rgb(var(--acc-rgb) / 0.1));
+  border: 1px solid var(--acc);
+  color: var(--acc-hi);
+  font-weight: 600;
+  padding: 11px 30px;
+  border-radius: var(--rpill);
+  font-size: 13.5px;
+  letter-spacing: 0.3px;
+  box-shadow: 0 10px 28px rgb(var(--acc-rgb) / 0.24), inset 0 1px 0 rgb(255 255 255 / 0.14);
+  transition: 0.24s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.cta:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgb(var(--acc-rgb) / 0.32), inset 0 1px 0 rgb(255 255 255 / 0.18);
+}
+.cta:disabled {
+  cursor: default;
+  opacity: 0.92;
+}
+.ctaPlus {
+  font-size: 15px;
+  line-height: 1;
+}
+.ctaSpin {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 0.25);
+  border-top-color: var(--acc-hi);
+  animation: 0.8s linear infinite global(an-spin);
+}
+.hint {
+  position: relative;
+  margin-top: 13px;
+  font-size: 11px;
+  color: var(--t4);
+  letter-spacing: 0.3px;
+}
+
+/* 三步引导 */
+.steps {
+  position: relative;
+  margin-top: 58px;
+  width: 600px;
+  max-width: 90%;
+}
+.stepLine {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 13px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(var(--acc-rgb) / 0.3) 18%, #2e343b 55%, #262b31 82%, transparent);
+}
+.stepRow {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+}
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  width: 33%;
+}
+.stepDot {
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: var(--bg2);
+  border: 1px solid #363d46;
+  color: var(--t5);
+  font-size: 11.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 5px var(--bg1);
+}
+.stepDotOn {
+  background: #1b2226;
+  border-color: var(--acc-line);
+  color: var(--acc);
+  box-shadow: 0 0 0 5px var(--bg1), 0 0 18px rgb(var(--acc-rgb) / 0.22);
+}
+.stepTitle {
+  font-size: 12.5px;
+  color: var(--t2);
+  font-weight: 600;
+}
+.stepTitleOn {
+  color: var(--t1);
+}
+.stepSub {
+  font-size: 11px;
+  color: var(--t4);
+}

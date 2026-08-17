@@ -38,13 +38,6 @@ export function ScriptAnalysis() {
 
   const shotTotal = Object.values(project.scenes).reduce((n, sc) => n + sc.shotIds.length, 0)
   const durTotal = Object.values(project.scenes).reduce((n, sc) => n + sceneDuration(sc, project.shots), 0)
-  const counts = {
-    character: Object.values(project.assets).filter((a) => a.kind === 'character').length,
-    location: Object.values(project.assets).filter((a) => a.kind === 'location').length,
-    prop: Object.values(project.assets).filter((a) => a.kind === 'prop').length,
-    costume: Object.values(project.assets).filter((a) => a.kind === 'costume').length,
-    look: Object.values(project.assets).filter((a) => a.kind === 'look').length,
-  }
 
   // 两步式 CTA：「生成提示词」（次要，恒可点）与「进入资产库生图」（主，全就绪才可点）共存。
   // 口径为全剧：need = 全部待生成 + 待更新的镜头。数量统计只进完成度提示行，不进按钮文案。
@@ -110,8 +103,7 @@ export function ScriptAnalysis() {
         <div className={s.foot}>
           <div className={s.info}>
             全剧 <b>{project.episodes.length} 集</b> · <b>{Object.keys(project.scenes).length} 场</b> ·{' '}
-            <b>{shotTotal} 个镜头</b> · 约 {durTotal} 秒　　{counts.character} 角色（{counts.look} 角色造型）/{' '}
-            {counts.costume} 服装 / {counts.location} 场景 / {counts.prop} 道具
+            <b>{shotTotal} 个镜头</b> · 约 {durTotal} 秒
           </div>
           {needIds.length > 0 ? (
             <button className={s.doneLink} onClick={() => setPromptScope('project')}>

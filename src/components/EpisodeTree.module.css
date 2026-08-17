@@ -236,3 +236,32 @@
 .epgap {
   height: 10px;
 }
+
+/* ── 解析中：集头 + 场行错峰入场（仅演示态生效） ── */
+:global([data-analyzing]) .ep {
+  animation: 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both global(an-reveal-row);
+}
+:global([data-analyzing]) .scWrap {
+  animation: 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both global(an-reveal-row);
+}
+:global([data-analyzing]) .scWrap:nth-child(2) {
+  animation-delay: 0.06s;
+}
+:global([data-analyzing]) .scWrap:nth-child(3) {
+  animation-delay: 0.15s;
+}
+:global([data-analyzing]) .scWrap:nth-child(4) {
+  animation-delay: 0.24s;
+}
+:global([data-analyzing]) .scWrap:nth-child(5) {
+  animation-delay: 0.33s;
+}
+:global([data-analyzing]) .scWrap:nth-child(6) {
+  animation-delay: 0.42s;
+}
+:global([data-analyzing]) .scWrap:nth-child(7) {
+  animation-delay: 0.51s;
+}
+:global([data-analyzing]) .scWrap:nth-child(n + 8) {
+  animation-delay: 0.6s;
+}

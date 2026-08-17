@@ -1,6 +1,6 @@
 // Zustand：一个 project + 所有动作。不做持久化，刷新回到初始状态。
 import { create } from 'zustand'
-import type { Asset, MountRef, Project, PromptState, Scene, Shot, ShotDensity, Stage } from '../data/types'
+import type { MountRef, Project, PromptState, Scene, Shot, ShotDensity, Stage } from '../data/types'
 import { seedProject } from '../data/seed'
 import { episode2Payload } from '../data/seedEpisode2'
 import { appendEpisode } from '../services/incremental'
@@ -24,6 +24,10 @@ function usageIndexOf(project: Project): Record<string, AssetUsage> {
 }
 
 export type Tab = 'character' | 'costume' | 'location' | 'prop' | 'shot'
+
+/** 演示相位机：进站空态 → 模拟上传 → 解析中（内容分区错峰显现）→ 完成。
+ *  纯 UI 态，不进领域模型。seed 始终完整加载，动画只做呈现层揭示。 */
+export type AnalysisPhase = 'empty' | 'uploading' | 'analyzing' | 'done'
 
 export interface ToastAction {
   label: string
@@ -50,6 +54,10 @@ interface UIState {
   sceneSettingsOpen: boolean
   navCollapsed: boolean
   toast: Toast | null
+  // ── 拆解过程演示 ──
+  analysisPhase: AnalysisPhase
+  // 解析中已揭示到第几阶段（0=读取，1=集场，2=剧本，3=分镜，4=资产）。控制器递增。
+  revealStage: number
 }
 
 interface StoreState extends UIState {
@@ -73,10 +81,19 @@ interface StoreState extends UIState {
   selectScene: (sceneId: string) => void
   setTab: (tab: Tab) => void
   toggleScript: () => void
+  setScriptOpen: (open: boolean) => void
   openSceneSettings: () => void
   closeSceneSettings: () => void
   showToast: (text: string, action?: ToastAction) => void
   dismissToast: () => void
+
+  // ── 拆解过程演示动作 ──
+  // 空态点「导入剧本」：进 uploading（模拟上传），控制器随后转 analyzing。
+  startUpload: () => void
+  setAnalysisPhase: (phase: AnalysisPhase) => void
+  setRevealStage: (stage: number) => void
+  // 「重新演示」：复位到空态，并把工作区视图复位（第 1 场 / 分镜 tab / 收起剧本）。
+  replayDemo: () => void
 
   // ── 提示词生成（两步式：先生成全部提示词，再生成第一批图）──
   generatePrompts: (shotIds: string[]) => void
@@ -94,9 +111,9 @@ interface StoreState extends UIState {
   insertScene: (episodeId: string, index: number) => void
   // 改场名（双击场名就地编辑，失焦/回车自动保存）。清空则回落到「（未命名）」。
   renameScene: (sceneId: string, name: string) => void
-  // 删除一个场（级联删镜 + 清理只在本场出现的孤儿资产 + 顺延重编号），并弹出可撤销的 toast。
+  // 删除一个场（级联删镜 + 清理只在本场出现的孤儿资产 + 顺延重编号）。调用方需先做二次确认。
   deleteScene: (sceneId: string) => void
-  // 删除一个镜头（顺延重编号），并弹出可撤销的 toast。
+  // 删除一个镜头（顺延重编号）。调用方需先做二次确认。
   deleteShot: (shotId: string) => void
   addMount: (shotId: string, mount: MountRef) => void
   removeMount: (shotId: string, assetId: string) => void
@@ -177,6 +194,9 @@ export const useStore = create<StoreState>((set, get) => {
   sceneSettingsOpen: false,
   navCollapsed: false,
   toast: null,
+  // 进站默认空态：先看到空剧本页，点「导入剧本」才开始拆解演示。
+  analysisPhase: 'empty',
+  revealStage: 0,
 
   currentScene: () => get().project.scenes[get().selectedSceneId],
   usageIndex: () => usageIndexOf(get().project),
@@ -189,6 +209,7 @@ export const useStore = create<StoreState>((set, get) => {
   selectScene: (sceneId) => set({ selectedSceneId: sceneId, sceneSettingsOpen: false }),
   setTab: (activeTab) => set({ activeTab }),
   toggleScript: () => set((s) => ({ scriptOpen: !s.scriptOpen })),
+  setScriptOpen: (scriptOpen) => set({ scriptOpen }),
   openSceneSettings: () => set({ sceneSettingsOpen: true }),
   closeSceneSettings: () => set({ sceneSettingsOpen: false }),
   showToast: (text, action) => {
@@ -196,6 +217,21 @@ export const useStore = create<StoreState>((set, get) => {
     set({ toast: { id, text, action } })
   },
   dismissToast: () => set({ toast: null }),
+
+  // 空态点「导入剧本」→ 模拟上传态。真正的时间线推进由 App 里的揭示控制器接管。
+  startUpload: () => set({ analysisPhase: 'uploading', revealStage: 0 }),
+  setAnalysisPhase: (analysisPhase) => set({ analysisPhase }),
+  setRevealStage: (revealStage) => set({ revealStage }),
+  replayDemo: () =>
+    set({
+      analysisPhase: 'empty',
+      revealStage: 0,
+      selectedSceneId: 's1',
+      activeTab: 'shot',
+      scriptOpen: false,
+      sceneSettingsOpen: false,
+      toast: null,
+    }),
 
   // 生成提示词：目标镜置 generating，错峰后置 ready（seed 里已有 image/videoPrompt，生成 = 揭示）。
   generatePrompts: (shotIds) => {
@@ -351,20 +387,6 @@ export const useStore = create<StoreState>((set, get) => {
       })
       .map((a) => a.id)
 
-    // 快照（撤销原位还原用）
-    const sceneSnap = structuredClone(scene)
-    const shotSnaps = shotIds
-      .map((id) => st0.project.shots[id])
-      .filter(Boolean)
-      .map((sh) => structuredClone(sh!)) as Shot[]
-    const assetSnaps = orphanIds.map((id) => structuredClone(st0.project.assets[id]!)) as Asset[]
-    const promptSnap: Record<string, PromptState> = {}
-    const editedSnap: Record<string, boolean> = {}
-    shotIds.forEach((id) => {
-      promptSnap[id] = st0.promptStates[id] ?? 'pending'
-      if (st0.promptEdited[id]) editedSnap[id] = true
-    })
-
     set((s) => {
       const e = s.project.episodes.find((x) => x.id === epId)
       if (!e) return s
@@ -401,37 +423,7 @@ export const useStore = create<StoreState>((set, get) => {
       }
     })
 
-    const restore = () => {
-      set((s) => {
-        if (s.project.scenes[sceneSnap.id]) return s
-        const e = s.project.episodes.find((x) => x.id === epId)
-        if (!e) return s
-        const nextSceneIds = [...e.sceneIds]
-        nextSceneIds.splice(Math.min(index, nextSceneIds.length), 0, sceneSnap.id)
-        const episodes = s.project.episodes.map((x) => (x.id === epId ? { ...x, sceneIds: nextSceneIds } : x))
-        const scenes = { ...s.project.scenes, [sceneSnap.id]: structuredClone(sceneSnap) }
-        nextSceneIds.forEach((sid, i) => {
-          const sc = scenes[sid]
-          if (sc && sc.no !== i + 1) scenes[sid] = { ...sc, no: i + 1 }
-        })
-        const shots = { ...s.project.shots }
-        shotSnaps.forEach((sh) => (shots[sh.id] = structuredClone(sh)))
-        const assets = { ...s.project.assets }
-        assetSnaps.forEach((a) => (assets[a.id] = structuredClone(a)))
-        const promptStates = { ...s.promptStates }
-        Object.entries(promptSnap).forEach(([id, ps]) => (promptStates[id] = ps))
-        const promptEdited = { ...s.promptEdited }
-        Object.keys(editedSnap).forEach((id) => (promptEdited[id] = true))
-        return {
-          project: { ...s.project, episodes, scenes, shots, assets },
-          promptStates,
-          promptEdited,
-          selectedSceneId: sceneSnap.id,
-        }
-      })
-    }
-
-    get().showToast(`已删除第 ${oldNo} 场`, { label: '撤销', run: restore })
+    get().showToast(`已删除第 ${oldNo} 场`)
   },
 
   deleteShot: (shotId) => {
@@ -441,12 +433,7 @@ export const useStore = create<StoreState>((set, get) => {
     if (!shot) return
     const scene0 = st0.project.scenes[shot.sceneId]
     if (!scene0) return
-    const index = scene0.shotIds.indexOf(shotId)
-    const oldNo = index + 1
-    // 快照 + 原状态，供撤销时原位放回。
-    const snapshot = structuredClone(shot)
-    const prevPrompt = st0.promptStates[shotId] ?? 'pending'
-    const prevEdited = !!st0.promptEdited[shotId]
+    const oldNo = scene0.shotIds.indexOf(shotId) + 1
 
     set((s) => {
       const scene = s.project.scenes[shot.sceneId]
@@ -469,28 +456,7 @@ export const useStore = create<StoreState>((set, get) => {
       }
     })
 
-    const restore = () => {
-      set((s) => {
-        const scene = s.project.scenes[snapshot.sceneId]
-        if (!scene || s.project.shots[snapshot.id]) return s
-        const shotIds = [...scene.shotIds]
-        shotIds.splice(Math.min(index, shotIds.length), 0, snapshot.id)
-        const shots = { ...s.project.shots, [snapshot.id]: structuredClone(snapshot) }
-        shotIds.forEach((sid, i) => {
-          const sh = shots[sid]
-          if (sh && sh.no !== i + 1) shots[sid] = { ...sh, no: i + 1 }
-        })
-        return {
-          project: { ...s.project, scenes: { ...s.project.scenes, [snapshot.sceneId]: { ...scene, shotIds } }, shots },
-          promptStates: { ...s.promptStates, [snapshot.id]: prevPrompt },
-          promptEdited: prevEdited
-            ? { ...s.promptEdited, [snapshot.id]: true }
-            : s.promptEdited,
-        }
-      })
-    }
-
-    get().showToast(`已删除第 ${oldNo} 镜`, { label: '撤销', run: restore })
+    get().showToast(`已删除第 ${oldNo} 镜`)
   },
 
   addMount: (shotId, mount) => {

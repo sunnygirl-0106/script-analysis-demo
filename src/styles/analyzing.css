@@ -1,0 +1,111 @@
+/* 拆解过程演示：全局共享 keyframes。
+ * 放在全局（非 module）以便各 .module.css 里 :global([data-analyzing]) 作用域的规则按名引用。
+ * 与既有缓动统一：cubic-bezier(0.22, 0.61, 0.36, 1)。 */
+
+/* 双环 spinner（对齐参考稿 2b） */
+@keyframes an-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 进度条流光扫过 */
+@keyframes an-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+/* 分区入场：模糊 + 上移 + 淡入 → 清晰归位 */
+@keyframes an-reveal-region {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+/* 行级入场：更轻的上移淡入，配 nth-child 错峰 delay */
+@keyframes an-reveal-row {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+/* 剧本段落逐行点亮 */
+@keyframes an-reveal-beat {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* HUD 文档卡浮动呼吸 */
+@keyframes an-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* spinner 外圈呼吸光晕 */
+@keyframes an-halo {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.08);
+  }
+}
+
+/* 骨架微光 */
+@keyframes an-shimmer {
+  0% {
+    background-position: -160px 0;
+  }
+  100% {
+    background-position: 220px 0;
+  }
+}
+
+/* 覆盖层整体淡入 / 淡出 */
+@keyframes an-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 系统「减弱动态」：控制器已直接跳到完成态，这里再兜底关掉所有演示入场动画 */
+@media (prefers-reduced-motion: reduce) {
+  [data-analyzing] * {
+    animation: none !important;
+  }
+}

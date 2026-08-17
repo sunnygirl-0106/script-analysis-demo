@@ -155,3 +155,32 @@
   color: var(--cloth);
   border-bottom-color: rgb(var(--cloth-rgb) / 0.4);
 }
+
+/* ── 解析中：剧本抬头 + 段落逐行淡入（仅演示态生效） ── */
+:global([data-analyzing]) .masthead {
+  animation: 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both global(an-reveal-beat);
+}
+:global([data-analyzing]) .beat {
+  animation: 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both global(an-reveal-beat);
+}
+:global([data-analyzing]) .beat:nth-child(2) {
+  animation-delay: 0.08s;
+}
+:global([data-analyzing]) .beat:nth-child(3) {
+  animation-delay: 0.18s;
+}
+:global([data-analyzing]) .beat:nth-child(4) {
+  animation-delay: 0.28s;
+}
+:global([data-analyzing]) .beat:nth-child(5) {
+  animation-delay: 0.38s;
+}
+:global([data-analyzing]) .beat:nth-child(6) {
+  animation-delay: 0.48s;
+}
+:global([data-analyzing]) .beat:nth-child(7) {
+  animation-delay: 0.58s;
+}
+:global([data-analyzing]) .beat:nth-child(n + 8) {
+  animation-delay: 0.68s;
+}

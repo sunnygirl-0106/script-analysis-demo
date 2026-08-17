@@ -8,7 +8,7 @@ export function Toast() {
 
   useEffect(() => {
     if (!toast) return
-    // 带撤销的 toast 多留一会儿，给用户点「撤销」的时间。
+    // 带操作按钮的 toast 多留一会儿，给用户点按钮的时间。
     const id = window.setTimeout(dismiss, toast.action ? 5200 : 3200)
     return () => window.clearTimeout(id)
   }, [toast, dismiss])

@@ -130,7 +130,7 @@ export function ReplaceEpisodeDialog({ episodeId, onClose }: { episodeId: string
             )}
 
             <div className={s.foot}>
-              可上传单集或完整剧本；如检测到多集内容，将在下一步选择用于替换第 {no} 集的剧集。
+              本操作仅替换第 {no} 集。若新内容包含多集，请改用工具栏的「导入新剧本」。
             </div>
             <div className={di.actions}>
               <button className={ui.btn} onClick={onClose}>
