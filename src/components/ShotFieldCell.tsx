@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import { useStore } from '../store/useStore'
 import type { Shot } from '../data/types'
 import { armEditSwallow, consumeEditSwallow } from '../services/editGuard'
+import { EntityText } from './EntityText'
+import { AtMentionPicker } from './AtMentionPicker'
 import s from './ShotFieldCell.module.css'
 
 // 分镜表里的行内可编辑字段格。点击就地弹出小弹窗（对齐设计稿）：
@@ -22,6 +24,8 @@ interface Props {
   rows?: number
   clamp?: 2 | 3 | 4
   placeholder?: string
+  /** 展示态把文中的资产名切成可 hover 的实体词（只「主要内容」开）。编辑态仍是纯 textarea。 */
+  entities?: boolean
 }
 
 // pill 弹窗固定宽；text 弹窗贴合单元格宽度就地覆盖。
@@ -56,6 +60,7 @@ export function ShotFieldCell({
   rows = 4,
   clamp = 3,
   placeholder = '待填写',
+  entities = false,
 }: Props) {
   const update = useStore((st) => st.updateShotField)
   const [open, setOpen] = useState(false)
@@ -82,6 +87,8 @@ export function ShotFieldCell({
       const t = e.target as Node
       if (wrapRef.current?.contains(t)) return
       if (popRef.current?.contains(t)) return
+      // @ 资产选择器走 portal，落在 popRef 之外——点它里面不算「点到外部」，否则选资产会误收编辑框。
+      if ((e.target as HTMLElement).closest?.('[data-atmention-pop]')) return
       armEditSwallow()
       commit()
       setOpen(false)
@@ -197,7 +204,9 @@ export function ShotFieldCell({
       ) : empty ? (
         <span className={s.dim}>{placeholder}</span>
       ) : (
-        <div className={clamp === 2 ? s.clamp2 : clamp === 4 ? s.clamp4 : s.clamp3}>{value}</div>
+        <div className={clamp === 2 ? s.clamp2 : clamp === 4 ? s.clamp4 : s.clamp3}>
+          {entities ? <EntityText text={value} shotId={shotId} /> : value}
+        </div>
       )}
 
       {open &&
@@ -259,7 +268,10 @@ export function ShotFieldCell({
                     if (e.key === 'Escape') setOpen(false)
                   }}
                 />
-                <div className={s.foot}>自动保存</div>
+                {entities && (
+                  <AtMentionPicker textareaRef={inputEl} value={draft} onChange={setDraft} shotId={shotId} />
+                )}
+                <div className={s.foot}>{entities ? '输入 @ 选择资产 · 自动保存' : '自动保存'}</div>
               </>
             )}
           </div>,

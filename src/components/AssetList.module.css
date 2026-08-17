@@ -299,11 +299,18 @@
 }
 .apprPopHead {
   flex: none;
+  display: flex;
+  align-items: center;
   padding: 9px 12px;
   font-size: 10.5px;
   letter-spacing: 0.4px;
   color: var(--t4);
   border-bottom: 1px solid var(--line2);
+}
+.apprPopHint {
+  margin-left: auto;
+  color: var(--acc);
+  letter-spacing: 0;
 }
 .apprPopBody {
   overflow-y: auto;
@@ -312,14 +319,39 @@
 .apprPopRow {
   display: flex;
   gap: 8px;
+  align-items: flex-start;
   padding: 6px 8px;
   border-radius: var(--rsm);
   font-size: 11.5px;
   color: var(--t3);
   font-variant-numeric: tabular-nums;
 }
-.apprPopRow:hover {
+.apprPopRow b {
+  flex: none;
+  line-height: 22px;
+}
+/* 可点场次：小胶囊，hover 提亮为主色 */
+.apprScenes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.apprSceneChip {
+  padding: 2px 9px;
+  border-radius: var(--rpill);
+  border: 1px solid var(--line);
   background: var(--bg3);
+  color: var(--t2);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  transition: 0.14s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.apprSceneChip:hover {
+  border-color: var(--acc-line);
+  background: var(--acc-bg);
+  color: var(--acc);
+  transform: translateY(-1px);
 }
 .apprPopRow b {
   flex: none;

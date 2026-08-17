@@ -57,6 +57,7 @@ export function ScriptPanel() {
   const sceneId = useStore((st) => st.selectedSceneId)
   const open = useStore((st) => st.scriptOpen)
   const toggle = useStore((st) => st.toggleScript)
+  const scriptW = useStore((st) => st.scriptW)
 
   const scene = project.scenes[sceneId]
   const assets = Object.values(project.assets)
@@ -77,9 +78,17 @@ export function ScriptPanel() {
     : 0
 
   return (
-    <div className={s.col}>
+    <div className={s.col} style={{ width: scriptW }}>
       <div className={s.head}>
         <span className={s.lbl}>本场剧本</span>
+        <span className={s.lock} tabIndex={0} aria-label="剧本原文不可编辑，如需修改请重新导入">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}>
+            <rect x="5" y="11" width="14" height="9" rx="2" />
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" strokeLinecap="round" />
+            <path d="M12 14.5v2" strokeLinecap="round" />
+          </svg>
+          <span className={s.tip}>剧本原文不可编辑，如需修改请重新导入</span>
+        </span>
         {scene && (
           <span className={s.meta}>
             {shotCount} 镜 · {fmtDuration(totalSec)}

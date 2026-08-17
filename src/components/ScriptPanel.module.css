@@ -51,6 +51,64 @@
   color: var(--t4);
   letter-spacing: 0.6px;
 }
+/* 只读锁：跟在标签右侧，hover / 聚焦弹出说明 */
+.head .lock {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--t5);
+  cursor: help;
+  outline: none;
+  transition: color 0.14s;
+}
+.head .lock:hover,
+.head .lock:focus-visible {
+  color: var(--t3);
+}
+.head .lock svg {
+  width: 13px;
+  height: 13px;
+  display: block;
+}
+.head .tip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: -6px;
+  width: max-content;
+  max-width: 208px;
+  padding: 7px 10px;
+  border-radius: var(--rsm);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--t2);
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.45);
+  opacity: 0;
+  transform: translateY(-3px);
+  pointer-events: none;
+  transition: opacity 0.16s, transform 0.16s;
+  z-index: 40;
+  white-space: normal;
+}
+.head .tip::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 11px;
+  width: 8px;
+  height: 8px;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  transform: rotate(45deg);
+}
+.head .lock:hover .tip,
+.head .lock:focus-visible .tip {
+  opacity: 1;
+  transform: none;
+}
 .head .meta {
   margin-left: auto;
   flex: none;

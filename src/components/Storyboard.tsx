@@ -25,6 +25,7 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
   const promptStates = useStore((st) => st.promptStates)
   const insertShot = useStore((st) => st.insertShot)
   const deleteShot = useStore((st) => st.deleteShot)
+  const flashShotIds = useStore((st) => st.flashShotIds)
   // 表尾「在末尾插入一镜」热区：悬停显形、停住几秒自动隐藏。
   const appendIns = useAutoHideHover()
 
@@ -109,6 +110,13 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
     }
   }, [timeline.length, gridW])
 
+  // 从「出场明细」跳转过来：把首个被高亮的镜头滚到视野中央。
+  useEffect(() => {
+    if (!flashShotIds.length) return
+    const el = scrollRef.current?.querySelector(`[data-shot-id="${flashShotIds[0]}"]`)
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [flashShotIds])
+
   return (
     <div className={s.pane}>
       <SceneSettingsDrawer />
@@ -147,6 +155,7 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
                 alt={i % 2 === 1}
                 readOnly={readOnly}
                 promptState={promptStates[shot.id] ?? 'pending'}
+                flash={flashShotIds.includes(shot.id)}
                 onHover={setHoverId}
                 onInsertAbove={readOnly ? undefined : () => insertShot(scene.id, i)}
                 onDelete={readOnly ? undefined : () => deleteShot(shot.id)}

@@ -6,6 +6,7 @@ import { TabBar } from '../components/TabBar'
 import { AssetList } from '../components/AssetList'
 import { SORT_LABEL, type AssetSort } from '../components/AssetOverviewBar'
 import { Storyboard } from '../components/Storyboard'
+import { PanelResizer } from '../components/PanelResizer'
 import { ScriptImportDialog } from '../components/ScriptImportDialog'
 import { ResplitSceneDialog } from '../components/ResplitSceneDialog'
 import { ConfirmPromptDialog } from '../components/ConfirmPromptDialog'
@@ -24,6 +25,10 @@ export function ScriptAnalysis() {
   const activeTab = useStore((st) => st.activeTab)
   const showToast = useStore((st) => st.showToast)
   const setStage = useStore((st) => st.setStage)
+  const scriptOpen = useStore((st) => st.scriptOpen)
+  const episodeW = useStore((st) => st.episodeW)
+  const scriptW = useStore((st) => st.scriptW)
+  const setPanelW = useStore((st) => st.setPanelW)
   // 分镜编辑不再整页锁死；能否改镜头字段 / 挂载由能力矩阵决定（analysis 阶段恒可编辑）。
   const readOnly = !useStore((st) => can(st.project, 'editShotFields'))
 
@@ -53,7 +58,11 @@ export function ScriptAnalysis() {
   return (
     <div className={s.page}>
       <EpisodeTree />
+      <PanelResizer getWidth={() => episodeW} onResize={(w) => setPanelW('episode', w)} />
       <ScriptPanel />
+      {scriptOpen && (
+        <PanelResizer getWidth={() => scriptW} onResize={(w) => setPanelW('script', w)} />
+      )}
 
       <div className={s.rcol}>
         <div className={s.toolbar}>

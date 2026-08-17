@@ -1,0 +1,23 @@
+/* 主要内容里的实体词：默认与正文完全一样（静态零色），
+   只有 hover 时才给一点交互色底 —— 用天青（交互色）而不是类目色，
+   因为此刻要表达的是「这两个是同一个东西」，不是「它属于哪一类」。 */
+.ment {
+  border-radius: 2px;
+  padding: 0 1px;
+  cursor: default;
+  transition: background 0.12s;
+}
+.ment:hover {
+  background: var(--acc-bg);
+  box-shadow: inset 0 -1px 0 var(--acc-line);
+}
+
+/* 「查看提示词」里的实体高亮：按类目上色（颜色由内联 style 给，取 KIND_COLOR），
+   角色紫 / 场景绿 / 道具黄 / 服装粉，与「出场的人和物」对应。再垫一条同色淡下划线补足对比。 */
+.markColor {
+  /* 不改字重/字距：背板要和上层透明 textarea 像素对齐，颜色 + 淡下划线已足够。 */
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}

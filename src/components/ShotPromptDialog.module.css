@@ -106,34 +106,64 @@
   border-color: var(--acc-line);
   color: var(--acc);
 }
-.textarea {
+/* 彩色背板 + 透明文字 textarea 叠层：查看与编辑都能看见按类目上色的实体名。
+   背板渲染彩色文字，textarea 文字透明、只留光标，两者共用同一套版心必须像素对齐。 */
+.editWrap {
+  position: relative;
   flex: 1;
   min-height: 46vh;
-  resize: none;
   background: var(--bg1);
+  overflow: hidden;
+}
+.backdrop,
+.textarea {
+  position: absolute;
+  inset: 0;
+  margin: 0;
   border: none;
-  color: var(--t1);
+  font-family: inherit;
   font-size: 12.5px;
   line-height: 1.85;
+  letter-spacing: normal;
   padding: 12px 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+.backdrop {
+  color: var(--t1);
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+.ph {
+  color: var(--t5);
+}
+.textarea {
+  resize: none;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--t1);
+  overflow: auto;
 }
 .textarea:focus {
   outline: none;
 }
-.textarea::placeholder {
-  color: var(--t5);
-  line-height: 1.85;
-}
 .textarea[readonly] {
-  color: var(--t3);
+  caret-color: transparent;
   cursor: default;
 }
 
+.foot {
+  margin-top: 8px;
+  font-size: 10.5px;
+  color: var(--t5);
+}
 .actions {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 .spacer {
   flex: 1;

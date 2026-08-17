@@ -64,6 +64,7 @@ export function EpisodeTree() {
   const deleteScene = useStore((st) => st.deleteScene)
   const deleteEpisode = useStore((st) => st.deleteEpisode)
   const usageIndex = useStore((st) => st.usageIndex())
+  const episodeW = useStore((st) => st.episodeW)
   const readOnly = !useStore((st) => can(st.project, 'editScript'))
 
   const [menuEp, setMenuEp] = useState<string | null>(null)
@@ -133,7 +134,7 @@ export function EpisodeTree() {
       : null
 
   return (
-    <div className={s.side}>
+    <div className={s.side} style={{ width: episodeW }}>
       <div className={s.head}>
         集 · 场
         <span className={s.rt}>

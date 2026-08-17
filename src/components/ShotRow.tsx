@@ -10,6 +10,7 @@ import {
   type Shot,
 } from '../data/types'
 import { chipClass, KIND_LABEL } from './entity'
+import { useEntityLit } from './EntityText'
 import { mountIssues } from '../services/completeness'
 import { isLongShot } from '../services/duration'
 import { useAutoHideHover } from '../hooks/useAutoHideHover'
@@ -25,6 +26,76 @@ function fmt(sec: number): string {
   return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`
 }
 
+/**
+ * 角色卡（着装角色 / 角色兜底）。单独成组件是为了让它能自己订阅高亮 ——
+ * hover「主要内容」里的角色名时只有这一张卡重渲染，不会把整张分镜表刷一遍。
+ */
+function CastPill({
+  m,
+  shotId,
+  chName,
+  costume,
+  costumeWarn,
+  readOnly,
+  onRemove,
+}: {
+  m: MountRef
+  shotId: string
+  chName: string
+  costume: string
+  costumeWarn?: boolean
+  readOnly: boolean
+  onRemove: (e: MouseEvent) => void
+}) {
+  const lit = useEntityLit(m.assetId, shotId)
+  return (
+    <span className={[s.castPill, lit ? s.mountLit : ''].join(' ')}>
+      <span className={s.roleDot} />
+      <span className={s.castName}>{chName}</span>
+      <span
+        className={s.castCostume}
+        style={costumeWarn ? { color: 'var(--amber)' } : undefined}
+        title={costumeWarn ? '该角色还没有选择造型' : undefined}
+      >
+        {costume}
+      </span>
+      {!readOnly && (
+        <button className={s.castX} onClick={onRemove} title="从本镜头移除">
+          ✕
+        </button>
+      )}
+    </span>
+  )
+}
+
+/** 场景 / 道具 chip。同上，自己订阅高亮。 */
+function MountChip({
+  m,
+  shotId,
+  name,
+  readOnly,
+  onRemove,
+}: {
+  m: MountRef
+  shotId: string
+  name: string
+  readOnly: boolean
+  onRemove: (e: MouseEvent) => void
+}) {
+  const lit = useEntityLit(m.assetId, shotId)
+  return (
+    <span className={[ui.chip, chipClass(m.kind), s.chipHover, lit ? s.mountLit : ''].join(' ')}>
+      <span className={ui.odot} />
+      {name}
+      {!readOnly && (
+        <button className={[ui.chipX, s.chipHoverX].join(' ')} onClick={onRemove} title="从本镜头移除">
+          ✕
+        </button>
+      )}
+    </span>
+  )
+}
+
 interface Props {
   shot: Shot
   startAt: number
@@ -33,6 +104,8 @@ interface Props {
   alt: boolean
   readOnly: boolean
   promptState: PromptState
+  // 从「出场明细」跳转过来时短暂泛光。
+  flash?: boolean
   onHover: (id: string | null) => void
   // 悬停本行上沿 → 在本行之前插入一镜。只读时为 undefined，不渲染插入条。
   onInsertAbove?: () => void
@@ -40,7 +113,7 @@ interface Props {
   onDelete?: () => void
 }
 
-export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptState, onHover, onInsertAbove, onDelete }: Props) {
+export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptState, flash, onHover, onInsertAbove, onDelete }: Props) {
   const assets = useStore((st) => st.project.assets)
   const addMount = useStore((st) => st.addMount)
   const removeMount = useStore((st) => st.removeMount)
@@ -91,31 +164,26 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
       const chName = look ? assets[look.characterId]?.name ?? '角色信息不可用' : '该内容已移除'
       const cos = look ? look.costumeIds.map((id) => assets[id]?.name).filter(Boolean) : []
       return (
-        <span className={s.castPill}>
-          <span className={s.roleDot} />
-          <span className={s.castName}>{chName}</span>
-          <span className={s.castCostume}>{cos.length ? cos.join(' · ') : '默认着装'}</span>
-          {!readOnly && (
-            <button className={s.castX} onClick={remove(m.assetId)} title="从本镜头移除">
-              ✕
-            </button>
-          )}
-        </span>
+        <CastPill
+          m={m}
+          shotId={shot.id}
+          chName={chName}
+          costume={cos.length ? cos.join(' · ') : '默认着装'}
+          readOnly={readOnly}
+          onRemove={remove(m.assetId)}
+        />
       )
     }
     return (
-      <span className={s.castPill}>
-        <span className={s.roleDot} />
-        <span className={s.castName}>{nameOf(m)}</span>
-        <span className={s.castCostume} style={{ color: 'var(--amber)' }} title="该角色还没有选择造型">
-          ⚠ 请选择角色造型
-        </span>
-        {!readOnly && (
-          <button className={s.castX} onClick={remove(m.assetId)} title="从本镜头移除">
-            ✕
-          </button>
-        )}
-      </span>
+      <CastPill
+        m={m}
+        shotId={shot.id}
+        chName={nameOf(m)}
+        costume="⚠ 请选择角色造型"
+        costumeWarn
+        readOnly={readOnly}
+        onRemove={remove(m.assetId)}
+      />
     )
   }
 
@@ -183,10 +251,12 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
 
   return (
     <div
+      data-shot-id={shot.id}
       className={[
         s.row,
         alt ? s.rowAlt : '',
         active ? s.rowOn : '',
+        flash ? s.rowFlash : '',
         promptState === 'stale' ? s.rowStale : '',
         removing ? s.rowRemoving : '',
       ].join(' ')}
@@ -296,19 +366,14 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
               <div className={s.groupTitle}>{KIND_LABEL[g.kind]}</div>
               <div className={s.groupItems}>
                 {g.items.map((m) => (
-                  <span key={m.assetId} className={[ui.chip, chipClass(m.kind), s.chipHover].join(' ')}>
-                    <span className={ui.odot} />
-                    {nameOf(m)}
-                    {!readOnly && (
-                      <button
-                        className={[ui.chipX, s.chipHoverX].join(' ')}
-                        onClick={remove(m.assetId)}
-                        title="从本镜头移除"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </span>
+                  <MountChip
+                    key={m.assetId}
+                    m={m}
+                    shotId={shot.id}
+                    name={nameOf(m)}
+                    readOnly={readOnly}
+                    onRemove={remove(m.assetId)}
+                  />
                 ))}
                 {!readOnly && (
                   <span className={s.addSlot}>
@@ -354,6 +419,7 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
         hint="这一镜演什么，取材自剧本原文"
         rows={5}
         clamp={4}
+        entities
       />
       <ShotFieldCell
         shotId={shot.id}

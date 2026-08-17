@@ -1,0 +1,63 @@
+/* @ 引用选择器弹层。沿用挂载选择器（MountPicker）的视觉与结构，
+   只是没有独立搜索框——@ 后面输入的字就是搜索词。z-index 高于编辑弹窗（60）。 */
+.pop {
+  position: fixed;
+  z-index: 70;
+  max-height: 340px;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--ctrl);
+  border-radius: 12px;
+  box-shadow: 0 18px 44px rgb(0 0 0 / 0.65);
+  overflow: hidden;
+}
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 6px;
+}
+.group {
+  padding: 2px 0 6px;
+}
+.groupLabel {
+  padding: 5px 8px;
+  font-size: 10px;
+  letter-spacing: 0.6px;
+}
+.opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 9px;
+  border-radius: var(--rpill);
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--t3);
+  transition: background 0.18s, transform 0.18s;
+}
+.opt:hover {
+  background: var(--bg3);
+  transform: translateX(2px);
+  color: var(--t1);
+}
+.note {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--t4);
+  white-space: nowrap;
+}
+.empty {
+  padding: 16px 12px;
+  font-size: 11.5px;
+  color: var(--t5);
+  text-align: center;
+}
+.foot {
+  flex: none;
+  padding: 9px 12px;
+  border-top: 1px solid var(--line);
+  font-size: 10.5px;
+  color: var(--t4);
+}

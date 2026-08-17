@@ -1,0 +1,24 @@
+/* 面板拖拽把手：夹在两块面板之间，压在分割线上。6px 命中区，1px 视觉线。 */
+.handle {
+  flex: none;
+  width: 6px;
+  margin: 0 -3px; /* 抵消宽度，视觉上仍压在原分割线位置，不额外占布局 */
+  z-index: 5;
+  cursor: col-resize;
+  display: flex;
+  justify-content: center;
+  align-self: stretch;
+}
+.line {
+  width: 1px;
+  height: 100%;
+  background: transparent;
+  transition: background 0.15s;
+}
+.handle:hover .line {
+  background: rgb(var(--acc-rgb) / 0.45);
+}
+.lineOn {
+  background: rgb(var(--acc-rgb) / 0.7) !important;
+  box-shadow: 0 0 8px rgb(var(--acc-rgb) / 0.4);
+}

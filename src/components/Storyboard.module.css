@@ -190,6 +190,21 @@
 .rowStale {
   box-shadow: inset 3px 0 0 var(--amber);
 }
+/* 从「出场明细」跳转过来：泛一下天青光后消退（keyframes 定义在本模块内，避免被 CSS Modules 改名） */
+.rowFlash {
+  animation: flashPulse 2.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@keyframes flashPulse {
+  0%,
+  20% {
+    background: rgb(var(--acc-rgb) / 0.16) !important;
+    box-shadow: inset 3px 0 0 var(--acc);
+  }
+  100% {
+    background: transparent;
+    box-shadow: inset 3px 0 0 transparent;
+  }
+}
 
 /* ① 镜头 · 时长：竖排「大号镜号 / 时长步进 / 小字时间范围」 */
 .cNo {
@@ -669,4 +684,15 @@
 }
 :global([data-analyzing]) .row:nth-child(n + 11) {
   animation-delay: 0.7s;
+}
+
+/* ── hover 联动高亮 ────────────────────────────────────────────────
+   hover「主要内容」里的资产名 → 「出场的人和物」里对应那一项亮起来。
+   用天青（交互色）而不是类目色：此刻要表达的是「这两个是同一个东西」，
+   不是「它属于哪一类」——类目信息已经由 chip 上的小圆点承担了。
+   高亮只发生在这一列，左侧「本场剧本」面板不参与（那是彩色区，自己已在标实体）。 */
+.mountLit {
+  border-color: var(--acc-line) !important;
+  background: var(--acc-bg) !important;
+  box-shadow: 0 0 0 1px rgb(var(--acc-rgb) / 0.06);
 }

@@ -1,6 +1,6 @@
 // Zustand：一个 project + 所有动作。不做持久化，刷新回到初始状态。
 import { create } from 'zustand'
-import type { MountRef, Project, PromptState, Scene, Shot, ShotDensity, Stage } from '../data/types'
+import type { Look, MountRef, Project, PromptState, Scene, Shot, ShotDensity, Stage } from '../data/types'
 import { seedProject } from '../data/seed'
 import { episode2Payload } from '../data/seedEpisode2'
 import { appendEpisode } from '../services/incremental'
@@ -11,6 +11,7 @@ import { can } from '../services/capability'
 import { buildUsageIndex, type AssetUsage } from '../services/appearanceIndex'
 import { deliverFirstBatch } from '../services/staleness'
 import { sceneDuration } from '../services/timeline'
+import { findDuplicate, PROSE_FIELDS, scanRenameImpact } from '../services/mentions'
 
 // 出场索引：按 project 引用记忆化。project 是不可变替换的，引用变才重算（决策 2.3）。
 let _idxProject: Project | null = null
@@ -58,7 +59,21 @@ interface UIState {
   analysisPhase: AnalysisPhase
   // 解析中已揭示到第几阶段（0=读取，1=集场，2=剧本，3=分镜，4=资产）。控制器递增。
   revealStage: number
+  // ── 可拖拽面板宽度：集·场目录 / 本场剧本（展开时）。右侧大区吃剩余空间。──
+  episodeW: number
+  scriptW: number
+  // 从「出场明细」跳转过来时，短暂高亮的镜头 id（分镜表里泛一下光后自动消退）。
+  flashShotIds: string[]
+  /** 当前 hover 到的「某镜的某个实体词」。hover 主要内容里的名字时写入。
+   *  带 shotId 是为了把高亮**限定在本行** —— 一个角色往往整场每镜都在，
+   *  不限定的话 hover 一个名字会让全场的角色卡一起亮，那就不是联动而是噪音了。
+   *  另外它只驱动「出场的人和物」这一列，不驱动左侧剧本原文面板（那是彩色区，自己已在标实体）。 */
+  hoverMention: { assetId: string; shotId: string } | null
 }
+
+// 面板宽度夹取范围。
+export const PANEL_MIN = { episode: 150, script: 200 }
+export const PANEL_MAX = { episode: 380, script: 620 }
 
 interface StoreState extends UIState {
   project: Project
@@ -80,6 +95,8 @@ interface StoreState extends UIState {
   setPage: (page: Stage) => void
   selectScene: (sceneId: string) => void
   setTab: (tab: Tab) => void
+  // 从资产「出场明细」点某集某场：跳到该场的分镜表，并高亮该资产出现的镜头。
+  jumpToAppearance: (assetId: string, episodeNo: number, sceneNo: number) => void
   toggleScript: () => void
   setScriptOpen: (open: boolean) => void
   openSceneSettings: () => void
@@ -92,6 +109,8 @@ interface StoreState extends UIState {
   startUpload: () => void
   setAnalysisPhase: (phase: AnalysisPhase) => void
   setRevealStage: (stage: number) => void
+  // 拖拽调整面板宽度（自动夹取到 PANEL_MIN/MAX）。
+  setPanelW: (which: 'episode' | 'script', width: number) => void
   // 「重新演示」：复位到空态，并把工作区视图复位（第 1 场 / 分镜 tab / 收起剧本）。
   replayDemo: () => void
 
@@ -120,6 +139,22 @@ interface StoreState extends UIState {
   updateSceneTrack: (sceneId: string, patch: Partial<Project['scenes'][string]['track']>) => void
   updateAssetPrompt: (assetId: string, text: string) => void
   renameAsset: (assetId: string, name: string) => void
+  /**
+   * 改名 + 全链路同步。资产表就地改完名字、回车/失焦后弹「确认」，用户勾完再调这里。
+   *
+   * 两件事性质完全不同，所以分开做：
+   *   · 引用侧（挂载 / 造型名 / 出场统计）—— 只改 assets[id].name 一个字段就自动跟随，不问用户；
+   *   · 文本侧（散文字段 / 提示词）—— 按字面替换，由 opts 决定替不替。
+   *
+   * 关键口径：**改名不是视觉变更**。勾了替换的镜头保持 ready，已出的图不作废；
+   * 只有「不替换」才真的不一致（提示词里的旧名指不到任何资产），那些镜头才标待更新。
+   */
+  renameAssetWithSync: (
+    assetId: string,
+    name: string,
+    opts: { prose: boolean; prompts: boolean },
+  ) => void
+  setHoverMention: (m: { assetId: string; shotId: string } | null) => void
   toggleAssetExcluded: (assetId: string) => void
   appendEpisode2: () => void
   replaceScript: (payload: ScriptPayload) => void
@@ -197,6 +232,10 @@ export const useStore = create<StoreState>((set, get) => {
   // 进站默认空态：先看到空剧本页，点「导入剧本」才开始拆解演示。
   analysisPhase: 'empty',
   revealStage: 0,
+  episodeW: 192,
+  scriptW: 308,
+  flashShotIds: [],
+  hoverMention: null,
 
   currentScene: () => get().project.scenes[get().selectedSceneId],
   usageIndex: () => usageIndexOf(get().project),
@@ -208,6 +247,35 @@ export const useStore = create<StoreState>((set, get) => {
   // 切场时关掉场级设定抽屉（抽屉里的内容属于上一场）。
   selectScene: (sceneId) => set({ selectedSceneId: sceneId, sceneSettingsOpen: false }),
   setTab: (activeTab) => set({ activeTab }),
+  jumpToAppearance: (assetId, episodeNo, sceneNo) => {
+    const proj = get().project
+    const ep = proj.episodes.find((e) => e.no === episodeNo)
+    if (!ep) return
+    const sceneId = ep.sceneIds.find((id) => proj.scenes[id]?.no === sceneNo)
+    if (!sceneId) return
+    const scene = proj.scenes[sceneId]
+    if (!scene) return
+    // 本场里「涉及该资产」的镜头：直接挂载，或经着装角色(look)向上聚合到角色/服装（与出场索引同口径）。
+    const involves = (shot: Shot) =>
+      shot.mounts.some((m) => {
+        if (m.assetId === assetId) return true
+        const a = proj.assets[m.assetId]
+        if (a && a.kind === 'look') {
+          const lk = a as Look
+          return lk.characterId === assetId || lk.costumeIds.includes(assetId)
+        }
+        return false
+      })
+    const ids = scene.shotIds.filter((id) => {
+      const sh = proj.shots[id]
+      return sh && involves(sh)
+    })
+    set({ selectedSceneId: sceneId, activeTab: 'shot', sceneSettingsOpen: false, flashShotIds: ids })
+    // 高亮几秒后自动消退；若期间又发起新的跳转（ids 引用变了）则不误清。
+    setTimeout(() => {
+      if (get().flashShotIds === ids) set({ flashShotIds: [] })
+    }, 2600)
+  },
   toggleScript: () => set((s) => ({ scriptOpen: !s.scriptOpen })),
   setScriptOpen: (scriptOpen) => set({ scriptOpen }),
   openSceneSettings: () => set({ sceneSettingsOpen: true }),
@@ -222,6 +290,10 @@ export const useStore = create<StoreState>((set, get) => {
   startUpload: () => set({ analysisPhase: 'uploading', revealStage: 0 }),
   setAnalysisPhase: (analysisPhase) => set({ analysisPhase }),
   setRevealStage: (revealStage) => set({ revealStage }),
+  setPanelW: (which, width) => {
+    const w = Math.round(Math.min(PANEL_MAX[which], Math.max(PANEL_MIN[which], width)))
+    set(which === 'episode' ? { episodeW: w } : { scriptW: w })
+  },
   replayDemo: () =>
     set({
       analysisPhase: 'empty',
@@ -528,6 +600,105 @@ export const useStore = create<StoreState>((set, get) => {
       return {
         project: { ...s.project, assets: { ...s.project.assets, [assetId]: { ...a, name: trimmed } } },
       }
+    })
+  },
+
+  setHoverMention: (m) => {
+    const cur = get().hoverMention
+    if (cur === m) return
+    if (cur && m && cur.assetId === m.assetId && cur.shotId === m.shotId) return
+    set({ hoverMention: m })
+  },
+
+  // 改名 + 全链路同步。声明见接口处的长注释。
+  renameAssetWithSync: (assetId, name, opts) => {
+    const st0 = get()
+    if (!can(st0.project, 'editAssetName')) return
+    const asset = st0.project.assets[assetId]
+    if (!asset) return
+    const next = name.trim()
+    const old = asset.name
+    if (!next || next === old) return
+    // 重名一律拦在这里（本版不做「合并为同一角色」）。
+    if (findDuplicate(st0.project.assets, assetId, next)) {
+      get().showToast(`已存在同名内容「${next}」，名称不能重复`)
+      return
+    }
+
+    // 撤销快照：名字与所有文本替换一起回滚。改名影响面大，撤销比多给几个复选框有用。
+    const snapProject = st0.project
+    const snapStates = st0.promptStates
+    const impact = scanRenameImpact(st0.project, st0.promptStates, assetId, next)
+
+    set((s) => {
+      // ① 引用侧：一个字段。
+      const assets = { ...s.project.assets, [assetId]: { ...s.project.assets[assetId]!, name: next } }
+
+      // 角色造型名跟随。lookName() 只在 Look.name 为空时才从「角色 · 服装」派生，
+      // AI 拆解通常会给一个显式名（「苏可 · 宽松连帽卫衣」），那是一份**存下来的字符串**，
+      // 不会自己跟着角色名变 —— 所以这里要把它里面的旧名换掉。
+      // 放在引用侧（不受勾选项控制）：弹窗的「自动更新」承诺了造型名会跟随，就得真的跟随。
+      for (const id of Object.keys(assets)) {
+        const l = assets[id]!
+        if (l.kind !== 'look') continue
+        const related = l.characterId === assetId || l.costumeIds.includes(assetId)
+        if (!related || !l.name?.includes(old)) continue
+        assets[id] = { ...l, name: l.name.split(old).join(next) }
+      }
+
+      // ② 文本侧。
+      const shots = { ...s.project.shots }
+      const promptStates = { ...s.promptStates }
+      for (const id of Object.keys(shots)) {
+        const shot = shots[id]!
+        const patch: Record<string, string> = {}
+
+        if (opts.prose) {
+          for (const { field } of PROSE_FIELDS) {
+            const text = String(shot[field] ?? '')
+            if (!text.includes(old)) continue
+            patch[field as string] = text.split(old).join(next)
+          }
+        }
+
+        if (opts.prompts) {
+          // 提示词文本对所有镜头都替换（含 pending）—— 否则 pending 镜头一旦生成，
+          // 又会把旧名字带回来。计数只给用户看得见的那些，见 scanRenameImpact。
+          if (shot.imagePrompt?.includes(old)) {
+            patch.imagePrompt = shot.imagePrompt.split(old).join(next)
+          }
+          if (shot.videoPrompt?.includes(old)) {
+            patch.videoPrompt = shot.videoPrompt.split(old).join(next)
+          }
+        } else {
+          // 不替换 = 提示词里的旧名指不到任何资产，这才是真的不一致 → 标待更新。
+          const state = promptStates[id] ?? 'pending'
+          const hit = shot.imagePrompt?.includes(old) || shot.videoPrompt?.includes(old)
+          if (hit && state === 'ready') promptStates[id] = 'stale'
+        }
+
+        if (Object.keys(patch).length) shots[id] = { ...shot, ...patch }
+      }
+
+      // ③ 资产自己的生图提示词。
+      // 注意**不动 promptRevision** —— 名字是标签不是视觉属性，不该让下游已出的图变「已过期」。
+      if (opts.prompts) {
+        for (const id of Object.keys(assets)) {
+          const a = assets[id]!
+          if (!a.imagePrompt?.includes(old)) continue
+          assets[id] = { ...a, imagePrompt: a.imagePrompt.split(old).join(next) }
+        }
+      }
+
+      return { project: { ...s.project, assets, shots }, promptStates }
+    })
+
+    const bits = [`已重命名「${old}」→「${next}」`]
+    if (opts.prose && impact.prose.length) bits.push(`正文替换 ${impact.prose.length} 处`)
+    if (opts.prompts && impact.shotPrompts.length) bits.push(`提示词替换 ${impact.shotPrompts.length} 镜`)
+    get().showToast(bits.join('，'), {
+      label: '撤销',
+      run: () => set({ project: snapProject, promptStates: snapStates }),
     })
   },
 

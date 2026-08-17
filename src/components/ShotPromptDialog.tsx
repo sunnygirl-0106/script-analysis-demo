@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store/useStore'
 import type { Shot } from '../data/types'
+import { EntityText } from './EntityText'
+import { AtMentionPicker } from './AtMentionPicker'
 import ui from '../styles/ui.module.css'
 import s from './ShotPromptDialog.module.css'
 
@@ -34,6 +36,8 @@ export function ShotPromptDialog({
   const [imgDirty, setImgDirty] = useState(false)
   const [vidDirty, setVidDirty] = useState(false)
   const [model, setModel] = useState(MODELS[0])
+  const imgRef = useRef<HTMLTextAreaElement>(null)
+  const vidRef = useRef<HTMLTextAreaElement>(null)
 
   // 生成完成（generating → ready）→ 把结果揭示进两个框。
   const prev = useRef(promptState)
@@ -96,6 +100,7 @@ export function ShotPromptDialog({
       key: 'image' as const,
       label: '画面提示词',
       value: img,
+      ref: imgRef,
       set: (v: string) => {
         setImg(v)
         setImgDirty(true)
@@ -106,6 +111,7 @@ export function ShotPromptDialog({
       key: 'video' as const,
       label: '视频提示词',
       value: vid,
+      ref: vidRef,
       set: (v: string) => {
         setVid(v)
         setVidDirty(true)
@@ -136,18 +142,42 @@ export function ShotPromptDialog({
                   复制
                 </button>
               </header>
-              <textarea
-                className={s.textarea}
-                value={f.value}
-                readOnly={readOnly}
-                autoFocus={f.key === focus}
-                spellCheck={false}
-                placeholder={f.placeholder}
-                onChange={(e) => f.set(e.target.value)}
-              />
+              {/* 彩色背板（按类目上色）+ 透明文字 textarea 叠在一起：查看与编辑都保持颜色。 */}
+              <div className={s.editWrap}>
+                <div className={s.backdrop} aria-hidden>
+                  {f.value ? (
+                    <EntityText text={f.value} variant="mark" />
+                  ) : (
+                    <span className={s.ph}>{f.placeholder}</span>
+                  )}
+                  {/* 末尾换行时补一个占位，保证背板与 textarea 行高一致 */}
+                  {f.value.endsWith('\n') && '​'}
+                </div>
+                <textarea
+                  ref={f.ref}
+                  className={s.textarea}
+                  value={f.value}
+                  readOnly={readOnly}
+                  autoFocus={f.key === focus}
+                  spellCheck={false}
+                  onChange={(e) => f.set(e.target.value)}
+                  onScroll={(e) => {
+                    const b = (e.currentTarget.previousElementSibling as HTMLElement) ?? null
+                    if (b) {
+                      b.scrollTop = e.currentTarget.scrollTop
+                      b.scrollLeft = e.currentTarget.scrollLeft
+                    }
+                  }}
+                />
+                {!readOnly && (
+                  <AtMentionPicker textareaRef={f.ref} value={f.value} onChange={f.set} shotId={shot.id} />
+                )}
+              </div>
             </section>
           ))}
         </div>
+
+        {!readOnly && <div className={s.foot}>输入 @ 选择资产 · 自动保存</div>}
 
         <div className={s.actions}>
           <label className={s.modelPick}>
