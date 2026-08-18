@@ -2,7 +2,7 @@
 // 业务规则的断言。测试里的中文描述就是产品规则本身，不要为了通过测试去改测试。
 //
 // 【版本追溯约定】
-//   · 规则版本对应《剧本分析-技术规划-v2.md》。当前基线：v1.2 · 2026-08-12。
+//   · 规则版本对应《剧本分析-技术规划-v2.md》。当前基线：v1.3 · 2026-08-15。
 //   · 每条规则（describe）标 since / updated；每个断言行尾挂版本标记。
 //   · 规则改动时把 updated 与受影响断言标记抬到新版本，git diff 即可定位。
 // ════════════════════════════════════════════════════════════════════════
@@ -359,9 +359,7 @@ describe('R11 着装角色', () => {
   })
 
   it('④ editLookBinding 恒假，store 不暴露修改 characterId/costumeIds 的 action', () => {
-    // v1.2
-    const p = fresh()
-    expect(can(p, 'editLookBinding')).toBe(false)
+    // v1.2 —— editLookBinding 恒假本身在 R6 已验，这里只测 store 不暴露改绑定的 action
     const actions = Object.keys(useStore.getState())
     expect(actions.some((k) => /lookbinding|characterid|costumeid/i.test(k))).toBe(false)
   })

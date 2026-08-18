@@ -22,9 +22,6 @@ export const ASSET_TAB_AT: { tab: Tab; at: number }[] = [
 /** 全部揭示完成、切到真实完整页的时刻（ms）。 */
 export const DONE_AT = 12000
 
-/** 最大 reveal 阶段号（含 0）。 */
-export const MAX_STAGE = STAGE_AT.length - 1
-
 /** 进度条在各阶段的目标百分比（CSS 平滑过渡到该宽度）。 */
 export const STAGE_PROGRESS = [6, 26, 46, 68, 88] as const
 

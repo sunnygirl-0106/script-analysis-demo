@@ -143,7 +143,3 @@ export const CAMERA_MOVES = [
   '定镜', '慢推', '快速推近', '拉远', '跟随', '低角度跟随',
   '手持', '摇摄', 'Rack Focus', '跳切',
 ] as const
-
-// 提示词字段固定顺序（景别 → 焦段光圈 → 运镜 → 色温 → 色调），模型对顺序敏感。
-export type ShotSize = (typeof SHOT_SIZES)[number]
-export type CameraMove = (typeof CAMERA_MOVES)[number]

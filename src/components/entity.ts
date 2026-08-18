@@ -46,9 +46,6 @@ export const KIND_DOT: Record<AssetKind, string> = {
   look: 'var(--role-dim)',
 }
 
-// 四类基础资产的固定顺序（资产 tab / 概览遍历用）。
-export const KIND_ORDER: AssetKind[] = ['character', 'costume', 'location', 'prop']
-
 // 镜头可挂载的类目（挂载选择器候选）：着装角色 / 场景 / 道具，外加 character 兜底（选择器不主动列）。
 // 服装不参与挂载（决策 3b）。
 export const MOUNT_KINDS: MountableKind[] = ['look', 'location', 'prop']
