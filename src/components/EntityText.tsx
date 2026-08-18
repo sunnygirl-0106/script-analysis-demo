@@ -1,7 +1,6 @@
 import { Fragment, useMemo } from 'react'
 import { useStore } from '../store/useStore'
 import { relatedAssetIds, splitMentions } from '../services/mentions'
-import { KIND_COLOR } from './entity'
 import s from './EntityText.module.css'
 
 /**
@@ -15,9 +14,9 @@ import s from './EntityText.module.css'
  *   3. **单向**：hover 散文里的名字 → 点亮对应挂载项。反方向（hover chip → 点亮正文）
  *      故意没做，避免高亮在两个区域来回跳。
  *
- * variant='mark'（「查看提示词」用）—— 纯静态、按类目上色：角色紫 / 场景绿 / 道具黄 / 服装粉，
- *   与「出场的人和物」的配色对应上。不订阅 store、不接 hover 联动（弹窗是模态层，点亮背后 chip 无意义），
- *   只是让读者一眼认出「哪些词是角色/场景/道具，各属哪一类」。
+ * variant='mark'（「查看提示词」用）—— 纯静态、**统一一个色**（交互色天青 --acc）：
+ *   提示词一段话里角色/场景/道具全上类目色会又紫又黄又粉太花，这里只需「一眼认出这是资产名」，
+ *   不需要再区分类目（类目由「出场的人和物」那一列承担）。不订阅 store、不接 hover 联动。
  */
 export function EntityText({
   text,
@@ -35,11 +34,7 @@ export function EntityText({
       {parts.map((p, i) =>
         p.assetId ? (
           variant === 'mark' ? (
-            <span
-              key={i}
-              className={s.markColor}
-              style={{ color: KIND_COLOR[assets[p.assetId]?.kind ?? 'character'] }}
-            >
+            <span key={i} className={s.markColor}>
               {p.text}
             </span>
           ) : (

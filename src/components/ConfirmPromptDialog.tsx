@@ -7,6 +7,7 @@ import {
   shotIdsOfScope,
   type PromptScope,
 } from '../services/promptScope'
+import { PencilIcon } from './PencilIcon'
 import d from './ScriptImportDialog.module.css'
 import c from './ConfirmPromptDialog.module.css'
 
@@ -284,7 +285,7 @@ export function ConfirmPromptDialog({
                           </span>
                           {isEdited && (
                             <span className={c.editTag} title="提示词经过手动编辑">
-                              ✎ 手动
+                              <PencilIcon /> 手动
                             </span>
                           )}
                           <span className={[c.rowCaret, isExpanded ? c.caretOpen : ''].join(' ')}>

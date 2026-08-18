@@ -12,10 +12,11 @@
   box-shadow: inset 0 -1px 0 var(--acc-line);
 }
 
-/* 「查看提示词」里的实体高亮：按类目上色（颜色由内联 style 给，取 KIND_COLOR），
-   角色紫 / 场景绿 / 道具黄 / 服装粉，与「出场的人和物」对应。再垫一条同色淡下划线补足对比。 */
+/* 「查看提示词」里的实体高亮：统一用交互色天青（--acc），不再按类目上色——
+   一段提示词里全上类目色太花，这里只要「一眼认出是资产名」。垫一条同色淡下划线补对比。
+   不改字重/字距：背板要和上层透明 textarea 像素对齐。 */
 .markColor {
-  /* 不改字重/字距：背板要和上层透明 textarea 像素对齐，颜色 + 淡下划线已足够。 */
+  color: var(--acc);
   text-decoration: underline;
   text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
   text-decoration-thickness: 1px;

@@ -9,9 +9,10 @@ import s from './RenameAssetDialog.module.css'
 /**
  * 改名确认弹窗。资产表里就地改完名字、回车 / 失焦之后弹出来。
  *
- * 大标题固定就是「确认」——「重命名角色」是句废话：用户刚从那一行点进来，
- * 旧名 → 新名也摆在眼前。标题让给「确认」之后，这个弹窗的语气就从
+ * 大标题固定是「确认更改」——「重命名角色」是句废话：用户刚从那一行点进来，
+ * 旧名 → 新名也摆在眼前。标题落在「确认更改」之后，这个弹窗的语气就从
  * 「你在做一次改名」变成了「你要不要顺带把下面这些也改掉」——后者才是它真正的问题。
+ *（不用「同步替换」当标题：只重命名不勾替换的路径也存在，那时叫「同步替换」就名不副实。）
  * 类目词（角色 / 场景 / 道具 / 服装）下沉到副文案与勾选项说明里，跟着资产类型走。
  *
  * 只给两个勾，不给四个：用户不会想「主要内容换、对白不换」，拆细是假控制权。
@@ -60,7 +61,7 @@ export function RenameAssetDialog({
     <div className={d.overlay} onClick={onClose}>
       <div className={s.dialog} onClick={(e) => e.stopPropagation()}>
         <div className={s.head}>
-          <div className={s.title}>确认</div>
+          <div className={s.title}>确认更改</div>
           <div className={s.desc}>同一个{kind}在后续环节会继续使用新的名称。</div>
         </div>
 

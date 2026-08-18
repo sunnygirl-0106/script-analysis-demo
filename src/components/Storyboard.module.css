@@ -67,7 +67,7 @@
   /* 列宽由 JS 通过 --cols 变量下发，可被用户拖拽调整；下面是兜底默认 */
   grid-template-columns: var(
     --cols,
-    96px 88px 120px 230px minmax(240px, 1fr) 140px 220px 130px 150px
+    96px 88px 120px 252px minmax(240px, 1fr) 140px 220px 130px 150px
   );
 }
 
@@ -186,9 +186,10 @@
 .rowOn {
   background: var(--row-on-bg) !important;
 }
-/* 字段改动后落回 stale：左侧一道琥珀，提醒该镜提示词待重新生成 */
+/* 字段改动后落回 stale：左侧一道琥珀，提醒该镜提示词待重新生成。
+   用淡描边色（--amber-line，0.5）+ 2px，弱提示即可，不必抢眼。 */
 .rowStale {
-  box-shadow: inset 3px 0 0 var(--amber);
+  box-shadow: inset 2px 0 0 var(--amber-line);
 }
 /* 从「出场明细」跳转过来：泛一下天青光后消退（keyframes 定义在本模块内，避免被 CSS Modules 改名） */
 .rowFlash {
@@ -303,10 +304,14 @@
 
 /* ② 关联资产：极端情况下资产超过行高时独立滚动，不裁掉资产 */
 .cAsset {
-  padding: 11px 12px 12px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  padding: 15px 12px;
+  overflow: hidden;
   border-right: 1px solid var(--line2);
+  /* 不再单栏上下滚动：三组内容在固定行高里垂直居中；真的超高才裁切（尽量少见）。
+     上下留出一点内边距，让角色顶上、道具底下都有一点点空隙，不至于贴边显挤。 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 /* 固定三组：角色 / 场景 / 道具。每组横排一行：左标签 + 右侧 chip/「+」，
    三行竖排即可塞进固定行高，不必拉宽拉高表格。 */
@@ -517,14 +522,6 @@
   gap: 5px;
   align-items: center;
   justify-content: center;
-}
-/* 手动编辑角标：badge 右侧的小 ✎，与状态正交。 */
-.editMark {
-  flex: none;
-  font-size: 11px;
-  line-height: 1;
-  color: var(--amber);
-  cursor: default;
 }
 .badge {
   display: inline-flex;

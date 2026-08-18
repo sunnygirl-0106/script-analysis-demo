@@ -118,8 +118,6 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
   const addMount = useStore((st) => st.addMount)
   const removeMount = useStore((st) => st.removeMount)
   const setDuration = useStore((st) => st.setShotDuration)
-  // 手动编辑标记：与提示词状态正交，为 true 时 badge 右侧挂 ✎ 角标，提示重新生成会覆盖。
-  const edited = useStore((st) => !!st.promptEdited[shot.id])
 
   // 点「查看提示词」→ 打开编辑弹窗，focus 记录点开时定位哪一段。
   const [editing, setEditing] = useState<'image' | 'video' | null>(null)
@@ -195,12 +193,6 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
     </div>
   )
 
-  // 手动编辑角标：三态 badge 右侧共用，与状态正交。
-  const editMark = edited ? (
-    <span className={s.editMark} title="提示词经过手动编辑">
-      ✎
-    </span>
-  ) : null
 
   // ⑨ 最终提示词状态格
   const promptCell = () => {
@@ -211,7 +203,6 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
             <span className={s.sp} />
             生成中…
           </span>
-          {editMark}
         </div>
       )
     }
@@ -221,7 +212,6 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
           <button className={[s.badge, s.badgeReady].join(' ')} onClick={() => setEditing('image')}>
             查看提示词
           </button>
-          {editMark}
         </div>
       )
     }
@@ -231,7 +221,6 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
           <button className={[s.badge, s.badgeStale].join(' ')} onClick={() => setEditing('image')}>
             ⚠ 待更新
           </button>
-          {editMark}
         </div>
       )
     }
@@ -244,7 +233,6 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
         >
           待生成提示词
         </button>
-        {editMark}
       </div>
     )
   }

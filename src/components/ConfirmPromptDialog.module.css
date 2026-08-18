@@ -407,6 +407,9 @@
 }
 .editTag {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 11px;
   color: var(--amber);
   white-space: nowrap;

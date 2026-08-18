@@ -168,6 +168,15 @@
 .spacer {
   flex: 1;
 }
+/* 生成按钮左侧的预估星钻，口径/配色对齐「生成镜头提示词」弹窗的 .cost。 */
+.cost {
+  flex: none;
+  margin-right: 10px;
+  font-size: 12.5px;
+  color: var(--acc);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .modelPick {
   display: inline-flex;
   align-items: center;

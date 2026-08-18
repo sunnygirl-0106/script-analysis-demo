@@ -11,6 +11,8 @@ import s from './ShotPromptDialog.module.css'
 // 已生成态：同一套框里显示生成结果，右下变「重新生成提示词」。两态版式完全一致。
 // 用户手动改写并保存任一段 → markPromptEdited，落一个 ✎ 标记（重新生成会覆盖）。
 const MODELS = ['豆包 4.5', '即梦 3.0', '可灵 2.1', 'Seedance 1.0', 'Vidu 2.0']
+// 一镜生成画面 + 视频两段提示词的预估星钻，口径与「生成镜头提示词」弹窗一致（每镜 2）。
+const GEN_COST = 2
 
 export function ShotPromptDialog({
   shot,
@@ -201,14 +203,19 @@ export function ShotPromptDialog({
               关闭
             </button>
           ) : (
-            <button
-              className={[ui.btn, ui.btnPrimary].join(' ')}
-              disabled={generating}
-              onClick={() => generatePrompts([shot.id])}
-            >
-              {generating && <span className={s.spin} />}
-              {synthLabel}
-            </button>
+            <>
+              <span className={s.cost} title="预估消耗星钻（一镜画面 + 视频提示词）">
+                ⚡ {GEN_COST}
+              </span>
+              <button
+                className={[ui.btn, ui.btnPrimary].join(' ')}
+                disabled={generating}
+                onClick={() => generatePrompts([shot.id])}
+              >
+                {generating && <span className={s.spin} />}
+                {synthLabel}
+              </button>
+            </>
           )}
         </div>
       </div>
