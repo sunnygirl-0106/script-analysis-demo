@@ -152,7 +152,8 @@ export function AtMentionPicker({ textareaRef, value, onChange, shotId }: Props)
         return { asset: a, kind: 'look', label: a.name, note: chName, insertName: chName }
       }
       if (a.kind === 'location') {
-        return { asset: a, kind: 'location', label: a.name, note: a.timeOfDay, insertName: a.name }
+        // 场景不显示「日/内」时段标签：@ 框只需名字，时段是另一维度信息，这里是噪音。
+        return { asset: a, kind: 'location', label: a.name, note: '', insertName: a.name }
       }
       return { asset: a, kind: 'prop', label: a.name, note: '', insertName: a.name }
     }

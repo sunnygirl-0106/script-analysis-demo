@@ -66,7 +66,7 @@ export function AnalyzeHud() {
           ))}
         </div>
 
-        <div className={s.foot}>解析约需 1–2 分钟，可先离开本页，完成后会通知你</div>
+        <div className={s.foot}>解析约需 1–2 分钟，可先离开本页</div>
       </div>
     </div>
   )
