@@ -498,6 +498,7 @@ export const useStore = create<StoreState>((set, get) => {
     get().showToast(`已删除第 ${oldNo} 场`)
   },
 
+  // 撤销：单级、随 toast 存活，见改动方案 v1.4 §1（与 renameAssetWithSync 同款）。
   deleteShot: (shotId) => {
     if (!can(get().project, 'editShotFields')) return
     const st0 = get()
@@ -506,6 +507,11 @@ export const useStore = create<StoreState>((set, get) => {
     const scene0 = st0.project.scenes[shot.sceneId]
     if (!scene0) return
     const oldNo = scene0.shotIds.indexOf(shotId) + 1
+
+    // 撤销快照：删除镜头会同时动 project / promptStates / promptEdited，三者一起回滚。
+    const snapProject = st0.project
+    const snapStates = st0.promptStates
+    const snapEdited = st0.promptEdited
 
     set((s) => {
       const scene = s.project.scenes[shot.sceneId]
@@ -528,7 +534,10 @@ export const useStore = create<StoreState>((set, get) => {
       }
     })
 
-    get().showToast(`已删除第 ${oldNo} 镜`)
+    get().showToast(`已删除第 ${oldNo} 镜`, {
+      label: '撤销',
+      run: () => set({ project: snapProject, promptStates: snapStates, promptEdited: snapEdited }),
+    })
   },
 
   addMount: (shotId, mount) => {

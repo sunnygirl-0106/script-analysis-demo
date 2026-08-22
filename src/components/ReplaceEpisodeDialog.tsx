@@ -182,7 +182,7 @@ export function ReplaceEpisodeDialog({ episodeId, onClose }: { episodeId: string
             <div className={di.danger}>
               ⚠ 第 {no} 集当前的 {curScenes} 场、{curShots} 个镜头及其中的手动修改将被新的拆解结果替换。
               系统将优先匹配已有角色和资产；仅在本集出现、新剧本中不再使用的素材将被移除。
-              其他剧集不受影响，此操作无法撤销。
+              其他剧集不受影响，此操作不可撤销。
             </div>
             <div className={di.actions}>
               <button className={ui.btn} onClick={() => setStep(tab === 'paste' ? 'multi' : 'input')}>

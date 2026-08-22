@@ -89,7 +89,7 @@ export function ResplitEpisodeDialog({ episodeId, onClose }: { episodeId: string
 
         <div className={s.impact}>
           <div className={s.impactTitle}>影响说明</div>
-          本集 {stats.scenes} 场 {stats.shots} 镜将全部重新生成；已识别的角色 / 服装 / 场景 / 道具继续保留；其他集不受影响。
+          点「确认重新拆分」后，本集 {stats.scenes} 场 {stats.shots} 镜的原有分镜、人工修改和镜头提示词将被新结果替换；已有角色 / 服装 / 场景 / 道具继续保留，其他集不受影响。此操作不可撤销。
         </div>
 
         <div className={d.actions}>

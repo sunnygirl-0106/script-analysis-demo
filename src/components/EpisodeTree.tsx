@@ -302,8 +302,10 @@ export function EpisodeTree() {
                           <button
                             className={[s.menuItem, s.menuDanger].join(' ')}
                             onClick={() => {
-                              setDialog({ type: 'deleteScene', sceneId: sc.id })
                               setMenuScene(null)
+                              // 空场无级联（没有镜头就不会有「仅在本场出现」的资产），直接删，不打扰。
+                              if (sc.shotIds.length === 0) deleteScene(sc.id)
+                              else setDialog({ type: 'deleteScene', sceneId: sc.id })
                             }}
                           >
                             <i className={s.mIcon}>{ic.trash}</i>删除本场
@@ -367,9 +369,9 @@ export function EpisodeTree() {
           <div className={di.dialog} onClick={(e) => e.stopPropagation()}>
             <div className={di.title}>删除第 {delSc.no} 场「{delSc.name}」？</div>
             <div className={di.danger}>
-              {delScStat.shots > 0 ? `将同时删除本场的 ${delScStat.shots} 个镜头` : '本场暂无镜头'}
+              将同时删除本场的 {delScStat.shots} 个镜头
               {delScStat.onlyInScene > 0
-                ? `，以及仅在本场出现的 ${delScStat.onlyInScene} 项独有资产；其他场仍在使用的内容会保留`
+                ? `，以及仅在本场出现的 ${delScStat.onlyInScene} 项独有资产。其他场仍在使用的内容会保留`
                 : ''}
               。此操作不可撤销。
             </div>

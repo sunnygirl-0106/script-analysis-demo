@@ -27,7 +27,7 @@ import { mountIssues } from '../services/completeness'
 import { isLongShot, LONG_SHOT_SEC } from '../services/duration'
 
 /** 规则基线版本。整体版本升级时改这里，单条规则/断言的局部变更用行内标记覆盖。 */
-export const RULES_VERSION = 'v1.3' // 2026-08-15 · 对应改动方案 v1.3
+export const RULES_VERSION = 'v1.4' // 对应改动方案 v1.4
 
 // 每个用例都从 seed 深拷贝，互不污染。
 const fresh = () => structuredClone(seedProject)
@@ -464,8 +464,9 @@ describe('R14 第一批范围', () => {
   })
 })
 
-// ── R15 提示词手动编辑标记与替换本集重置 · since v1.3 · updated v1.3 ──
+// ── R15 提示词手动编辑标记与替换本集重置 · since v1.3 · updated v1.4 ──
 // promptEdited 与 promptStates 是两个正交维度；重新生成 / 替换本集都会清掉手动痕迹。
+// v1.4：破坏性操作的撤销口径——删除镜头可撤销（随 toast），删除场不可撤销。
 describe('R15 提示词手动编辑标记与替换本集重置', () => {
   it('generatePrompts 执行到某镜即清掉其 promptEdited', () => {
     // v1.3
@@ -491,5 +492,44 @@ describe('R15 提示词手动编辑标记与替换本集重置', () => {
     expect(Object.keys(st.promptEdited).length).toBe(0)
     // 旧镜随替换消失，不留孤儿键。
     expect(st.promptStates.s1_sh1).toBeUndefined()
+  })
+
+  it('删除镜头可撤销：project / promptStates / promptEdited 逐一复原', () => {
+    // v1.4
+    useStore.setState({ project: structuredClone(seedProject), promptStates: {}, promptEdited: {} })
+    const id = 's1_sh1'
+    const sceneId = useStore.getState().project.shots[id]!.sceneId
+    // 造一个 ready + 手动编辑过的镜头，验证撤销把这两个正交状态也带回来。
+    useStore.getState().setPromptState(id, 'ready')
+    useStore.getState().markPromptEdited(id)
+    const snapShotIds = [...useStore.getState().project.scenes[sceneId]!.shotIds]
+
+    useStore.getState().deleteShot(id)
+    const del = useStore.getState()
+    expect(del.project.shots[id]).toBeUndefined()
+    expect(del.project.scenes[sceneId]!.shotIds).not.toContain(id)
+    expect(del.promptStates[id]).toBeUndefined()
+    expect(del.promptEdited[id]).toBeUndefined()
+    // 本场镜号顺延重编，从 1 起连续。
+    del.project.scenes[sceneId]!.shotIds.forEach((sid, i) => {
+      expect(del.project.shots[sid]!.no).toBe(i + 1)
+    })
+
+    // 撤销：三样逐一回到删除前。
+    const action = del.toast?.action
+    expect(action).toBeTruthy()
+    action!.run()
+    const back = useStore.getState()
+    expect(back.project.shots[id]).toBeTruthy()
+    expect(back.project.scenes[sceneId]!.shotIds).toEqual(snapShotIds)
+    expect(back.promptStates[id]).toBe('ready')
+    expect(back.promptEdited[id]).toBe(true)
+  })
+
+  it('删除场不可撤销：toast 不带撤销 action', () => {
+    // v1.4
+    useStore.setState({ project: structuredClone(seedProject), promptStates: {}, promptEdited: {} })
+    useStore.getState().deleteScene('s2')
+    expect(useStore.getState().toast?.action).toBeUndefined()
   })
 })
