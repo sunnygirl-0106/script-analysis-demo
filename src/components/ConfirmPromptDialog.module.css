@@ -24,7 +24,7 @@
   flex: none;
   width: 16px;
   height: 16px;
-  border: 1.5px solid #4b5361;
+  border: 1.5px solid #555555;
   border-radius: 4px;
   background: transparent;
   cursor: pointer;
@@ -47,7 +47,7 @@
   top: 1.5px;
   width: 3px;
   height: 7px;
-  border: solid #14161a;
+  border: solid #121212;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
@@ -59,7 +59,7 @@
   width: 9px;
   height: 1.5px;
   border-radius: 1px;
-  background: #14161a;
+  background: #121212;
 }
 .check:disabled {
   opacity: 0.4;

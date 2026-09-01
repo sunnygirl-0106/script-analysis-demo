@@ -88,8 +88,8 @@
   width: 44px;
   height: 56px;
   border-radius: 8px;
-  border: 1px solid #444c56;
-  background: linear-gradient(180deg, #22272d, #1c2025);
+  border: 1px solid #4d4d4d;
+  background: linear-gradient(180deg, #272727, #202020);
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -106,7 +106,7 @@
 .mLine {
   height: 3px;
   border-radius: 2px;
-  background: #3a424c;
+  background: #434343;
 }
 
 .bigTitle {
@@ -135,7 +135,7 @@
   position: relative;
   height: 5px;
   border-radius: 3px;
-  background: #1f242a;
+  background: #242424;
   border: 1px solid var(--line2);
   overflow: hidden;
 }
@@ -205,7 +205,7 @@
 }
 .active .stepMark {
   border: 1px solid var(--acc);
-  background: #1b2226;
+  background: #212121;
 }
 .pulse {
   width: 5px;

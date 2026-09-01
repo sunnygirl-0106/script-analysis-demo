@@ -97,8 +97,8 @@
   top: 26px;
   width: 76px;
   height: 100px;
-  border: 1px solid #2b3138;
-  background: linear-gradient(180deg, #1c2025, #181b1f);
+  border: 1px solid #313131;
+  background: linear-gradient(180deg, #202020, #1b1b1b);
   transform: rotate(-11deg);
   box-shadow: 0 10px 26px rgb(0 0 0 / 0.4);
 }
@@ -107,8 +107,8 @@
   top: 20px;
   width: 76px;
   height: 100px;
-  border: 1px solid #363d46;
-  background: linear-gradient(180deg, #20242a, #1b1f24);
+  border: 1px solid #3e3e3e;
+  background: linear-gradient(180deg, #252525, #1f1f1f);
   transform: rotate(-5deg);
   box-shadow: 0 12px 30px rgb(0 0 0 / 0.45);
 }
@@ -118,7 +118,7 @@
   width: 78px;
   height: 104px;
   border: 1px solid var(--acc-line);
-  background: linear-gradient(180deg, #252b31, #1e2328);
+  background: linear-gradient(180deg, #2b2b2b, #232323);
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -135,7 +135,7 @@
 .line {
   height: 4px;
   border-radius: 3px;
-  background: #3d454e;
+  background: #454545;
 }
 .spark1,
 .spark2 {
@@ -234,7 +234,7 @@
   right: 8%;
   top: 13px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgb(var(--acc-rgb) / 0.3) 18%, #2e343b 55%, #262b31 82%, transparent);
+  background: linear-gradient(90deg, transparent, rgb(var(--acc-rgb) / 0.3) 18%, #343434 55%, #2b2b2b 82%, transparent);
 }
 .stepRow {
   position: relative;
@@ -253,7 +253,7 @@
   height: 27px;
   border-radius: 50%;
   background: var(--bg2);
-  border: 1px solid #363d46;
+  border: 1px solid #3e3e3e;
   color: var(--t5);
   font-size: 11.5px;
   font-weight: 700;
@@ -263,7 +263,7 @@
   box-shadow: 0 0 0 5px var(--bg1);
 }
 .stepDotOn {
-  background: #1b2226;
+  background: #212121;
   border-color: var(--acc-line);
   color: var(--acc);
   box-shadow: 0 0 0 5px var(--bg1), 0 0 18px rgb(var(--acc-rgb) / 0.22);
