@@ -1,7 +1,15 @@
 // Zustand：一个 project + 所有动作。不做持久化，刷新回到初始状态。
 import { create } from 'zustand'
-import type { Look, MountRef, Project, PromptState, Scene, Shot, ShotDensity, Stage } from '../data/types'
+import type {
+  AnalysisStep, AssetKind, CandidateAsset, CandidateDecision, Look, MountRef,
+  PendingTask, Project, PromptState, Scene, Shot, ShotDensity, Stage,
+} from '../data/types'
 import { seedProject } from '../data/seed'
+import {
+  commitCandidates as commitCandidatesSvc,
+  extractCandidates,
+  type ScannedAsset,
+} from '../services/candidates'
 import { episode2Payload } from '../data/seedEpisode2'
 import { appendEpisode } from '../services/incremental'
 import { replaceScript as replaceScriptSvc, type ScriptPayload } from '../services/replace'
@@ -87,6 +95,16 @@ interface StoreState extends UIState {
    *  一个镜头可以同时是「已手动编辑」和「待更新」。UI 态，不进 Shot 数据模型。 */
   promptEdited: Record<string, boolean>
 
+  // ── 候选层与确认闸（v2.0）──
+  /** 流程相位：分镜是否已经存在。与 analysisPhase（动画）正交。 */
+  analysisStep: AnalysisStep
+  /** 待确认候选。空数组 = 没有待处理增量。 */
+  candidates: CandidateAsset[]
+  /** 被增量确认打断、等待续跑的任务。null = 没有挂起任务。 */
+  pendingTask: PendingTask | null
+  /** 演练用的观测痕迹（见 §7.3）。只写不读，不驱动任何 UI。 */
+  trace: { sawIncrementalGate: boolean }
+
   // ── 派生便捷读取 ──
   currentScene: () => Project['scenes'][string] | undefined
   usageIndex: () => Record<string, AssetUsage>
@@ -170,6 +188,31 @@ interface StoreState extends UIState {
   resplit: (sceneId: string, opts: { density?: ShotDensity; targetShots?: number }) => void
   resplitEpisode: (episodeId: string, opts: { density: ShotDensity; sceneCount?: number }) => void
   setStage: (stage: Stage) => void
+
+  // ── 候选与确认闸（v2.0）──
+  /** 打开增量确认。scanned 为空时不开闸，直接跑 task（v3 §6.3 零新增分支）。 */
+  openIncrementalGate: (scanned: ScannedAsset[], task: PendingTask) => void
+  setCandidateDecision: (tempId: string, decision: CandidateDecision, linkTargetId?: string) => void
+  renameCandidate: (tempId: string, name: string) => void
+  addManualCandidate: (kind: AssetKind, name: string) => void
+  removeCandidate: (tempId: string) => void
+  /** 结算 + 自动续跑挂起任务（v3 §6.2）。 */
+  commitCandidates: () => void
+  /** 取消整次操作：候选全丢，挂起任务不执行，原有分镜与资产库都不变（v3 §6.4）。 */
+  cancelIncrementalGate: () => void
+  /** 演练前复位观测痕迹。 */
+  resetTrace: () => void
+
+  // ── 首次流程（v2.0）──
+  /** 阶段② 的「重新上传剧本」。仅 libraryCommittedAt == null 时可调。 */
+  reuploadScript: (payload: ScriptPayload) => void
+  /** 「确认并保存到项目资产库」：结算候选 + 写 libraryCommittedAt。 */
+  commitLibrary: () => void
+  /** 「开始拆分集 / 场 / 镜」：生成分镜，analysisStep → 'storyboard'。 */
+  startSplit: (opts: { density?: ShotDensity; instant?: boolean }) => void
+
+  // ── 资产库侧（v3 唯一的删除出口）──
+  deleteAsset: (assetId: string) => void
 }
 
 let toastSeq = 0
@@ -225,6 +268,126 @@ export const useStore = create<StoreState>((set, get) => {
     }
   }
 
+  // ── 续跑体（v2.0）──
+  // 每个改剧本的操作把「真正落库/生成分镜」的那一段抽成 apply*，供两条路径复用：
+  //   · 零候选：入口动作 → openIncrementalGate 直接跑 apply*
+  //   · 有候选：入口动作 → 开闸 → 用户确认 → commitCandidates → runPendingTask → apply*
+  // 这样「先确认后续跑」与「无候选不打断」用同一份续跑逻辑，不分叉。
+
+  const applyAppendEpisode = () => {
+    const s = get()
+    const next = appendEpisode(s.project, episode2Payload)
+    set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited) })
+    get().showToast('第 2 集已添加。已有角色资料已自动沿用，新角色资料也已创建。')
+  }
+
+  const applyReplaceEpisode = (episodeId: string) => {
+    const s = get()
+    const proj = s.project
+    const ep = proj.episodes.find((e) => e.id === episodeId)
+    if (!ep) return
+    const deleted = deleteEpisodeSvc(proj, episodeId)
+    const appended = appendEpisode(deleted, episode2Payload)
+    // 集号顺序整理，避免删中间集后号码跳空。
+    const renum = { ...appended, episodes: appended.episodes.map((e, i) => ({ ...e, no: i + 1 })) }
+    const newEp = renum.episodes.find((e) => e.id === 'e2')
+    const firstScene = newEp?.sceneIds[0] ?? renum.episodes[0]?.sceneIds[0] ?? ''
+    set({
+      project: renum,
+      ...reconcilePrompts(renum, s.promptStates, s.promptEdited),
+      selectedSceneId: firstScene,
+      sceneSettingsOpen: false,
+      activeTab: 'shot',
+    })
+    get().showToast(`第 ${ep.no} 集已替换，其他剧集没有改变。`)
+  }
+
+  const applyResplitScene = (sceneId: string, opts: { density?: ShotDensity; targetShots?: number }) => {
+    const s = get()
+    const scene = s.project.scenes[sceneId]
+    if (!scene) return
+
+    // 该场没有多套预设 → 回退到「恢复初始」。
+    if (!hasDensityPresets(sceneId)) {
+      const reset = resplitScene(s.project, sceneId)
+      const rscene = reset.scenes[sceneId]!
+      const next = { ...reset, scenes: { ...reset.scenes, [sceneId]: { ...rscene, density: 'standard' as ShotDensity } } }
+      set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited), sceneSettingsOpen: false })
+      get().showToast('当前演示仅第 1 场支持不同镜头节奏，本场已按原方式重新生成')
+      return
+    }
+
+    // 指定镜数 → 选最接近的一套，如实说明。
+    if (opts.targetShots != null && opts.density == null) {
+      const density = closestDensity(sceneId, opts.targetShots)
+      const next = resplitSceneDensity(s.project, sceneId, density)
+      set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited), sceneSettingsOpen: false })
+      get().showToast(
+        `已按「期望 ${opts.targetShots} 个镜头」重新拆分：当前演示中最接近的方案为「${DENSITY_LABEL[density]}」，共 ${densityShots(sceneId, density).length} 个镜头`,
+      )
+      return
+    }
+
+    // 指定颗粒度（或照原颗粒度重拆一次）。
+    const density = opts.density ?? scene.density
+    const next = resplitSceneDensity(s.project, sceneId, density)
+    set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited), sceneSettingsOpen: false })
+    get().showToast(`「${scene.name}」已按${DENSITY_LABEL[density]}节奏重新拆分为 ${densityShots(sceneId, density).length} 个镜头，其他场景没有改变。`)
+  }
+
+  const applyResplitEpisode = (episodeId: string, opts: { density: ShotDensity; sceneCount?: number }) => {
+    const s = get()
+    let proj = s.project
+    const ep = proj.episodes.find((e) => e.id === episodeId)
+    if (!ep) return
+
+    const applied: string[] = []
+    const kept: number[] = []
+    for (const sid of ep.sceneIds) {
+      const scene = proj.scenes[sid]
+      if (!scene) continue
+      if (hasDensityPresets(sid)) {
+        proj = resplitSceneDensity(proj, sid, opts.density)
+        applied.push(`第 ${scene.no} 场按${DENSITY_LABEL[opts.density]}节奏重新拆分为 ${proj.scenes[sid]!.shotIds.length} 个镜头`)
+      } else {
+        const reset = resplitScene(proj, sid)
+        const rscene = reset.scenes[sid]!
+        proj = { ...reset, scenes: { ...reset.scenes, [sid]: { ...rscene, density: 'standard' as ShotDensity } } }
+        kept.push(scene.no)
+      }
+    }
+    set({
+      project: proj,
+      ...reconcilePrompts(proj, s.promptStates, s.promptEdited),
+      selectedSceneId: ep.sceneIds[0] ?? s.selectedSceneId,
+      sceneSettingsOpen: false,
+    })
+
+    let msg = applied.length
+      ? `已重新拆分第 ${ep.no} 集：${applied.join('，')}`
+      : `已重新拆分第 ${ep.no} 集`
+    if (kept.length) msg += `，第 ${kept.join(' / ')} 场当前演示无多套方案，保持原方式`
+    if (opts.sceneCount != null) msg += '；当前版本暂不支持调整场景数量'
+    get().showToast(msg)
+  }
+
+  /** 按挂起任务的 kind 分派到对应续跑体（v3 §6.2）。 */
+  const runPendingTask = (task: PendingTask) => {
+    const a = task.args
+    switch (task.kind) {
+      case 'appendEpisode': applyAppendEpisode(); break
+      case 'replaceEpisode': applyReplaceEpisode(a.episodeId as string); break
+      case 'resplitScene':
+        applyResplitScene(a.sceneId as string, { density: a.density as ShotDensity | undefined, targetShots: a.targetShots as number | undefined })
+        break
+      case 'resplitEpisode':
+        applyResplitEpisode(a.episodeId as string, { density: a.density as ShotDensity, sceneCount: a.sceneCount as number | undefined })
+        break
+      // firstImport / newScene / replaceScene：走各自的专用入口，不经此分派。
+      default: break
+    }
+  }
+
   return {
   project: structuredClone(seedProject),
   promptStates: initPromptStates(seedProject),
@@ -243,6 +406,11 @@ export const useStore = create<StoreState>((set, get) => {
   scriptW: 308,
   flashShotIds: [],
   hoverMention: null,
+  // 候选层：默认从现状起（已入库 + 有分镜），故 storyboard、无候选、无挂起任务。
+  analysisStep: 'storyboard',
+  candidates: [],
+  pendingTask: null,
+  trace: { sawIncrementalGate: false },
 
   currentScene: () => get().project.scenes[get().selectedSceneId],
   usageIndex: () => usageIndexOf(get().project),
@@ -587,6 +755,8 @@ export const useStore = create<StoreState>((set, get) => {
   // 改提示词 → promptRevision + 1（决策 4.2）。进入视觉筹备后仍可改（editPrompt 恒为 true）。
   updateAssetPrompt: (assetId, text) => {
     if (!can(get().project, 'editPrompt')) return
+    const before = get().project.assets[assetId]
+    if (!before || before.imagePrompt === text) return
     set((s) => {
       const a = s.project.assets[assetId]
       if (!a || a.imagePrompt === text) return s
@@ -600,6 +770,8 @@ export const useStore = create<StoreState>((set, get) => {
         },
       }
     })
+    // v2.0：资产提示词变了 → 引用它的镜头画面提示词过期，标待更新（只标不重生，v3 铁律 3）。
+    for (const sid of shotsAffectedByAsset(get().project, assetId)) touchPrompt(sid, false)
   },
 
   // 改资产名 / 别名。名称真相源在进入资产库后移交下游，故 editAssetName 仅 analysis 阶段可用。
@@ -771,9 +943,7 @@ export const useStore = create<StoreState>((set, get) => {
       get().showToast('第 2 集已在项目中，无需重复添加。')
       return
     }
-    const next = appendEpisode(s.project, episode2Payload)
-    set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited) })
-    get().showToast('第 2 集已添加。已有角色资料已自动沿用，新角色资料也已创建。')
+    applyAppendEpisode()
   },
 
   replaceScript: (payload) => {
@@ -801,8 +971,7 @@ export const useStore = create<StoreState>((set, get) => {
   // 若它已存在则不替换，如实告知，避免删了却补不上。
   replaceEpisode: (episodeId) => {
     if (!can(get().project, 'editScript')) return
-    const s = get()
-    const proj = s.project
+    const proj = get().project
     const ep = proj.episodes.find((e) => e.id === episodeId)
     if (!ep) return
     const remaining = proj.episodes.filter((e) => e.id !== episodeId)
@@ -810,21 +979,7 @@ export const useStore = create<StoreState>((set, get) => {
       get().showToast('当前演示仅支持一套新剧本内容，且第 2 集已存在，无法替换本集')
       return
     }
-    const deleted = deleteEpisodeSvc(proj, episodeId)
-    const appended = appendEpisode(deleted, episode2Payload)
-    // 集号顺序整理，避免删中间集后号码跳空。
-    const renum = { ...appended, episodes: appended.episodes.map((e, i) => ({ ...e, no: i + 1 })) }
-    const newEp = renum.episodes.find((e) => e.id === 'e2')
-    const firstScene = newEp?.sceneIds[0] ?? renum.episodes[0]?.sceneIds[0] ?? ''
-    // 新集镜头都是新 id → reconcile 后全回 pending、手动痕迹清空；其他集状态照旧。
-    set({
-      project: renum,
-      ...reconcilePrompts(renum, s.promptStates, s.promptEdited),
-      selectedSceneId: firstScene,
-      sceneSettingsOpen: false,
-      activeTab: 'shot',
-    })
-    get().showToast(`第 ${ep.no} 集已替换，其他剧集没有改变。`)
+    applyReplaceEpisode(episodeId)
   },
 
   deleteEpisode: (episodeId) => {
@@ -858,73 +1013,14 @@ export const useStore = create<StoreState>((set, get) => {
 
   resplit: (sceneId, opts) => {
     if (!can(get().project, 'editScript')) return
-    const s = get()
-    const scene = s.project.scenes[sceneId]
-    if (!scene) return
-
-    // 该场没有多套预设 → 回退到「恢复初始」。
-    if (!hasDensityPresets(sceneId)) {
-      const reset = resplitScene(s.project, sceneId)
-      const rscene = reset.scenes[sceneId]!
-      const next = { ...reset, scenes: { ...reset.scenes, [sceneId]: { ...rscene, density: 'standard' as ShotDensity } } }
-      set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited), sceneSettingsOpen: false })
-      get().showToast('当前演示仅第 1 场支持不同镜头节奏，本场已按原方式重新生成')
-      return
-    }
-
-    // 指定镜数 → 选最接近的一套，如实说明。
-    if (opts.targetShots != null && opts.density == null) {
-      const density = closestDensity(sceneId, opts.targetShots)
-      const next = resplitSceneDensity(s.project, sceneId, density)
-      set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited), sceneSettingsOpen: false })
-      get().showToast(
-        `已按「期望 ${opts.targetShots} 个镜头」重新拆分：当前演示中最接近的方案为「${DENSITY_LABEL[density]}」，共 ${densityShots(sceneId, density).length} 个镜头`,
-      )
-      return
-    }
-
-    // 指定颗粒度（或照原颗粒度重拆一次）。
-    const density = opts.density ?? scene.density
-    const next = resplitSceneDensity(s.project, sceneId, density)
-    set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited), sceneSettingsOpen: false })
-    get().showToast(`「${scene.name}」已按${DENSITY_LABEL[density]}节奏重新拆分为 ${densityShots(sceneId, density).length} 个镜头，其他场景没有改变。`)
+    if (!get().project.scenes[sceneId]) return
+    applyResplitScene(sceneId, opts)
   },
 
   resplitEpisode: (episodeId, opts) => {
     if (!can(get().project, 'editScript')) return
-    const s = get()
-    let proj = s.project
-    const ep = proj.episodes.find((e) => e.id === episodeId)
-    if (!ep) return
-
-    const applied: string[] = []
-    const kept: number[] = []
-    for (const sid of ep.sceneIds) {
-      const scene = proj.scenes[sid]
-      if (!scene) continue
-      if (hasDensityPresets(sid)) {
-        proj = resplitSceneDensity(proj, sid, opts.density)
-        applied.push(`第 ${scene.no} 场按${DENSITY_LABEL[opts.density]}节奏重新拆分为 ${proj.scenes[sid]!.shotIds.length} 个镜头`)
-      } else {
-        const reset = resplitScene(proj, sid)
-        const rscene = reset.scenes[sid]!
-        proj = { ...reset, scenes: { ...reset.scenes, [sid]: { ...rscene, density: 'standard' as ShotDensity } } }
-        kept.push(scene.no)
-      }
-    }
-    set({
-      project: proj,
-      ...reconcilePrompts(proj, s.promptStates, s.promptEdited),
-      selectedSceneId: ep.sceneIds[0] ?? s.selectedSceneId,
-      sceneSettingsOpen: false,
-    })
-
-    let msg = applied.length
-      ? `已重新拆分第 ${ep.no} 集：${applied.join('，')}`
-      : `已重新拆分第 ${ep.no} 集`
-    if (kept.length) msg += `，第 ${kept.join(' / ')} 场当前演示无多套方案，保持原方式`
-    if (opts.sceneCount != null) msg += '；当前版本暂不支持调整场景数量'
-    get().showToast(msg)
+    if (!get().project.episodes.some((e) => e.id === episodeId)) return
+    applyResplitEpisode(episodeId, opts)
   },
 
   setStage: (stage) => {
@@ -934,6 +1030,159 @@ export const useStore = create<StoreState>((set, get) => {
       return { project, activePage: stage }
     })
     if (stage === 'visual') get().showToast('已进入项目资产库，第一批资产开始生成。剧本和提示词仍可调整，角色与服装组合保持不变。')
+  },
+
+  // ── 候选与确认闸（v2.0）──
+  openIncrementalGate: (scanned, task) => {
+    const cands = extractCandidates(get().project, scanned)
+    // 零候选：不开闸，直接续跑（v3 §6.3 零新增分支）。
+    if (cands.length === 0) {
+      runPendingTask(task)
+      return
+    }
+    set((st) => ({
+      candidates: cands,
+      pendingTask: task,
+      trace: { ...st.trace, sawIncrementalGate: true },
+    }))
+  },
+
+  setCandidateDecision: (tempId, decision, linkTargetId) =>
+    set((st) => ({
+      candidates: st.candidates.map((c) =>
+        c.tempId === tempId ? { ...c, decision, linkTargetId } : c,
+      ),
+    })),
+
+  renameCandidate: (tempId, name) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    set((st) => ({
+      candidates: st.candidates.map((c) => (c.tempId === tempId ? { ...c, name: trimmed } : c)),
+    }))
+  },
+
+  addManualCandidate: (kind, name) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    const tempId = `cand_manual_${kind}_${++insSeq}`
+    set((st) => ({
+      candidates: [...st.candidates, { tempId, kind, name: trimmed, imagePrompt: '', decision: 'new' }],
+    }))
+  },
+
+  removeCandidate: (tempId) =>
+    set((st) => ({ candidates: st.candidates.filter((c) => c.tempId !== tempId) })),
+
+  commitCandidates: () => {
+    const s = get()
+    const { project, added, linked, skipped } = commitCandidatesSvc(s.project, s.candidates)
+    const task = s.pendingTask
+    set({ project, candidates: [], pendingTask: null })
+    // 结算完自动续跑挂起任务（v3 §6.2）。续跑体里的追加/替换会基于「已入库」的库去重。
+    if (task) runPendingTask(task)
+    // 续跑体通常自带 toast；这里只在纯结算（无续跑任务，如手动补录）时给个回执。
+    if (!task) {
+      const bits = [`已入库 ${added.length} 项`]
+      if (linked.length) bits.push(`关联 ${linked.length} 项`)
+      if (skipped.length) bits.push(`忽略 ${skipped.length} 项`)
+      get().showToast(bits.join('，'))
+    }
+  },
+
+  cancelIncrementalGate: () => set({ candidates: [], pendingTask: null }),
+
+  resetTrace: () => set({ trace: { sawIncrementalGate: false } }),
+
+  // ── 首次流程（v2.0）──
+  reuploadScript: (payload) => {
+    if (get().project.libraryCommittedAt != null) return
+    // 换一份原文重新拆：库仍为空，重新抽候选。阶段②没有分镜，只带场结构（shotIds 清空）。
+    const scenes: Record<string, Scene> = {}
+    for (const [id, sc] of Object.entries(payload.scenes)) scenes[id] = { ...sc, shotIds: [] }
+    const project: Project = {
+      ...get().project,
+      episodes: payload.episodes.map((e) => ({ ...e })),
+      scenes,
+      shots: {},
+      assets: {},
+      libraryCommittedAt: null,
+    }
+    const scanned: ScannedAsset[] = Object.values(payload.assets)
+      .filter((a) => a.kind !== 'look')
+      .map((a) => ({ kind: a.kind, name: a.name, imagePrompt: a.imagePrompt, aliases: a.aliases }))
+    const candidates = extractCandidates(project, scanned)
+    set({ project, candidates, analysisStep: 'assetConfirm', activeTab: 'character', sceneSettingsOpen: false })
+    get().showToast(`已重新上传《${payload.title}》，请确认资产后保存到项目资产库。`)
+  },
+
+  commitLibrary: () => {
+    const s = get()
+    if (s.project.libraryCommittedAt != null) return
+    const { project, added, linked, skipped } = commitCandidatesSvc(s.project, s.candidates)
+    set({
+      project: { ...project, libraryCommittedAt: Date.now() },
+      candidates: [],
+      pendingTask: null,
+    })
+    const bits = [`已保存到项目资产库：入库 ${added.length} 项`]
+    if (linked.length) bits.push(`关联 ${linked.length} 项`)
+    if (skipped.length) bits.push(`忽略同名 ${skipped.length} 项`)
+    get().showToast(`${bits.join('，')}。接下来可开始拆分集 / 场 / 镜。`)
+  },
+
+  startSplit: (_opts) => {
+    const s = get()
+    // 生成分镜：以 seed 的规范分镜为模板，把挂载重指到已入库资产（committed id = `as_${tempId}`，
+    // 着装角色 = `lk_as_${characterTempId}`），因为 seedCandidates 的 tempId 取自 seed 资产 id。
+    const remapId = (seedId: string): string => {
+      const a = seedProject.assets[seedId]
+      if (a?.kind === 'look') return `lk_as_${a.characterId}`
+      return `as_${seedId}`
+    }
+    const scenes = { ...s.project.scenes }
+    const shots: Record<string, Shot> = {}
+    for (const [sid, tmpl] of Object.entries(seedProject.scenes)) {
+      if (!scenes[sid]) continue
+      scenes[sid] = { ...scenes[sid], shotIds: [...tmpl.shotIds] }
+      for (const shId of tmpl.shotIds) {
+        const sh = seedProject.shots[shId]
+        if (!sh) continue
+        shots[shId] = { ...sh, mounts: sh.mounts.map((m) => ({ kind: m.kind, assetId: remapId(m.assetId) })) }
+      }
+    }
+    const project: Project = { ...s.project, scenes, shots }
+    set({
+      project,
+      ...reconcilePrompts(project, {}, {}),
+      analysisStep: 'storyboard',
+      activeTab: 'shot',
+      selectedSceneId: project.episodes[0]?.sceneIds[0] ?? '',
+      sceneSettingsOpen: false,
+    })
+    const total = Object.keys(shots).length
+    get().showToast(`已按剧本拆分为 ${total} 个镜头，可开始逐镜生成画面与视频提示词。`)
+  },
+
+  // ── 资产库侧（v3 唯一的删除出口）──
+  deleteAsset: (assetId) => {
+    const s = get()
+    if (!s.project.assets[assetId]) return
+    // 先算受影响镜头（基于删除前的挂载），删除后置为 stale。
+    const affected = shotsAffectedByAsset(s.project, assetId)
+    set((st) => {
+      const assets = { ...st.project.assets }
+      delete assets[assetId]
+      // ⚠ 不清理 mounts —— 资产库不回写分镜（单向）。挂载指向失效 id，由 UI 兜底渲染「已失效」。
+      const promptStates = { ...st.promptStates }
+      for (const sid of affected) if (promptStates[sid] === 'ready') promptStates[sid] = 'stale'
+      return { project: { ...st.project, assets }, promptStates }
+    })
+    get().showToast(
+      affected.length
+        ? `已从项目资产库删除该资产。引用它的 ${affected.length} 个镜头挂载已失效并标记待更新。`
+        : '已从项目资产库删除该资产。',
+    )
   },
   }
 })

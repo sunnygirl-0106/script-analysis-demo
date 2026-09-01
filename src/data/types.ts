@@ -140,6 +140,44 @@ export interface Look extends AssetBase {
 
 export type Asset = Character | Costume | Location | Prop | Look
 
+// ── 候选层与流程相位（v2.0）──
+
+/** 剧本分析的流程相位（v2.0）。资产确认是一道闸：分镜在闸之后才存在。
+ *  与既有 AnalysisPhase（拆解动画的呈现相位）是两个正交概念，不要合并。 */
+export type AnalysisStep = 'import' | 'assetConfirm' | 'storyboard'
+
+/** 用户对一条候选的处理方式（v3 §4.2）。 */
+export type CandidateDecision = 'new' | 'link' | 'skip'
+
+/** 待确认候选资产 —— 尚未入库，不进 project.assets。
+ *  它没有 promptRevision / deliveredRevision：那两个字段的语义从「入库」那一刻才开始。 */
+export interface CandidateAsset {
+  tempId: string
+  kind: AssetKind
+  name: string
+  imagePrompt: string
+  aliases?: string[]
+  /** 角色候选带出的造型（随宿主一起入库或一起丢弃）。 */
+  costumeIds?: string[]
+  characterId?: string
+  /** 原文口径的出现信息。阶段②还没有集/场/镜，只能这么表达。 */
+  firstParaNo?: number
+  occCount?: number
+  decision: CandidateDecision
+  /** decision === 'link' 时指向的既有资产 id。 */
+  linkTargetId?: string
+}
+
+/** 增量确认被打断时挂起的任务，确认完自动续跑（v3 §6.2）。 */
+export interface PendingTask {
+  kind: 'firstImport' | 'appendEpisode' | 'newScene'
+      | 'replaceEpisode' | 'replaceScene' | 'resplitEpisode' | 'resplitScene'
+  label: string       // 弹窗标题用，如「追加第 2 集」
+  scopeText: string   // 「仅第 2 集原文」
+  /** 续跑所需的参数。各 kind 自定，store 里用判别联合取出。 */
+  args: Record<string, unknown>
+}
+
 // ── 字段枚举（给 FieldSelect 下拉用）──
 export const SHOT_SIZES = ['极特写', '特写', '近景', '中景', '全景', '远景'] as const
 export const CAMERA_MOVES = [

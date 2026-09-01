@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useStore } from './store/useStore'
 import { AppShell } from './layout/AppShell'
 import { ScriptAnalysis } from './pages/ScriptAnalysis'
+import { AssetConfirm } from './pages/AssetConfirm'
 import { EmptyScriptState } from './pages/EmptyScriptState'
 import { AnalyzingWorkspace } from './pages/AnalyzingWorkspace'
 import { VisualPrep } from './pages/VisualPrep'
@@ -62,6 +63,7 @@ function useAnalysisReveal() {
 export default function App() {
   const activePage = useStore((s) => s.activePage)
   const analysisPhase = useStore((s) => s.analysisPhase)
+  const analysisStep = useStore((s) => s.analysisStep)
 
   useAnalysisReveal()
 
@@ -70,6 +72,8 @@ export default function App() {
       <EmptyScriptState />
     ) : analysisPhase === 'analyzing' ? (
       <AnalyzingWorkspace />
+    ) : analysisStep === 'assetConfirm' ? (
+      <AssetConfirm />
     ) : (
       <ScriptAnalysis />
     )

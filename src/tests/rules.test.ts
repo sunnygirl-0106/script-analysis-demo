@@ -20,6 +20,8 @@ import { densityShots, applyDensity, resplitSceneDensity } from '../services/den
 import { resplitScene, deleteEpisode } from '../services/lock'
 import { can } from '../services/capability'
 import { buildUsageIndex } from '../services/appearanceIndex'
+import { refState, unreferencedCount } from '../services/reference'
+import { shotsAffectedByAsset } from '../services/staleness'
 import { syncState, deliverFirstBatch } from '../services/staleness'
 import { reconcile } from '../services/reconcile'
 import { lookName } from '../services/looks'
@@ -498,6 +500,53 @@ describe('R14 第一批范围', () => {
     )
     expect(firstBatch.some((a) => a.id === A.napkin)).toBe(false)
     expect(firstBatch.length).toBe(15)
+  })
+})
+
+// ── R16 引用态（删场/删集不删资产的可视化出口）· since v2.0 ──
+describe('R16 引用态', () => {
+  it('① 被镜头挂载 → referenced；无镜头挂载 → unreferenced', () => {
+    // v2.0
+    const idx = buildUsageIndex(fresh())
+    expect(refState(idx, A.suke)).toBe('referenced')
+    expect(refState(idx, A.malatang)).toBe('referenced')
+  })
+
+  it('② 删集后本集独有资产变为 unreferenced（库里仍在）', () => {
+    // v2.0 —— 与 C1/C2 口径一致：删集不删资产，只是不再被引用。
+    const p = appendEpisode(fresh(), episode2Payload)
+    const courier = Object.values(p.assets).find((a) => a.name === '快递员')!
+    expect(refState(buildUsageIndex(p), courier.id)).toBe('referenced')
+    const next = deleteEpisode(p, 'e2')
+    expect(next.assets[courier.id]).toBeTruthy()
+    expect(refState(buildUsageIndex(next), courier.id)).toBe('unreferenced')
+  })
+
+  it('③ unreferencedCount 与逐条一致', () => {
+    // v2.0
+    const p = appendEpisode(fresh(), episode2Payload)
+    const next = deleteEpisode(p, 'e2')
+    const idx = buildUsageIndex(next)
+    const manual = Object.keys(idx).filter((id) => refState(idx, id) === 'unreferenced').length
+    expect(unreferencedCount(idx)).toBe(manual)
+    expect(manual).toBeGreaterThan(0)
+  })
+
+  it('④ shotsAffectedByAsset：改资产提示词波及的镜头与出场索引同口径', () => {
+    // v2.0 —— 苏可（角色）经 look 聚合，波及第 1 集三个场的镜头。
+    const p = fresh()
+    const shots = shotsAffectedByAsset(p, A.suke)
+    expect(shots.length).toBeGreaterThan(0)
+    // 每个受影响镜头都确实（直接或经 look）挂了苏可。
+    for (const sid of shots) {
+      const sh = p.shots[sid]!
+      const hit = sh.mounts.some((m) => {
+        if (m.assetId === A.suke) return true
+        const a = p.assets[m.assetId]
+        return a?.kind === 'look' && (a as Look).characterId === A.suke
+      })
+      expect(hit).toBe(true)
+    }
   })
 })
 

@@ -39,6 +39,10 @@
   --acc-line: rgb(var(--acc-rgb) / 0.45); /* 主色描边 */
   --amber-bg: rgb(var(--amber-rgb) / 0.12);
   --amber-line: rgb(var(--amber-rgb) / 0.5);
+
+  /* v2.0 状态语义色（中性推导，不写字面色值到组件） */
+  --pending-fg: rgb(var(--amber-rgb)); /* 待入库 —— 与既有 amber 系同族 */
+  --unref-fg: var(--t4); /* 当前剧本未引用 —— 弱灰 */
   --gold-bg: rgb(var(--gold-rgb) / 0.16); /* 金色淡底（hero 卡） */
   --gold-line: rgb(var(--gold-rgb) / 0.4); /* 金色描边 */
   --danger-bg: rgb(var(--danger-rgb) / 0.1);

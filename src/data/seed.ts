@@ -1,7 +1,8 @@
 // 第 1 集：《最后的尊严》3 场 25 镜 + 全部资产。
 // 内容全部取材自剧本原文，不用 lorem —— 原型的说服力全在这。
-import type { Project, Scene, Shot, Asset, AssetKind, Look, MountableKind, MountRef } from './types'
+import type { CandidateAsset, Project, Scene, Shot, Asset, AssetKind, Look, MountableKind, MountRef } from './types'
 import { PROMPTS } from './prompts'
+import { buildUsageIndex } from '../services/appearanceIndex'
 
 // ── 资产 id（全剧唯一，供挂载引用）──
 export const A = {
@@ -654,4 +655,40 @@ export function initialSceneShots(sceneId: string): { shotIds: string[]; shots: 
     out[id] = structuredClone(seedProject.shots[id]!)
   }
   return { shotIds: [...scene.shotIds], shots: out }
+}
+
+// ── v2.0：「首次导入全剧」的起点 ──
+// seedFreshProject：libraryCommittedAt: null + 无分镜 + 资产库为空，全部资产落在 seedCandidates。
+// startSplit 会以 seedProject 的规范分镜为模板生成分镜，并把挂载重指到入库后的 committed id
+//（`as_${tempId}`，着装角色 `lk_as_${characterTempId}`）—— tempId 取自 seed 资产 id，故可对齐。
+const _seedUsage = buildUsageIndex(seedProject)
+
+/** 候选清单：四类基础资产各一条；角色候选带出它在 seed 里的造型（一并入库生成 look）。 */
+export const seedCandidates: CandidateAsset[] = assetList.map((a, i) => {
+  const cand: CandidateAsset = {
+    tempId: a.id, // 关键：tempId = seed 资产 id，入库后 committed id 可被 startSplit 确定性重指
+    kind: a.kind,
+    name: a.name,
+    imagePrompt: a.imagePrompt,
+    aliases: a.aliases,
+    decision: 'new',
+    occCount: _seedUsage[a.id]?.shotCount ?? 0,
+    firstParaNo: i + 1,
+  }
+  if (a.kind === 'character') {
+    const look = LOOK_BY_CHAR[a.id]
+    if (look && look.costumeIds.length) cand.costumeIds = [...look.costumeIds]
+  }
+  return cand
+})
+
+/** 「首次导入」演示的起点项目：未入库、无分镜、资产库为空。 */
+export const seedFreshProject: Project = {
+  ...seedProject,
+  assets: {},
+  shots: {},
+  scenes: Object.fromEntries(
+    Object.entries(scenes).map(([id, sc]) => [id, { ...sc, shotIds: [] }]),
+  ),
+  libraryCommittedAt: null,
 }
