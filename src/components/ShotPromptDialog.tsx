@@ -3,6 +3,9 @@ import { useStore } from '../store/useStore'
 import type { Shot } from '../data/types'
 import { EntityText } from './EntityText'
 import { AtMentionPicker } from './AtMentionPicker'
+import { costShotPrompts, fmtCost } from '../services/cost'
+import { PHASES, taskDuration } from '../services/taskRun'
+import { TaskProgress } from './TaskProgress'
 import ui from '../styles/ui.module.css'
 import s from './ShotPromptDialog.module.css'
 
@@ -11,8 +14,8 @@ import s from './ShotPromptDialog.module.css'
 // 已生成态：同一套框里显示生成结果，右下变「重新生成提示词」。两态版式完全一致。
 // 用户手动改写并保存任一段 → markPromptEdited，落一个 ✎ 标记（重新生成会覆盖）。
 const MODELS = ['豆包 4.5', '即梦 3.0', '可灵 2.1', 'Seedance 1.0', 'Vidu 2.0']
-// 一镜生成画面 + 视频两段提示词的预估星钻，口径与「生成镜头提示词」弹窗一致（每镜 2）。
-const GEN_COST = 2
+// 一镜生成画面 + 视频两段提示词的预估星钻（每镜 ✦6，口径与批量弹窗一致）。
+const GEN_COST = costShotPrompts(['_one'])
 
 export function ShotPromptDialog({
   shot,
@@ -38,6 +41,7 @@ export function ShotPromptDialog({
   const [imgDirty, setImgDirty] = useState(false)
   const [vidDirty, setVidDirty] = useState(false)
   const [model, setModel] = useState(MODELS[0])
+  const [running, setRunning] = useState(false)
   const imgRef = useRef<HTMLTextAreaElement>(null)
   const vidRef = useRef<HTMLTextAreaElement>(null)
 
@@ -95,7 +99,6 @@ export function ShotPromptDialog({
   }
 
   const generating = promptState === 'generating'
-  const synthLabel = generating ? '生成中…' : revealed ? '重新生成提示词' : '立即生成提示词'
 
   const fields = [
     {
@@ -202,20 +205,24 @@ export function ShotPromptDialog({
             <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={close}>
               关闭
             </button>
+          ) : running ? (
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <TaskProgress
+                compact
+                phases={PHASES.shotPrompt}
+                durationMs={taskDuration(GEN_COST)}
+                onDone={() => { generatePrompts([shot.id]); setRunning(false) }}
+              />
+            </span>
           ) : (
-            <>
-              <span className={s.cost} title="预估消耗星钻（一镜画面 + 视频提示词）">
-                ⚡ {GEN_COST}
-              </span>
-              <button
-                className={[ui.btn, ui.btnPrimary].join(' ')}
-                disabled={generating}
-                onClick={() => generatePrompts([shot.id])}
-              >
-                {generating && <span className={s.spin} />}
-                {synthLabel}
-              </button>
-            </>
+            <button
+              className={[ui.btn, ui.btnPrimary].join(' ')}
+              disabled={generating}
+              onClick={() => setRunning(true)}
+            >
+              {generating && <span className={s.spin} />}
+              {revealed ? `确认并重新生成 · ${fmtCost(GEN_COST)}` : `生成 · ${fmtCost(GEN_COST)}`}
+            </button>
           )}
         </div>
       </div>

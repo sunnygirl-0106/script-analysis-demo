@@ -90,6 +90,11 @@
   color: var(--t2);
   font-weight: 600;
 }
+/* 「N 项当前剧本未引用」：弱化黄字（§4.2）。 */
+.unrefTag {
+  color: var(--amber);
+  opacity: 0.8;
+}
 /* 有镜头被标脏时的提醒行，贴在主 CTA 左侧 */
 .warn {
   display: inline-flex;

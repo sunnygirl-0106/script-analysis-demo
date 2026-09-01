@@ -1,0 +1,87 @@
+/* 统一资产检查区（§4.2）。用在各任务弹窗里，色调只用 theme 变量。 */
+.box {
+  margin-top: 14px;
+  padding: 12px 13px;
+  border: 1px solid var(--line2);
+  border-radius: var(--rlg);
+  background: var(--bg1);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--t3);
+}
+
+.checking {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--t3);
+}
+.clean {
+  color: var(--scene);
+  font-weight: 500;
+}
+
+.lead { color: var(--t2); }
+.lead b { color: var(--t1); font-weight: 600; }
+
+.table {
+  margin-top: 10px;
+  border: 1px solid var(--line2);
+  border-radius: var(--rsm);
+  overflow: hidden;
+}
+.thead, .trow {
+  display: grid;
+  grid-template-columns: 1.2fr 56px 1.6fr;
+  gap: 10px;
+  padding: 8px 10px;
+  align-items: start;
+}
+.thead {
+  font-size: 10.5px;
+  color: var(--t4);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--line2);
+}
+.trow { border-bottom: 1px solid var(--line2); }
+.trow:last-child { border-bottom: none; }
+.tName { display: flex; align-items: center; gap: 7px; color: var(--t1); font-size: 12.5px; padding-top: 5px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.tKind { color: var(--t3); font-size: 12px; padding-top: 6px; }
+.tCtrl { display: flex; flex-direction: column; gap: 4px; }
+
+.sel, .linkSel {
+  appearance: none;
+  width: 100%;
+  background: var(--bg3);
+  color: var(--t1);
+  border: 1px solid var(--line);
+  border-radius: var(--rsm);
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.linkSel { border-color: var(--acc-line); }
+.sub { font-size: 10.5px; color: var(--t4); }
+.effect { font-size: 10.5px; color: var(--amber); line-height: 1.5; }
+
+.summary {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line2);
+  color: var(--t3);
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+
+.spin {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid var(--acc-line);
+  border-top-color: var(--acc);
+  animation: apc-spin 0.7s linear infinite;
+  flex: none;
+}
+@keyframes apc-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }

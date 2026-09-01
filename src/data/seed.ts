@@ -677,7 +677,16 @@ export const seedCandidates: CandidateAsset[] = assetList.map((a, i) => {
   }
   if (a.kind === 'character') {
     const look = LOOK_BY_CHAR[a.id]
-    if (look && look.costumeIds.length) cand.costumeIds = [...look.costumeIds]
+    if (look && look.costumeIds.length) {
+      cand.costumeIds = [...look.costumeIds]
+      // 每套造型带一条融合式提示词（AI 抽取时已产出），阶段②可行内编辑。
+      cand.lookPrompts = Object.fromEntries(
+        look.costumeIds.map((cid) => {
+          const cos = assetList.find((x) => x.id === cid)?.name ?? '服装'
+          return [cid, `${a.name}素模 + ${cos}的融合造型：以角色素模为人物一致性基准，服装款式与颜色以「${cos}」资产为准，合成一张穿好衣服的定妆图。背景中性、写实电影质感。`]
+        }),
+      )
+    }
   }
   return cand
 })

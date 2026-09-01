@@ -1,0 +1,106 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 2px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  transition: opacity 0.25s ease;
+}
+
+.done {
+  color: var(--t4);
+  opacity: 1;
+}
+.active {
+  color: var(--acc-hi);
+  font-weight: 600;
+}
+.pending {
+  color: var(--t3);
+  opacity: 0.3;
+}
+
+.mark {
+  flex: 0 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+.done .mark {
+  color: var(--t4);
+}
+
+.label {
+  flex: 1;
+}
+
+/* 细进度条 */
+.track {
+  height: 3px;
+  border-radius: var(--rpill);
+  background: var(--line2);
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  border-radius: var(--rpill);
+  background: var(--acc);
+  width: 0;
+  transition-property: width;
+  transition-timing-function: linear;
+}
+
+/* 转圈 */
+.spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--acc-line);
+  border-top-color: var(--acc);
+  animation: tp-spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+/* compact 变体：行内单行 */
+.compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--acc-hi);
+}
+.compactLabel {
+  white-space: nowrap;
+}
+
+@keyframes tp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+  .fill {
+    transition: none;
+  }
+}

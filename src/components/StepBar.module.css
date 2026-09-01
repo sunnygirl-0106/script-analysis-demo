@@ -1,0 +1,125 @@
+/* 五步流程条：主内容区顶部的窄条。仅用 theme 变量取色。 */
+.bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg1);
+}
+
+.steps {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.stepWrap {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+.sep {
+  width: 22px;
+  height: 1px;
+  background: var(--line);
+  margin: 0 4px;
+  flex: none;
+}
+
+.step {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 8px;
+  border-radius: var(--rpill);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: 0.16s cubic-bezier(0.22, 0.61, 0.36, 1);
+  white-space: nowrap;
+}
+.badge {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  color: var(--t4);
+  background: var(--bg2);
+}
+.txt {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.15;
+  text-align: left;
+}
+.label {
+  font-size: 12.5px;
+  color: var(--t3);
+  font-weight: 600;
+}
+.sub {
+  font-size: 10px;
+  color: var(--t5);
+}
+
+/* 当前步：主色描边 + 淡底。 */
+.current {
+  border-color: var(--acc-line);
+  background: var(--acc-bg);
+  cursor: default;
+}
+.current .badge {
+  border-color: var(--acc);
+  color: var(--on-acc);
+  background: var(--acc);
+}
+.current .label { color: var(--acc); }
+
+/* 已完成步：次要灰 + ✓，可点回看。 */
+.done .badge {
+  border-color: var(--scene);
+  color: var(--scene);
+  background: transparent;
+}
+.done .label { color: var(--t3); }
+.done:hover { background: var(--bg2); }
+
+/* 可跳但未完成步：中性可点。 */
+.jumpable:hover { background: var(--bg2); }
+.jumpable:hover .label { color: var(--t1); }
+
+/* 不可跳步：压暗禁用。 */
+.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.disabled .label { color: var(--t5); }
+
+/* 作用域标签：右侧，回答「为什么这一步没有集场镜」。 */
+.scope {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: none;
+  white-space: nowrap;
+}
+.scopeLabel {
+  font-size: 10.5px;
+  color: var(--t5);
+}
+.scopeVal {
+  font-size: 12px;
+  color: var(--t2);
+  font-weight: 600;
+}

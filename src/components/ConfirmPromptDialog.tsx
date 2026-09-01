@@ -8,6 +8,9 @@ import {
   type PromptScope,
 } from '../services/promptScope'
 import { PencilIcon } from './PencilIcon'
+import { costShotPrompts, fmtCost } from '../services/cost'
+import { PHASES, taskDuration } from '../services/taskRun'
+import { TaskProgress } from './TaskProgress'
 import d from './ScriptImportDialog.module.css'
 import c from './ConfirmPromptDialog.module.css'
 
@@ -68,6 +71,7 @@ export function ConfirmPromptDialog({
   const selectable = (id: string) => stateOf(id) !== 'generating'
 
   const [selected, setSelected] = useState<Set<string>>(() => defaultSelection(ids, states))
+  const [running, setRunning] = useState(false)
   // 默认展开：当前场展开，其余折叠；scope==='scene' 只有一组，恒展开。
   const defaultOpen = () =>
     new Set(scope === 'scene' ? groups.map((g) => g.sceneId) : [selectedSceneId])
@@ -112,7 +116,7 @@ export function ConfirmPromptDialog({
   const allSelectable = ids.filter(selectable)
   const allOn = allSelectable.length > 0 && allSelectable.every((id) => selected.has(id))
   const someOn = selCount > 0 && !allOn
-  const cost = selCount * 2
+  const cost = costShotPrompts([...selected]) // 每镜 ✦6
 
   const allRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
@@ -314,24 +318,36 @@ export function ConfirmPromptDialog({
           <span className={c.hint}>内容修改后自动保存为最新版本</span>
 
           <div className={c.footRight}>
-            <div className={c.modes}>
-              <label className={mode === 'smart' ? c.modeOn : ''}>
-                <input type="radio" checked={mode === 'smart'} onChange={() => setMode('smart')} />
-                智能合成
-              </label>
-              <label className={mode === 'concat' ? c.modeOn : ''}>
-                <input type="radio" checked={mode === 'concat'} onChange={() => setMode('concat')} />
-                自动拼接
-              </label>
-            </div>
-            <span className={c.cost}>⚡ {cost}</span>
-            <button
-              className={c.cta}
-              disabled={selCount === 0}
-              onClick={() => onConfirm([...selected])}
-            >
-              生成 {selCount} 镜提示词
-            </button>
+            {running ? (
+              <span style={{ flex: 1, minWidth: 220 }}>
+                <TaskProgress
+                  phases={PHASES.shotPrompt}
+                  durationMs={taskDuration(cost)}
+                  onDone={() => onConfirm([...selected])}
+                />
+              </span>
+            ) : (
+              <>
+                <div className={c.modes}>
+                  <label className={mode === 'smart' ? c.modeOn : ''}>
+                    <input type="radio" checked={mode === 'smart'} onChange={() => setMode('smart')} />
+                    智能合成
+                  </label>
+                  <label className={mode === 'concat' ? c.modeOn : ''}>
+                    <input type="radio" checked={mode === 'concat'} onChange={() => setMode('concat')} />
+                    自动拼接
+                  </label>
+                </div>
+                <span className={c.cost}>{fmtCost(cost)}</span>
+                <button
+                  className={c.cta}
+                  disabled={selCount === 0}
+                  onClick={() => setRunning(true)}
+                >
+                  确认并生成 · {fmtCost(cost)}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

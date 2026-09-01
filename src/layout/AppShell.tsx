@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useStore } from '../store/useStore'
 import type { Stage } from '../data/types'
+import { StepBar } from '../components/StepBar'
 import s from './AppShell.module.css'
 
 // 左侧导航图标（内联 line icon，跟随 currentColor）
@@ -60,7 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const analysisPhase = useStore((st) => st.analysisPhase)
   const replayDemo = useStore((st) => st.replayDemo)
   const setAnalysisPhase = useStore((st) => st.setAnalysisPhase)
-  const setTab = useStore((st) => st.setTab)
+  const finishFirstImport = useStore((st) => st.finishFirstImport)
 
   // 演示控制器 pill：解析中可「跳过」直达完整页；完整页可「重新演示」复位重播。空态不显示（空态自带 CTA）。
   const running = analysisPhase === 'uploading' || analysisPhase === 'analyzing'
@@ -70,7 +71,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <button
           className={s.demoPill}
           onClick={() => {
-            setTab('shot')
+            finishFirstImport()
             setAnalysisPhase('done')
           }}
         >
@@ -154,7 +155,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
           </div>
 
-          <div className={s.content}>{children}</div>
+          <div className={s.content}>
+            {activePage === 'analysis' && <StepBar />}
+            <div className={s.contentBody}>{children}</div>
+          </div>
         </div>
       </div>
     </div>

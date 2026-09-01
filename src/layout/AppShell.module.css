@@ -334,5 +334,13 @@
 .content {
   flex: 1;
   display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+/* 页面主体：StepBar 之下的横向布局区，沿用旧 .content 的 flex 行为。 */
+.contentBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
   min-width: 0;
 }

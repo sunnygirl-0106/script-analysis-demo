@@ -2,6 +2,7 @@ import { useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { useStore } from '../store/useStore'
 import type { Asset } from '../data/types'
 import { can } from '../services/capability'
+import { refState } from '../services/reference'
 import { syncState } from '../services/staleness'
 import { lookName, looksUsingCostume } from '../services/looks'
 import { parsePromptSections } from '../services/promptFormat'
@@ -85,8 +86,10 @@ export function AssetRow({ asset, sub, onOpenPrompt }: Props) {
   const assets = useStore((st) => st.project.assets)
   const usageIndex = useStore((st) => st.usageIndex())
   const canExclude = useStore((st) => can(st.project, 'toggleExcluded'))
+  const canEditName = useStore((st) => can(st.project, 'editAssetName'))
   const toggleExcluded = useStore((st) => st.toggleAssetExcluded)
   const renamePlain = useStore((st) => st.renameAsset)
+  const removeAssetAlias = useStore((st) => st.removeAssetAlias)
   const showToast = useStore((st) => st.showToast)
 
   // 待确认的新名字。非 null 时弹「确认」。
@@ -112,6 +115,8 @@ export function AssetRow({ asset, sub, onOpenPrompt }: Props) {
   const usage = usageIndex[asset.id] ?? { appearances: [], shotCount: 0 }
   const dot = KIND_DOT[asset.kind]
   const name = asset.kind === 'look' ? lookName(asset, assets) : asset.name
+  // v2.0：已入库但当前剧本没有任何镜头引用它（删场/删集不删资产的可视化出口，§4.2）。
+  const unreferenced = refState(usageIndex, asset.id) === 'unreferenced'
 
   // 名称下方 meta 行：服装显示「已搭配 + 造型 chips」，其余显示首现。
   const usedBy = asset.kind === 'costume' ? looksUsingCostume(asset.id, assets) : []
@@ -163,6 +168,29 @@ export function AssetRow({ asset, sub, onOpenPrompt }: Props) {
           <span className={[s.metaLine, s.metaEmpty].join(' ')}>暂未关联角色造型</span>
         ) : (
           meta && <span className={s.metaLine}>{meta}</span>
+        )}
+        {unreferenced && (
+          <span className={s.unrefNote} title="仍在项目资产库，只是当前剧本没有镜头引用它">
+            当前剧本未引用
+          </span>
+        )}
+        {/* 别名：「使用已有资产」并进来的旧叫法。资产只增不减，但误并的别名可撤销（§4.3）。 */}
+        {(asset.aliases?.length ?? 0) > 0 && (
+          <span className={s.metaLine}>
+            <span className={s.usedLabel}>别名</span>
+            {asset.aliases!.map((al) => (
+              <span key={al} className={s.aliasChip}>
+                {al}
+                {canEditName && (
+                  <button
+                    className={s.aliasX}
+                    title={`解除别名「${al}」`}
+                    onClick={(e) => { e.stopPropagation(); removeAssetAlias(asset.id, al) }}
+                  >×</button>
+                )}
+              </span>
+            ))}
+          </span>
         )}
       </div>
 

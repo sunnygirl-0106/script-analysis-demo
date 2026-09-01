@@ -8,8 +8,6 @@ import { AnalyzingWorkspace } from './pages/AnalyzingWorkspace'
 import { VisualPrep } from './pages/VisualPrep'
 import { Studio } from './pages/Studio'
 import { Toast } from './components/Toast'
-import { IncrementalGateDialog } from './components/IncrementalGateDialog'
-import { RuleCheatPanel } from './components/RuleCheatPanel'
 import { ASSET_TAB_AT, DONE_AT, STAGE_AT, UPLOAD_MS } from './services/analysisTimeline'
 
 // 拆解过程演示的时间线控制器：监听 analysisPhase，按 analysisTimeline 推进 revealStage，
@@ -20,6 +18,7 @@ function useAnalysisReveal() {
   const setRevealStage = useStore((s) => s.setRevealStage)
   const setTab = useStore((s) => s.setTab)
   const setScriptOpen = useStore((s) => s.setScriptOpen)
+  const finishFirstImport = useStore((s) => s.finishFirstImport)
 
   useEffect(() => {
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
@@ -27,9 +26,9 @@ function useAnalysisReveal() {
     const at = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms))
 
     if (phase === 'uploading') {
-      // 减弱动态：跳过整段动画，直接落到完整页。
+      // 减弱动态：跳过整段动画，直接落到阶段② 完整确认页。
       if (reduce) {
-        at(150, () => setPhase('done'))
+        at(150, () => { finishFirstImport(); setPhase('done') })
       } else {
         at(UPLOAD_MS, () => {
           setRevealStage(0)
@@ -40,6 +39,7 @@ function useAnalysisReveal() {
       }
     } else if (phase === 'analyzing') {
       if (reduce) {
+        finishFirstImport()
         setPhase('done')
       } else {
         STAGE_AT.forEach((ms, i) =>
@@ -50,16 +50,16 @@ function useAnalysisReveal() {
         )
         // 资产阶段：依次扫过角色·服装·场景·道具，逐类呈现，拆解更完整。
         ASSET_TAB_AT.forEach(({ tab, at: ms }) => at(ms, () => setTab(tab)))
-        // 落地：切回分镜脚本作为完整页的默认视图。
+        // 落地：解析完成后进入阶段② 完整确认页（v3「先资产、后脚本」）。
         at(DONE_AT, () => {
-          setTab('shot')
+          finishFirstImport()
           setPhase('done')
         })
       }
     }
 
     return () => timers.forEach((t) => clearTimeout(t))
-  }, [phase, setPhase, setRevealStage, setTab, setScriptOpen])
+  }, [phase, setPhase, setRevealStage, setTab, setScriptOpen, finishFirstImport])
 }
 
 export default function App() {
@@ -85,9 +85,7 @@ export default function App() {
       {activePage === 'analysis' && analysisContent}
       {activePage === 'visual' && <VisualPrep />}
       {activePage === 'studio' && <Studio />}
-      <IncrementalGateDialog />
       <Toast />
-      <RuleCheatPanel />
     </AppShell>
   )
 }

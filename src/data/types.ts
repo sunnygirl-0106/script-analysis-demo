@@ -157,8 +157,10 @@ export interface CandidateAsset {
   name: string
   imagePrompt: string
   aliases?: string[]
-  /** 角色候选带出的造型（随宿主一起入库或一起丢弃）。 */
+  /** 角色候选带出的造型（随宿主一起入库或一起丢弃）。一件服装 = 一套造型（阶段②口径）。 */
   costumeIds?: string[]
+  /** 每套造型（按 costumeId 索引）自己的融合式生图提示词。阶段②可行内编辑；空 = 待补全。 */
+  lookPrompts?: Record<string, string>
   characterId?: string
   /** 原文口径的出现信息。阶段②还没有集/场/镜，只能这么表达。 */
   firstParaNo?: number

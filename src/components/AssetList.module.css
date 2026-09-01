@@ -164,6 +164,13 @@
 .metaEmpty {
   color: var(--t4);
 }
+/* 「当前剧本未引用」：弱化黄字提示（删场/删集不删资产的可视化出口，§4.2）。 */
+.unrefNote {
+  font-size: 10.5px;
+  color: var(--amber);
+  opacity: 0.72;
+  white-space: nowrap;
+}
 .miniChip {
   display: inline-flex;
   align-items: center;
@@ -183,6 +190,30 @@
   background: transparent;
   border: 1px solid rgb(var(--cloth-rgb) / 0.5);
 }
+
+/* 别名 chip（可撤销） */
+.aliasChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  color: var(--t4);
+  background: var(--bg3);
+  border: 1px dashed var(--line);
+  border-radius: var(--rpill);
+  padding: 1px 6px 1px 8px;
+}
+.aliasX {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--t5);
+  font-size: 11px;
+  line-height: 1;
+  padding: 0 1px;
+}
+.aliasX:hover { color: var(--danger); }
 
 /* 提示词列 */
 .promptCell {

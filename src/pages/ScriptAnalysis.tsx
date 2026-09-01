@@ -13,6 +13,7 @@ import { ConfirmPromptDialog } from '../components/ConfirmPromptDialog'
 import type { PromptScope } from '../services/promptScope'
 import { can } from '../services/capability'
 import { sceneDuration } from '../services/timeline'
+import { unreferencedCount } from '../services/reference'
 import ui from '../styles/ui.module.css'
 import s from './ScriptAnalysis.module.css'
 
@@ -26,6 +27,7 @@ export function ScriptAnalysis() {
   const showToast = useStore((st) => st.showToast)
   const setStage = useStore((st) => st.setStage)
   const scriptOpen = useStore((st) => st.scriptOpen)
+  const usageIndex = useStore((st) => st.usageIndex())
   const episodeW = useStore((st) => st.episodeW)
   const scriptW = useStore((st) => st.scriptW)
   const setPanelW = useStore((st) => st.setPanelW)
@@ -43,6 +45,8 @@ export function ScriptAnalysis() {
 
   const shotTotal = Object.values(project.scenes).reduce((n, sc) => n + sc.shotIds.length, 0)
   const durTotal = Object.values(project.scenes).reduce((n, sc) => n + sceneDuration(sc, project.shots), 0)
+  // 未引用资产计数（删场/删集不删资产的可视化出口，§4.2）。
+  const unrefTotal = unreferencedCount(usageIndex)
 
   // 两步式 CTA：「生成提示词」（次要，恒可点）与「进入资产库生图」（主，全就绪才可点）共存。
   // 口径为全剧：need = 全部待生成 + 待更新的镜头。数量统计只进完成度提示行，不进按钮文案。
@@ -109,10 +113,11 @@ export function ScriptAnalysis() {
           {activeTab === 'prop' && <AssetList kind="prop" sort={assetSort} />}
         </div>
 
-        <div className={s.foot}>
+        <div className={s.foot} id="genPromptsFooter">
           <div className={s.info}>
             全剧 <b>{project.episodes.length} 集</b> · <b>{Object.keys(project.scenes).length} 场</b> ·{' '}
             <b>{shotTotal} 个镜头</b> · 约 {durTotal} 秒
+            {unrefTotal > 0 && <span className={s.unrefTag}> · {unrefTotal} 项当前剧本未引用</span>}
           </div>
           {needIds.length > 0 ? (
             <button className={s.doneLink} onClick={() => setPromptScope('project')}>

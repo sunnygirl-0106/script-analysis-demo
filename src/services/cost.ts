@@ -1,0 +1,52 @@
+// 星钻计价。纯函数，不碰 UI。演示口径——真实单价等陈硕确认，改 RATE 一处即可。
+// 术语统一：全仓库「算力 / ⚡」一律读作「星钻 / ✦」。
+import type { ShotDensity } from '../data/types'
+import { densityShots } from './density'
+import { seedProject } from '../data/seed'
+
+export const RATE = {
+  parsePerKChar: 2, // 解析剧本 / 抽资产：每千字 ✦2
+  shot: 1, // 拆分镜头：每镜 ✦1
+  assetPrompt: 1, // 单条资产提示词补全：✦1
+  shotPrompt: 6, // 单镜画面/视频提示词：✦6
+} as const
+
+/**
+ * 预计某场在某颗粒度下会拆出多少镜。
+ * 单一真相源顺序：① 有密度预设的场取预设镜数；② 否则取 seedProject 里该场的标准镜数
+ * （seedProject 就是「拆完」的参照）；③ 再兜底一个按密度的经验值。
+ */
+export function estimateShots(sceneIds: string[], density: ShotDensity = 'standard'): number {
+  const fallback: Record<ShotDensity, number> = { compact: 6, standard: 8, loose: 5 }
+  return sceneIds.reduce((sum, id) => {
+    const preset = densityShots(id, density).length
+    if (preset > 0) return sum + preset
+    const seeded = seedProject.scenes[id]?.shotIds.length ?? 0
+    return sum + (seeded || fallback[density])
+  }, 0)
+}
+
+/** 按字数估解析消耗：每千字 ✦2，最少 ✦1。 */
+export function costParse(text: string): number {
+  return Math.max(1, Math.round((text.length / 1000) * RATE.parsePerKChar))
+}
+
+/** 按预计镜数估拆分消耗：每镜 ✦1。 */
+export function costSplit(sceneIds: string[], density: ShotDensity = 'standard'): number {
+  return estimateShots(sceneIds, density) * RATE.shot
+}
+
+/** 批量镜头提示词：每镜 ✦6。 */
+export function costShotPrompts(shotIds: string[]): number {
+  return shotIds.length * RATE.shotPrompt
+}
+
+/** 单条资产提示词补全：✦1。 */
+export function costAssetPrompt(): number {
+  return RATE.assetPrompt
+}
+
+/** 统一渲染成 `✦25`。 */
+export function fmtCost(n: number): string {
+  return `✦${n}`
+}

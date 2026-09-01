@@ -22,16 +22,23 @@ export interface ScannedAsset {
   occCount?: number
 }
 
-/** 从一批「本次范围内 AI 抽到的资产」里，滤掉库里已有的同名同类项，也在批内去重。
+/** 一条资产/候选的全部判重 key：名称 + 所有别名（都归一化，都带 kind 前缀）。
+ *  别名参与判重是「使用已有资产」能真正落地的地基：把候选名写进目标别名后，
+ *  下次同名再来就命中别名、不再当新资产问一遍（§4.3）。 */
+function keysOf(x: { kind: CandidateAsset['kind']; name: string; aliases?: string[] }): string[] {
+  return [assetKey(x), ...(x.aliases ?? []).map((al) => assetKey({ kind: x.kind, name: al }))]
+}
+
+/** 从一批「本次范围内 AI 抽到的资产」里，滤掉库里已有的同名同类项（含别名），也在批内去重。
  *  判重复用 incremental.assetKey，全系统只此一处判重逻辑。 */
 export function extractCandidates(project: Project, scanned: ScannedAsset[]): CandidateAsset[] {
-  const existing = new Set(Object.values(project.assets).map(assetKey))
+  const existing = new Set(Object.values(project.assets).flatMap(keysOf))
   const seen = new Set<string>()
   const out: CandidateAsset[] = []
   for (const item of scanned) {
-    const key = assetKey(item)
-    if (existing.has(key) || seen.has(key)) continue
-    seen.add(key)
+    const itemKeys = keysOf(item)
+    if (itemKeys.some((k) => existing.has(k) || seen.has(k))) continue
+    itemKeys.forEach((k) => seen.add(k))
     out.push({
       tempId: `cand_${item.kind}_${normalize(item.name)}`,
       kind: item.kind,
@@ -116,10 +123,21 @@ export function commitCandidates(
   const resolve = (tempId: string) => finalId.get(tempId) ?? tempId
 
   // ③ 结算。newAssets 单独攒，最后一次性并入，保证既有 assets 条目引用相等。
+  // 「使用已有资产」要真正落地：把候选名（及其别名）写进目标资产的 aliases，
+  // 否则去重是 kind+名称精确匹配，下次同名会被再当新资产问一遍（§4.3）。
+  const aliasAdds = new Map<string, Set<string>>()
   const newAssets: Record<string, Asset> = {}
   for (const c of effective) {
     if (c.decision === 'link') {
-      if (c.linkTargetId) linked.push({ tempId: c.tempId, targetId: c.linkTargetId })
+      if (c.linkTargetId) {
+        linked.push({ tempId: c.tempId, targetId: c.linkTargetId })
+        // 目标存在才写别名（写不进不存在的资产）。
+        if (project.assets[c.linkTargetId]) {
+          const set = aliasAdds.get(c.linkTargetId) ?? new Set<string>()
+          for (const al of [c.name, ...(c.aliases ?? [])]) set.add(al)
+          aliasAdds.set(c.linkTargetId, set)
+        }
+      }
       continue
     }
     if (c.decision === 'skip') {
@@ -142,8 +160,21 @@ export function commitCandidates(
     }
   }
 
+  // 把 link 的别名并进目标资产（去重、只增）。
+  const withAliases = { ...project.assets, ...newAssets }
+  for (const [targetId, adds] of aliasAdds) {
+    const target = withAliases[targetId]
+    if (!target) continue
+    const existing = new Set(target.aliases ?? [])
+    const merged = [...(target.aliases ?? [])]
+    for (const al of adds) {
+      if (al && al !== target.name && !existing.has(al)) { merged.push(al); existing.add(al) }
+    }
+    withAliases[targetId] = { ...target, aliases: merged }
+  }
+
   return {
-    project: { ...project, assets: { ...project.assets, ...newAssets } },
+    project: { ...project, assets: withAliases },
     added,
     linked,
     skipped,

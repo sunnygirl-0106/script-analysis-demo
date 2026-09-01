@@ -4,7 +4,7 @@ import type {
   AnalysisStep, AssetKind, CandidateAsset, CandidateDecision, Look, MountRef,
   PendingTask, Project, PromptState, Scene, Shot, ShotDensity, Stage,
 } from '../data/types'
-import { seedProject } from '../data/seed'
+import { seedProject, seedFreshProject, seedCandidates } from '../data/seed'
 import {
   commitCandidates as commitCandidatesSvc,
   extractCandidates,
@@ -90,6 +90,10 @@ interface UIState {
    *  不限定的话 hover 一个名字会让全场的角色卡一起亮，那就不是联动而是噪音了。
    *  另外它只驱动「出场的人和物」这一列，不驱动左侧剧本原文面板（那是彩色区，自己已在标实体）。 */
   hoverMention: { assetId: string; shotId: string } | null
+  /** 阶段② 悬浮到某条候选/已入库资产时，左侧全剧原文点亮它的名字（terms = [name, ...aliases]）。
+   *  与 hoverMention 是两回事：那个带 shotId、服务分镜表；这个只有资产身份的名字数组，
+   *  因为阶段② 的候选没有稳定 id 可供左栏反查，用名字最直接。 */
+  hoverAssetTerm: { terms: string[] } | null
 }
 
 // 面板宽度夹取范围。
@@ -139,6 +143,8 @@ export interface StoreState extends UIState {
   // 空态点「导入剧本」：进 uploading（模拟上传），控制器随后转 analyzing。
   startUpload: () => void
   setAnalysisPhase: (phase: AnalysisPhase) => void
+  /** 流程条跳转用：切阶段② / 阶段③ 相位（其余相位切换各有专用入口，不走这里）。 */
+  setAnalysisStep: (step: AnalysisStep) => void
   setRevealStage: (stage: number) => void
   // 拖拽调整面板宽度（自动夹取到 PANEL_MIN/MAX）。
   setPanelW: (which: 'episode' | 'script', width: number) => void
@@ -186,6 +192,7 @@ export interface StoreState extends UIState {
     opts: { prose: boolean; prompts: boolean },
   ) => void
   setHoverMention: (m: { assetId: string; shotId: string } | null) => void
+  setHoverAssetTerm: (t: { terms: string[] } | null) => void
   toggleAssetExcluded: (assetId: string) => void
   // ── 造型手动挂载（v2.0，受 editLookBinding 约束）──
   /** 改某着装角色引用的服装集合。挂载的镜头视觉随之变化 → 标待更新。 */
@@ -207,6 +214,24 @@ export interface StoreState extends UIState {
   renameCandidate: (tempId: string, name: string) => void
   addManualCandidate: (kind: AssetKind, name: string) => void
   removeCandidate: (tempId: string) => void
+  /** 阶段② 直接改一条候选的生图提示词。 */
+  setCandidatePrompt: (tempId: string, text: string) => void
+  /** 「✦ AI 结合剧本补全」：为提示词为空的候选生成一版草案（演示，纯前端合成）。 */
+  completeCandidatePrompt: (tempId: string) => void
+  /** 阶段② 给角色候选手动挂 / 换造型：改它带出的 costumeIds（引用同批服装候选的 tempId）。 */
+  setCandidateCostumes: (tempId: string, costumeIds: string[]) => void
+  /** 挂一件服装 = 生成一套造型 + 一条占位融合提示词（阶段② §3.3）。 */
+  attachCandidateCostume: (charTempId: string, costumeId: string) => void
+  /** 解除某套造型：移除该服装与它的提示词。 */
+  detachCandidateCostume: (charTempId: string, costumeId: string) => void
+  /** 换服装：把某套造型引用的服装换成另一件，提示词重置为新造型的占位。 */
+  swapCandidateCostume: (charTempId: string, oldCostumeId: string, newCostumeId: string) => void
+  /** 行内编辑某套造型的融合提示词。 */
+  setCandidateLookPrompt: (charTempId: string, costumeId: string, text: string) => void
+  /** 「✦ AI 结合剧本补全」某套造型的融合提示词（演示：纯前端合成，同步落字）。 */
+  completeCandidateLookPrompt: (charTempId: string, costumeId: string) => void
+  /** 新增一条服装候选（同时出现在服装 tab），返回其 tempId。用于「＋服装 · 新建」。 */
+  createCandidateCostume: (name: string) => string
   /** 结算 + 自动续跑挂起任务（v3 §6.2）。 */
   commitCandidates: () => void
   /** 取消整次操作：候选全丢，挂起任务不执行，原有分镜与资产库都不变（v3 §6.4）。 */
@@ -214,7 +239,26 @@ export interface StoreState extends UIState {
   /** 演练前复位观测痕迹。 */
   resetTrace: () => void
 
+  // ── 统一任务弹窗（v2.2 §4）：把「预检查」与「执行」拆开，让每个任务弹窗内联跑，不再另开闸弹窗 ──
+  /** 纯函数：给定本次扫到的资产，返回尚未收录的候选（不改 store）。供 <AssetPrecheck> 调用。 */
+  previewCandidates: (scanned: ScannedAsset[]) => CandidateAsset[]
+  /** 结算一组已定好处理方式的候选到项目资产库（link 写别名）。不挂任务、不发 toast。 */
+  commitScanned: (cands: CandidateAsset[]) => void
+  /** 各任务本次范围内 AI 扫到的资产（供弹窗预检查）。 */
+  scannedForResplitScene: (sceneId: string) => ScannedAsset[]
+  scannedForResplitEpisode: (episodeId: string) => ScannedAsset[]
+  scannedForEp2: () => ScannedAsset[]
+  /** 直接执行任务（不走闸；候选已由弹窗内联结算）。带各自的结果 toast。 */
+  runResplitScene: (sceneId: string, opts: { density?: ShotDensity; targetShots?: number }) => void
+  runResplitEpisode: (episodeId: string, opts: { density: ShotDensity; sceneCount?: number }) => void
+  runReplaceEpisode: (episodeId: string) => void
+  runAppendEpisode: () => void
+  /** 撤销一条别名（资产只增不减，但误并的别名必须可撤销，§4.3）。 */
+  removeAssetAlias: (assetId: string, alias: string) => void
+
   // ── 首次流程（v2.0）──
+  /** 解析动画跑完 → 落到阶段② 完整确认页（seedFreshProject + seedCandidates）。 */
+  finishFirstImport: () => void
   /** 阶段② 的「重新上传剧本」。仅 libraryCommittedAt == null 时可调。 */
   reuploadScript: (payload: ScriptPayload) => void
   /** 「确认并保存到项目资产库」：结算候选 + 写 libraryCommittedAt。 */
@@ -417,6 +461,7 @@ export const useStore = create<StoreState>((set, get) => {
   scriptW: 308,
   flashShotIds: [],
   hoverMention: null,
+  hoverAssetTerm: null,
   // 候选层：默认从现状起（已入库 + 有分镜），故 storyboard、无候选、无挂起任务。
   analysisStep: 'storyboard',
   candidates: [],
@@ -475,6 +520,7 @@ export const useStore = create<StoreState>((set, get) => {
   // 空态点「导入剧本」→ 模拟上传态。真正的时间线推进由 App 里的揭示控制器接管。
   startUpload: () => set({ analysisPhase: 'uploading', revealStage: 0 }),
   setAnalysisPhase: (analysisPhase) => set({ analysisPhase }),
+  setAnalysisStep: (analysisStep) => set({ analysisStep }),
   setRevealStage: (revealStage) => set({ revealStage }),
   setPanelW: (which, width) => {
     const w = Math.round(Math.min(PANEL_MAX[which], Math.max(PANEL_MIN[which], width)))
@@ -489,6 +535,11 @@ export const useStore = create<StoreState>((set, get) => {
       scriptOpen: false,
       sceneSettingsOpen: false,
       toast: null,
+      // 复位首次流程相位，否则「重新演示」之后 analysisStep / candidates / pendingTask 是串的。
+      analysisStep: 'storyboard',
+      candidates: [],
+      pendingTask: null,
+      hoverAssetTerm: null,
     }),
 
   // 生成提示词：目标镜置 generating，错峰后置 ready（seed 里已有 image/videoPrompt，生成 = 揭示）。
@@ -806,6 +857,13 @@ export const useStore = create<StoreState>((set, get) => {
     set({ hoverMention: m })
   },
 
+  setHoverAssetTerm: (t) => {
+    const cur = get().hoverAssetTerm
+    if (cur === t) return
+    if (!cur && !t) return
+    set({ hoverAssetTerm: t })
+  },
+
   // 改名 + 全链路同步。声明见接口处的长注释。
   renameAssetWithSync: (assetId, name, opts) => {
     const st0 = get()
@@ -1102,6 +1160,103 @@ export const useStore = create<StoreState>((set, get) => {
   removeCandidate: (tempId) =>
     set((st) => ({ candidates: st.candidates.filter((c) => c.tempId !== tempId) })),
 
+  setCandidatePrompt: (tempId, text) =>
+    set((st) => ({
+      candidates: st.candidates.map((c) => (c.tempId === tempId ? { ...c, imagePrompt: text } : c)),
+    })),
+
+  completeCandidatePrompt: (tempId) => {
+    const s = get()
+    const cand = s.candidates.find((c) => c.tempId === tempId)
+    if (!cand || cand.imagePrompt.trim()) return
+    // 演示用：结合剧名与类目合成一版可读草案（真实系统会调模型读原文，这里纯前端占位）。
+    const KIND_NOUN: Record<AssetKind, string> = {
+      character: '角色素模设定板', costume: '服装平铺图', location: '场景空镜',
+      prop: '道具产品图', look: '着装定妆图',
+    }
+    const draft = `【AI 补全草案】结合《${s.project.title}》原文，为「${cand.name}」生成的${KIND_NOUN[cand.kind]}提示词：纯白/中性背景，写实电影质感，突出「${cand.name}」的关键特征，无水印、无文字标注。可入库后继续细化。`
+    set((st) => ({
+      candidates: st.candidates.map((c) => (c.tempId === tempId ? { ...c, imagePrompt: draft } : c)),
+    }))
+    get().showToast(`已为「${cand.name}」补全一版提示词草案，可点开继续修改。`)
+  },
+
+  setCandidateCostumes: (tempId, costumeIds) =>
+    set((st) => ({
+      candidates: st.candidates.map((c) =>
+        c.tempId === tempId ? { ...c, costumeIds: [...costumeIds] } : c,
+      ),
+    })),
+
+  attachCandidateCostume: (charTempId, costumeId) =>
+    set((st) => ({
+      candidates: st.candidates.map((c) => {
+        if (c.tempId !== charTempId) return c
+        if ((c.costumeIds ?? []).includes(costumeId)) return c
+        return { ...c, costumeIds: [...(c.costumeIds ?? []), costumeId] }
+      }),
+    })),
+
+  detachCandidateCostume: (charTempId, costumeId) =>
+    set((st) => ({
+      candidates: st.candidates.map((c) => {
+        if (c.tempId !== charTempId) return c
+        const lookPrompts = { ...(c.lookPrompts ?? {}) }
+        delete lookPrompts[costumeId]
+        return { ...c, costumeIds: (c.costumeIds ?? []).filter((id) => id !== costumeId), lookPrompts }
+      }),
+    })),
+
+  swapCandidateCostume: (charTempId, oldCostumeId, newCostumeId) =>
+    set((st) => ({
+      candidates: st.candidates.map((c) => {
+        if (c.tempId !== charTempId) return c
+        const ids = (c.costumeIds ?? [])
+        if (!ids.includes(oldCostumeId) || ids.includes(newCostumeId)) return c
+        const lookPrompts = { ...(c.lookPrompts ?? {}) }
+        delete lookPrompts[oldCostumeId] // 换了服装 = 换了造型，旧融合提示词失去意义，回落待补全
+        return { ...c, costumeIds: ids.map((id) => (id === oldCostumeId ? newCostumeId : id)), lookPrompts }
+      }),
+    })),
+
+  setCandidateLookPrompt: (charTempId, costumeId, text) =>
+    set((st) => ({
+      candidates: st.candidates.map((c) =>
+        c.tempId === charTempId
+          ? { ...c, lookPrompts: { ...(c.lookPrompts ?? {}), [costumeId]: text } }
+          : c,
+      ),
+    })),
+
+  completeCandidateLookPrompt: (charTempId, costumeId) => {
+    const s = get()
+    const cand = s.candidates.find((c) => c.tempId === charTempId)
+    if (!cand) return
+    const costumeName =
+      s.candidates.find((c) => c.tempId === costumeId)?.name ??
+      s.project.assets[costumeId]?.name ??
+      '服装'
+    // 融合式草案：素模 + 服装。真实系统会读原文，这里纯前端占位（演示）。
+    const draft = `${cand.name}素模 + ${costumeName}的融合造型：把角色素模与该服装融合成一张穿好衣服的定妆图，人物一致性以角色素模为准、服装款式与颜色以服装资产为准。背景中性、写实电影质感、无水印无文字。`
+    set((st) => ({
+      candidates: st.candidates.map((c) =>
+        c.tempId === charTempId
+          ? { ...c, lookPrompts: { ...(c.lookPrompts ?? {}), [costumeId]: draft } }
+          : c,
+      ),
+    }))
+  },
+
+  createCandidateCostume: (name) => {
+    const trimmed = name.trim()
+    if (!trimmed) return ''
+    const tempId = `cand_manual_costume_${++insSeq}`
+    set((st) => ({
+      candidates: [...st.candidates, { tempId, kind: 'costume', name: trimmed, imagePrompt: '', decision: 'new' }],
+    }))
+    return tempId
+  },
+
   commitCandidates: () => {
     const s = get()
     const { project, added, linked, skipped } = commitCandidatesSvc(s.project, s.candidates)
@@ -1122,7 +1277,68 @@ export const useStore = create<StoreState>((set, get) => {
 
   resetTrace: () => set({ trace: { sawIncrementalGate: false } }),
 
+  // ── 统一任务弹窗（v2.2 §4）──
+  previewCandidates: (scanned) => extractCandidates(get().project, scanned),
+
+  commitScanned: (cands) => {
+    const s = get()
+    const { project } = commitCandidatesSvc(s.project, cands)
+    set({ project })
+  },
+
+  scannedForResplitScene: (sceneId) => RESPLIT_MISSED[sceneId] ?? [],
+  scannedForResplitEpisode: (episodeId) => {
+    const ep = get().project.episodes.find((e) => e.id === episodeId)
+    return ep ? ep.sceneIds.flatMap((sid) => RESPLIT_MISSED[sid] ?? []) : []
+  },
+  scannedForEp2: () => EP2_SCANNED,
+
+  runResplitScene: (sceneId, opts) => {
+    if (!can(get().project, 'editScript')) return
+    applyResplitScene(sceneId, opts)
+  },
+  runResplitEpisode: (episodeId, opts) => {
+    if (!can(get().project, 'editScript')) return
+    applyResplitEpisode(episodeId, opts)
+  },
+  runReplaceEpisode: (episodeId) => {
+    if (!can(get().project, 'editScript')) return
+    applyReplaceEpisode(episodeId)
+  },
+  runAppendEpisode: () => {
+    if (!can(get().project, 'editScript')) return
+    if (get().project.episodes.some((e) => e.id === 'e2')) {
+      get().showToast('第 2 集已在项目中，无需重复添加。')
+      return
+    }
+    applyAppendEpisode()
+  },
+
+  removeAssetAlias: (assetId, alias) =>
+    set((st) => {
+      const a = st.project.assets[assetId]
+      if (!a || !a.aliases?.includes(alias)) return st
+      return {
+        project: {
+          ...st.project,
+          assets: { ...st.project.assets, [assetId]: { ...a, aliases: a.aliases.filter((x) => x !== alias) } },
+        },
+      }
+    }),
+
   // ── 首次流程（v2.0）──
+  // 解析动画跑完 → 落到阶段② 完整确认页。起点是未入库的 seedFreshProject（无分镜、库为空），
+  // 全部资产落在 seedCandidates 里等确认。activeTab 切到角色，让确认页第一眼在角色类目。
+  finishFirstImport: () => set({
+    project: structuredClone(seedFreshProject),
+    candidates: structuredClone(seedCandidates),
+    analysisStep: 'assetConfirm',
+    activeTab: 'character',
+    promptStates: {},
+    promptEdited: {},
+    hoverAssetTerm: null,
+  }),
+
   reuploadScript: (payload) => {
     if (get().project.libraryCommittedAt != null) return
     // 换一份原文重新拆：库仍为空，重新抽候选。阶段②没有分镜，只带场结构（shotIds 清空）。
@@ -1147,21 +1363,22 @@ export const useStore = create<StoreState>((set, get) => {
   commitLibrary: () => {
     const s = get()
     if (s.project.libraryCommittedAt != null) return
-    const { project, added, linked, skipped } = commitCandidatesSvc(s.project, s.candidates)
+    const { project } = commitCandidatesSvc(s.project, s.candidates)
     set({
       project: { ...project, libraryCommittedAt: Date.now() },
       candidates: [],
       pendingTask: null,
     })
-    const bits = [`已保存到项目资产库：入库 ${added.length} 项`]
-    if (linked.length) bits.push(`关联 ${linked.length} 项`)
-    if (skipped.length) bits.push(`忽略同名 ${skipped.length} 项`)
-    get().showToast(`${bits.join('，')}。接下来可开始拆分集 / 场 / 镜。`)
+    // 不发 Toast（§3.5）：「已保存 → 请开始拆分」是没有新决策的停顿，只在教用户"还有第二步"。
+    // 入库与拆分在同一个统一弹窗里一次确认完成，结果 Toast 由拆分那一步统一给。
   },
 
-  startSplit: (_opts) => {
+  startSplit: (opts) => {
     const s = get()
-    // 生成分镜：以 seed 的规范分镜为模板，把挂载重指到已入库资产（committed id = `as_${tempId}`，
+    // 颗粒度真的生效（§5.1）：有密度预设的场（本演示是第 1 场）按选定颗粒度取整套镜，
+    // 其余场没有多套方案，回落 seed 的标准模板。默认取 project.defaultDensity。
+    const density = opts.density ?? s.project.defaultDensity
+    // 生成分镜：把挂载重指到已入库资产（committed id = `as_${tempId}`，
     // 着装角色 = `lk_as_${characterTempId}`），因为 seedCandidates 的 tempId 取自 seed 资产 id。
     const remapId = (seedId: string): string => {
       const a = seedProject.assets[seedId]
@@ -1172,11 +1389,17 @@ export const useStore = create<StoreState>((set, get) => {
     const shots: Record<string, Shot> = {}
     for (const [sid, tmpl] of Object.entries(seedProject.scenes)) {
       if (!scenes[sid]) continue
-      scenes[sid] = { ...scenes[sid], shotIds: [...tmpl.shotIds] }
-      for (const shId of tmpl.shotIds) {
-        const sh = seedProject.shots[shId]
-        if (!sh) continue
-        shots[shId] = { ...sh, mounts: sh.mounts.map((m) => ({ kind: m.kind, assetId: remapId(m.assetId) })) }
+      const usePreset = hasDensityPresets(sid)
+      const src = usePreset
+        ? densityShots(sid, density)
+        : tmpl.shotIds.map((id) => seedProject.shots[id]).filter((sh): sh is Shot => !!sh)
+      scenes[sid] = {
+        ...scenes[sid],
+        shotIds: src.map((sh) => sh.id),
+        density: usePreset ? density : 'standard',
+      }
+      for (const sh of src) {
+        shots[sh.id] = { ...sh, mounts: sh.mounts.map((m) => ({ kind: m.kind, assetId: remapId(m.assetId) })) }
       }
     }
     const project: Project = { ...s.project, scenes, shots }
