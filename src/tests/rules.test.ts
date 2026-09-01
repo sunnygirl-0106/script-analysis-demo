@@ -503,6 +503,66 @@ describe('R14 第一批范围', () => {
   })
 })
 
+// ── R17 增量确认闸（有新候选才停 · 自动续跑 · 取消）· since v2.0 ──
+describe('R17 增量确认闸', () => {
+  const reset = () =>
+    useStore.setState({
+      project: structuredClone(seedProject), promptStates: {}, promptEdited: {},
+      candidates: [], pendingTask: null, trace: { sawIncrementalGate: false },
+    })
+
+  it('① 追加第 2 集有新候选 → 开闸停下（快递员/工装/包裹），此刻还没落库', () => {
+    // v2.0
+    reset()
+    useStore.getState().appendEpisode2()
+    const st = useStore.getState()
+    expect(st.candidates.length).toBe(3)
+    expect(st.pendingTask?.kind).toBe('appendEpisode')
+    expect(st.trace.sawIncrementalGate).toBe(true)
+    expect(st.project.episodes.some((e) => e.id === 'e2')).toBe(false) // 未续跑
+  })
+
+  it('② 确认候选 → 结算入库 + 自动续跑；苏可去重不重复，快递员造型 characterId 指向入库后的角色', () => {
+    // v2.0
+    reset()
+    useStore.getState().appendEpisode2()
+    useStore.getState().commitCandidates()
+    const p = useStore.getState().project
+    expect(p.episodes.some((e) => e.id === 'e2')).toBe(true)
+    expect(Object.values(p.assets).filter((a) => a.name === '苏可').length).toBe(1)
+    const courier = Object.values(p.assets).find((a) => a.name === '快递员')!
+    const courierLook = Object.values(p.assets).find((a): a is Look => a.kind === 'look' && a.name.includes('快递员'))!
+    expect(courierLook.characterId).toBe(courier.id) // 造型绑定不悬空
+    // 出场索引：快递员经造型聚合，被第 2 集镜头引用。
+    expect(buildUsageIndex(p)[courier.id]!.shotCount).toBeGreaterThan(0)
+  })
+
+  it('③ 零候选不打断：重拆第 2 场直接续跑，不开闸', () => {
+    // v2.0 —— RESPLIT_MISSED 未给 s2 预置漏提，故无候选。
+    reset()
+    const before = useStore.getState().project.scenes.s2!.shotIds
+    useStore.getState().resplit('s2', {})
+    const st = useStore.getState()
+    expect(st.pendingTask).toBeNull()
+    expect(st.candidates).toEqual([])
+    expect(st.trace.sawIncrementalGate).toBe(false)
+    // 续跑确实执行了（s2 无多套预设 → 恢复初始，shotIds 引用被重建）。
+    expect(st.project.scenes.s2!.shotIds).not.toBe(before)
+  })
+
+  it('④ 取消整次操作：候选全丢、挂起任务不执行、资产库与分镜不变', () => {
+    // v2.0
+    reset()
+    const before = useStore.getState().project
+    useStore.getState().appendEpisode2()
+    useStore.getState().cancelIncrementalGate()
+    const st = useStore.getState()
+    expect(st.candidates).toEqual([])
+    expect(st.pendingTask).toBeNull()
+    expect(st.project).toBe(before) // 原项目引用未变
+  })
+})
+
 // ── R16 引用态（删场/删集不删资产的可视化出口）· since v2.0 ──
 describe('R16 引用态', () => {
   it('① 被镜头挂载 → referenced；无镜头挂载 → unreferenced', () => {
@@ -565,13 +625,23 @@ describe('R15 提示词手动编辑标记与替换本集重置', () => {
   })
 
   it('替换本集后镜头 promptStates 全部回 pending、promptEdited 清空、无孤儿键', () => {
-    // v1.3
-    useStore.setState({ project: structuredClone(seedProject), promptStates: {}, promptEdited: {} })
+    // updated v2.0 —— 替换本集先过候选闸：replaceEpisode 开闸，commitCandidates 确认后续跑。
+    useStore.setState({
+      project: structuredClone(seedProject), promptStates: {}, promptEdited: {},
+      candidates: [], pendingTask: null,
+    })
     // 先制造一个已就绪且被手动编辑过的镜头。
     useStore.getState().setPromptState('s1_sh1', 'ready')
     useStore.getState().markPromptEdited('s1_sh1')
+    // ① 替换本集：新内容含新候选（快递员/工装/包裹）→ 开闸，此刻还没落库。
     useStore.getState().replaceEpisode('e1')
+    expect(useStore.getState().candidates.length).toBeGreaterThan(0)
+    expect(useStore.getState().pendingTask?.kind).toBe('replaceEpisode')
+    // ② 确认候选 → 结算入库 + 自动续跑替换。
+    useStore.getState().commitCandidates()
     const st = useStore.getState()
+    expect(st.candidates).toEqual([])
+    expect(st.pendingTask).toBeNull()
     for (const shotId of Object.keys(st.project.shots)) {
       expect(st.promptStates[shotId]).toBe('pending')
     }

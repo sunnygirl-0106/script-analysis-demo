@@ -8,6 +8,7 @@ import { AnalyzingWorkspace } from './pages/AnalyzingWorkspace'
 import { VisualPrep } from './pages/VisualPrep'
 import { Studio } from './pages/Studio'
 import { Toast } from './components/Toast'
+import { IncrementalGateDialog } from './components/IncrementalGateDialog'
 import { ASSET_TAB_AT, DONE_AT, STAGE_AT, UPLOAD_MS } from './services/analysisTimeline'
 
 // 拆解过程演示的时间线控制器：监听 analysisPhase，按 analysisTimeline 推进 revealStage，
@@ -83,6 +84,7 @@ export default function App() {
       {activePage === 'analysis' && analysisContent}
       {activePage === 'visual' && <VisualPrep />}
       {activePage === 'studio' && <Studio />}
+      <IncrementalGateDialog />
       <Toast />
     </AppShell>
   )

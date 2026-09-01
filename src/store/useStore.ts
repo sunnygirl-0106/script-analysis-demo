@@ -57,6 +57,17 @@ const DENSITY_LABEL: Record<ShotDensity, string> = {
   loose: '舒缓',
 }
 
+// 追加/替换第 2 集时「本次范围内 AI 抽到的资产」。着装角色由 appendEpisode 处理，不进候选闸。
+const EP2_SCANNED: ScannedAsset[] = episode2Payload.assets
+  .filter((a) => a.kind !== 'look')
+  .map((a) => ({ kind: a.kind, name: a.name, imagePrompt: a.imagePrompt, aliases: a.aliases }))
+
+// 重拆的「补漏」口径（v3）：只有 seed 预置的首轮漏提项才产生候选、才打断；其余场零候选、不打断。
+// 这里给第 1 场预置一条演示用漏提（客厅茶几，首轮没单独提取成道具）。
+const RESPLIT_MISSED: Record<string, ScannedAsset[]> = {
+  s1: [{ kind: 'prop', name: '茶几', aliases: ['茶几'] }],
+}
+
 interface UIState {
   activePage: Stage
   selectedSceneId: string
@@ -943,7 +954,10 @@ export const useStore = create<StoreState>((set, get) => {
       get().showToast('第 2 集已在项目中，无需重复添加。')
       return
     }
-    applyAppendEpisode()
+    // v2.0：先过候选闸。有新候选就停下等确认；零候选直接续跑（applyAppendEpisode）。
+    get().openIncrementalGate(EP2_SCANNED, {
+      kind: 'appendEpisode', label: '追加第 2 集', scopeText: '仅第 2 集原文', args: {},
+    })
   },
 
   replaceScript: (payload) => {
@@ -979,7 +993,11 @@ export const useStore = create<StoreState>((set, get) => {
       get().showToast('当前演示仅支持一套新剧本内容，且第 2 集已存在，无法替换本集')
       return
     }
-    applyReplaceEpisode(episodeId)
+    // v2.0：替换本集的新内容也过候选闸；确认后自动续跑 applyReplaceEpisode。
+    get().openIncrementalGate(EP2_SCANNED, {
+      kind: 'replaceEpisode', label: `替换第 ${ep.no} 集`, scopeText: `仅新第 ${ep.no} 集原文`,
+      args: { episodeId },
+    })
   },
 
   deleteEpisode: (episodeId) => {
@@ -1013,14 +1031,24 @@ export const useStore = create<StoreState>((set, get) => {
 
   resplit: (sceneId, opts) => {
     if (!can(get().project, 'editScript')) return
-    if (!get().project.scenes[sceneId]) return
-    applyResplitScene(sceneId, opts)
+    const scene = get().project.scenes[sceneId]
+    if (!scene) return
+    // 补漏口径：只有预置漏提项才产生候选、才停下；否则零候选、不打断，直接续跑。
+    get().openIncrementalGate(RESPLIT_MISSED[sceneId] ?? [], {
+      kind: 'resplitScene', label: '重拆本场', scopeText: `仅第 ${scene.no} 场原文`,
+      args: { sceneId, density: opts.density, targetShots: opts.targetShots },
+    })
   },
 
   resplitEpisode: (episodeId, opts) => {
     if (!can(get().project, 'editScript')) return
-    if (!get().project.episodes.some((e) => e.id === episodeId)) return
-    applyResplitEpisode(episodeId, opts)
+    const ep = get().project.episodes.find((e) => e.id === episodeId)
+    if (!ep) return
+    const missed = ep.sceneIds.flatMap((sid) => RESPLIT_MISSED[sid] ?? [])
+    get().openIncrementalGate(missed, {
+      kind: 'resplitEpisode', label: `重拆第 ${ep.no} 集`, scopeText: `仅第 ${ep.no} 集原文`,
+      args: { episodeId, density: opts.density, sceneCount: opts.sceneCount },
+    })
   },
 
   setStage: (stage) => {

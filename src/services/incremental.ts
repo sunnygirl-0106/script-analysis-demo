@@ -40,6 +40,19 @@ export function appendEpisode(project: Project, payload: EpisodePayload): Projec
 
   const resolve = (id: string): string => remap.get(id) ?? id
 
+  // 新增的着装角色(look)：把它引用的角色 / 服装 id 也重指向到复用后的最终 id。
+  // 关键在「候选闸先入库了角色，再走 appendEpisode」的场景：角色被去重到 committed id，
+  // 若不一并重指，新 look 的 characterId 会悬空。自建集（角色也是新增）时 resolve 为自映射，无影响。
+  for (const id of Object.keys(addedAssets)) {
+    const a = addedAssets[id]!
+    if (a.kind !== 'look') continue
+    addedAssets[id] = {
+      ...a,
+      characterId: resolve(a.characterId),
+      costumeIds: a.costumeIds.map(resolve),
+    }
+  }
+
   // 3. 新集的镜：挂载重指向到复用后的 id（其余既有资产 id 原样保留）。
   const remappedShots: Record<string, Shot> = {}
   for (const shot of Object.values(payload.shots)) {
