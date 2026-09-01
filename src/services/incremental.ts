@@ -1,4 +1,6 @@
 // 追加集与资产去重。纯函数。追加集的资产新增数由新集内容决定。
+// 规则版本：v2.0（2026-09-01）。断言见 tests/rules.test.ts 的 R3 / R17。
+// v2.0：新增着装角色的 characterId/costumeIds 也随去重重指（候选闸先入库角色后不悬空）。
 import type { Asset, MountRef, Project, Shot } from '../data/types'
 import type { EpisodePayload } from '../data/seedEpisode2'
 

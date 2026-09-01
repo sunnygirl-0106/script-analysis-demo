@@ -43,6 +43,12 @@
   /* v2.0 状态语义色（中性推导，不写字面色值到组件） */
   --pending-fg: rgb(var(--amber-rgb)); /* 待入库 —— 与既有 amber 系同族 */
   --unref-fg: var(--t4); /* 当前剧本未引用 —— 弱灰 */
+
+  /* v2.0 层级令牌（收拢散落各处的 z-index，取值对齐既有栈：弹窗 60 / toast 100）。
+     规则速查面板必须盖在弹窗之上，故最高。 */
+  --z-dialog: 60;
+  --z-toast: 100;
+  --z-cheat: 120;
   --gold-bg: rgb(var(--gold-rgb) / 0.16); /* 金色淡底（hero 卡） */
   --gold-line: rgb(var(--gold-rgb) / 0.4); /* 金色描边 */
   --danger-bg: rgb(var(--danger-rgb) / 0.1);

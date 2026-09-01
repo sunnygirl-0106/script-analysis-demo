@@ -3,7 +3,7 @@
   left: 50%;
   bottom: 34px;
   transform: translateX(-50%);
-  z-index: 100;
+  z-index: var(--z-toast);
   max-width: 640px;
   padding: 11px 18px;
   border-radius: var(--rlg);

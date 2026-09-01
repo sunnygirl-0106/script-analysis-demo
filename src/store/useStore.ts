@@ -96,7 +96,7 @@ interface UIState {
 export const PANEL_MIN = { episode: 150, script: 200 }
 export const PANEL_MAX = { episode: 380, script: 620 }
 
-interface StoreState extends UIState {
+export interface StoreState extends UIState {
   project: Project
 
   // 提示词生成状态：shotId → PromptState。第一眼全部 pending，需点「生成全部提示词」。

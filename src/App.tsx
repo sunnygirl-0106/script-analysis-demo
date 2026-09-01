@@ -9,6 +9,7 @@ import { VisualPrep } from './pages/VisualPrep'
 import { Studio } from './pages/Studio'
 import { Toast } from './components/Toast'
 import { IncrementalGateDialog } from './components/IncrementalGateDialog'
+import { RuleCheatPanel } from './components/RuleCheatPanel'
 import { ASSET_TAB_AT, DONE_AT, STAGE_AT, UPLOAD_MS } from './services/analysisTimeline'
 
 // 拆解过程演示的时间线控制器：监听 analysisPhase，按 analysisTimeline 推进 revealStage，
@@ -86,6 +87,7 @@ export default function App() {
       {activePage === 'studio' && <Studio />}
       <IncrementalGateDialog />
       <Toast />
+      <RuleCheatPanel />
     </AppShell>
   )
 }
