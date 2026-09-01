@@ -503,6 +503,26 @@ describe('R14 第一批范围', () => {
   })
 })
 
+// ── R18 资产库删除（唯一删除出口 · 单向不回写分镜）· since v2.0 ──
+describe('R18 资产库删除', () => {
+  it('删资产：资产消失、挂载保留（不清 mounts）、引用它的 ready 镜头标 stale', () => {
+    // v2.0 —— deleteAsset 是 v3 唯一删除出口；资产库不回写分镜（单向）。
+    useStore.setState({ project: structuredClone(seedProject), promptStates: {}, promptEdited: {} })
+    const shot = Object.values(useStore.getState().project.shots)
+      .find((sh) => sh.mounts.some((m) => m.assetId === A.phone))!
+    useStore.getState().setPromptState(shot.id, 'ready')
+
+    useStore.getState().deleteAsset(A.phone)
+    const st = useStore.getState()
+    // 资产库删除。
+    expect(st.project.assets[A.phone]).toBeUndefined()
+    // 挂载不清理：镜头的 mounts 仍指向已失效 id（由 UI 兜底渲染「已失效」）。
+    expect(st.project.shots[shot.id]!.mounts.some((m) => m.assetId === A.phone)).toBe(true)
+    // 引用它的 ready 镜头标为待更新。
+    expect(st.promptStates[shot.id]).toBe('stale')
+  })
+})
+
 // ── R17 增量确认闸（有新候选才停 · 自动续跑 · 取消）· since v2.0 ──
 describe('R17 增量确认闸', () => {
   const reset = () =>

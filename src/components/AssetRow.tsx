@@ -10,6 +10,7 @@ import { KIND_DOT, KIND_LABEL } from './entity'
 import { SyncBadge } from './SyncBadge'
 import { AppearanceSummary } from './AppearanceSummary'
 import { RenameAssetDialog } from './RenameAssetDialog'
+import { LookMountControl } from './LookMountControl'
 import s from './AssetList.module.css'
 
 // 提示词正文：去掉【生成规格】技术段（分辨率/画幅/机位等，不进展示），其余段落正文连读。
@@ -147,6 +148,9 @@ export function AssetRow({ asset, sub, onOpenPrompt }: Props) {
             onCommit={commitName}
           />
           <span className={s.kindTag}>{KIND_LABEL[asset.kind]}</span>
+          {(asset.kind === 'character' || asset.kind === 'look') && (
+            <LookMountControl asset={asset} />
+          )}
         </span>
         {usedBy.length > 0 ? (
           <span className={s.metaLine}>

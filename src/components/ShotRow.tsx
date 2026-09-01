@@ -132,7 +132,8 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
     window.setTimeout(onDelete, 240)
   }
 
-  const nameOf = (m: MountRef) => assets[m.assetId]?.name ?? '该内容已移除'
+  // 挂载指向的资产可能已在项目资产库删除（v2.0 单向：资产库不回写分镜）→ 兜底显示「已失效」。
+  const nameOf = (m: MountRef) => assets[m.assetId]?.name ?? '（已失效）'
 
   const step = (e: MouseEvent, delta: number) => {
     e.stopPropagation()
@@ -159,7 +160,7 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
   const roleCard = (m: MountRef) => {
     if (m.kind === 'look') {
       const look = assets[m.assetId] as Look | undefined
-      const chName = look ? assets[look.characterId]?.name ?? '角色信息不可用' : '该内容已移除'
+      const chName = look ? assets[look.characterId]?.name ?? '角色信息不可用' : '（已失效）'
       const cos = look ? look.costumeIds.map((id) => assets[id]?.name).filter(Boolean) : []
       return (
         <CastPill

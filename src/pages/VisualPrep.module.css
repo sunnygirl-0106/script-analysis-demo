@@ -68,6 +68,21 @@
   padding: 2px 8px;
   border-radius: var(--rsm);
 }
+.delBtn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--t4);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: var(--rsm);
+  display: inline-flex;
+  transition: 0.14s;
+}
+.delBtn:hover {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
 .badgeQueued {
   background: var(--acc-bg);
   color: var(--acc);

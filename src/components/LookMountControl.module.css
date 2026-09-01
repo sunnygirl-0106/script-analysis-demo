@@ -1,0 +1,29 @@
+/* 造型手动挂载控件：紧凑内联，配色只用 theme 变量。 */
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sel {
+  font-size: 11px;
+  color: var(--t2);
+  background: var(--bg1);
+  border: 1px solid var(--line2);
+  border-radius: 5px;
+  padding: 2px 6px;
+  max-width: 140px;
+  cursor: pointer;
+}
+.sel:focus { outline: none; border-color: var(--acc-line); }
+.unbind {
+  appearance: none;
+  font-size: 11px;
+  color: var(--t4);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: 0.14s;
+}
+.unbind:hover { color: var(--t2); border-color: var(--line2); }
