@@ -9,7 +9,9 @@ import { densityShots, hasDensityPresets, resplitSceneDensity } from '../service
 import { deleteEpisode as deleteEpisodeSvc, resplitScene } from '../services/lock'
 import { can } from '../services/capability'
 import { buildUsageIndex, type AssetUsage } from '../services/appearanceIndex'
-import { deliverFirstBatch } from '../services/staleness'
+import { unreferencedCount as countUnreferenced } from '../services/reference'
+import { deliverFirstBatch, shotsAffectedByAsset } from '../services/staleness'
+import { lookName } from '../services/looks'
 import { sceneDuration } from '../services/timeline'
 import { findDuplicate, PROSE_FIELDS, scanRenameImpact } from '../services/mentions'
 
@@ -156,6 +158,11 @@ interface StoreState extends UIState {
   ) => void
   setHoverMention: (m: { assetId: string; shotId: string } | null) => void
   toggleAssetExcluded: (assetId: string) => void
+  // ── 造型手动挂载（v2.0，受 editLookBinding 约束）──
+  /** 改某着装角色引用的服装集合。挂载的镜头视觉随之变化 → 标待更新。 */
+  setLookCostumes: (lookId: string, costumeIds: string[]) => void
+  /** 为角色新建一个着装角色（look）。返回新 look 的 id，失败返回空串。 */
+  createLook: (characterId: string, costumeIds: string[]) => string
   appendEpisode2: () => void
   replaceScript: (payload: ScriptPayload) => void
   replaceEpisode: (episodeId: string) => void
@@ -450,14 +457,8 @@ export const useStore = create<StoreState>((set, get) => {
     const shotIds = [...scene.shotIds]
     const wasSelected = st0.selectedSceneId === sceneId
 
-    // 孤儿资产：仅在本场出现的资产（删除前用 usageIndex 判定），与集删除同一判据、收窄到单场。
-    const idx = st0.usageIndex()
-    const orphanIds = Object.values(st0.project.assets)
-      .filter((a) => {
-        const apps = idx[a.id]?.appearances ?? []
-        return apps.length > 0 && apps.every((ap) => ap.episodeNo === ep.no && ap.sceneNo === scene.no)
-      })
-      .map((a) => a.id)
+    // v2.0：删场不动资产库。删除前后各统计一次「未引用」资产数，差值 = 本次新增的未引用项 K。
+    const unrefBefore = countUnreferenced(st0.usageIndex())
 
     set((s) => {
       const e = s.project.episodes.find((x) => x.id === epId)
@@ -472,8 +473,6 @@ export const useStore = create<StoreState>((set, get) => {
       })
       const shots = { ...s.project.shots }
       shotIds.forEach((id) => delete shots[id])
-      const assets = { ...s.project.assets }
-      orphanIds.forEach((id) => delete assets[id])
       const promptStates = { ...s.promptStates }
       const promptEdited = { ...s.promptEdited }
       shotIds.forEach((id) => {
@@ -486,8 +485,9 @@ export const useStore = create<StoreState>((set, get) => {
         if (nextSceneIds.length) selectedSceneId = nextSceneIds[Math.min(index, nextSceneIds.length - 1)]
         else selectedSceneId = episodes.find((x) => x.sceneIds.length > 0)?.sceneIds[0] ?? ''
       }
+      // assets 原样透传：删场只删结构与镜头，资产库一条不减（v3 唯一删除出口在资产库侧）。
       return {
-        project: { ...s.project, episodes, scenes, shots, assets },
+        project: { ...s.project, episodes, scenes, shots, assets: s.project.assets },
         promptStates,
         promptEdited,
         selectedSceneId,
@@ -495,7 +495,11 @@ export const useStore = create<StoreState>((set, get) => {
       }
     })
 
-    get().showToast(`已删除第 ${oldNo} 场`)
+    const unrefAfter = countUnreferenced(usageIndexOf(get().project))
+    const k = Math.max(0, unrefAfter - unrefBefore)
+    get().showToast(
+      `已删除第 ${oldNo} 场（${shotIds.length} 个镜头）。项目资产库一条未减，其中 ${k} 项变为「当前剧本未引用」。`,
+    )
   },
 
   // 撤销：单级、随 toast 存活，见改动方案 v1.4 §1（与 renameAssetWithSync 同款）。
@@ -723,6 +727,43 @@ export const useStore = create<StoreState>((set, get) => {
     })
   },
 
+  // 改某着装角色引用的服装集合（v2.0，editLookBinding 放开后）。
+  setLookCostumes: (lookId, costumeIds) => {
+    if (!can(get().project, 'editLookBinding')) return
+    const look = get().project.assets[lookId]
+    if (!look || look.kind !== 'look') return
+    set((s) => {
+      const l = s.project.assets[lookId]
+      if (!l || l.kind !== 'look') return s
+      return {
+        project: {
+          ...s.project,
+          assets: { ...s.project.assets, [lookId]: { ...l, costumeIds: [...costumeIds] } },
+        },
+      }
+    })
+    // 换服装是视觉变更：引用该造型的镜头画面提示词过期 → 标待更新（只标不重生）。
+    for (const sid of shotsAffectedByAsset(get().project, lookId)) touchPrompt(sid, false)
+  },
+
+  // 为角色新建一个着装角色。返回新 look id；不满足能力位或角色不存在时返回空串。
+  createLook: (characterId, costumeIds) => {
+    if (!can(get().project, 'editLookBinding')) return ''
+    const ch = get().project.assets[characterId]
+    if (!ch || ch.kind !== 'character') return ''
+    const id = `lk_ins${++insSeq}`
+    const look: Look = {
+      id, kind: 'look', name: '', characterId, costumeIds: [...costumeIds],
+      imagePrompt: '', promptRevision: 0,
+    }
+    // 名称用派生名占位存下来，便于后续原文高亮与展示（与 seed 的显式命名一致）。
+    look.name = lookName(look, get().project.assets)
+    set((s) => ({
+      project: { ...s.project, assets: { ...s.project.assets, [id]: look } },
+    }))
+    return id
+  },
+
   appendEpisode2: () => {
     if (!can(get().project, 'editScript')) return
     const s = get()
@@ -737,6 +778,11 @@ export const useStore = create<StoreState>((set, get) => {
 
   replaceScript: (payload) => {
     if (!can(get().project, 'editScript')) return
+    // v2.0：整本替换仅首次入库前可用。已入库后换剧本请新建项目（引导，不静默丢弃）。
+    if (!can(get().project, 'replaceWholeScript')) {
+      get().showToast('已保存到项目资产库，换一部剧本请新建项目')
+      return
+    }
     const s = get()
     const next = replaceScriptSvc(s.project, payload)
     const firstScene = next.episodes[0]?.sceneIds[0] ?? ''
@@ -791,11 +837,13 @@ export const useStore = create<StoreState>((set, get) => {
     }
     const ep = proj.episodes.find((e) => e.id === episodeId)
     if (!ep) return
-    const before = Object.keys(proj.assets).length
+    const shotCount = ep.sceneIds.reduce((n, sid) => n + (proj.scenes[sid]?.shotIds.length ?? 0), 0)
+    // v2.0：删集不动资产库。删除前后各统计一次未引用数，差值 = 本次新增的未引用项 K。
+    const unrefBefore = countUnreferenced(usageIndexOf(proj))
     const next = deleteEpisodeSvc(proj, episodeId)
-    const cleaned = before - Object.keys(next.assets).length
     const renum = { ...next, episodes: next.episodes.map((e, i) => ({ ...e, no: i + 1 })) }
     const firstScene = renum.episodes[0]?.sceneIds[0] ?? ''
+    const k = Math.max(0, countUnreferenced(usageIndexOf(renum)) - unrefBefore)
     set({
       project: renum,
       ...reconcilePrompts(renum, s.promptStates, s.promptEdited),
@@ -803,7 +851,9 @@ export const useStore = create<StoreState>((set, get) => {
       sceneSettingsOpen: false,
       activeTab: 'shot',
     })
-    get().showToast(`第 ${ep.no} 集已删除。本集独有的 ${cleaned} 项内容已一并删除，其他剧集使用的内容仍会保留。`)
+    get().showToast(
+      `第 ${ep.no} 集已删除（${shotCount} 个镜头）。项目资产库一条未减，其中 ${k} 项变为「当前剧本未引用」。`,
+    )
   },
 
   resplit: (sceneId, opts) => {

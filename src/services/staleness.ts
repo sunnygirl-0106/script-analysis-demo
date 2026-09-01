@@ -28,3 +28,25 @@ export function deliverFirstBatch(project: Project): Project {
   }
   return { ...project, assets }
 }
+
+/**
+ * 资产被删 / 提示词被改，导致引用它的镜头的画面提示词过期（v2.0）。
+ * 返回受影响的 shotId 列表，由 store 置为 'stale'。与出场索引同口径：
+ * 直接挂载，或经着装角色(look)向上聚合（角色含其 look，服装含引用它的 look）。
+ * ⚠ 只标记，不自动重新生成 —— v3 铁律 3。断言见 tests/rules.test.ts 的 R13。
+ */
+export function shotsAffectedByAsset(project: Project, assetId: string): string[] {
+  const out: string[] = []
+  for (const shot of Object.values(project.shots)) {
+    const hit = shot.mounts.some((m) => {
+      if (m.assetId === assetId) return true
+      const a = project.assets[m.assetId]
+      if (a && a.kind === 'look') {
+        return a.characterId === assetId || a.costumeIds.includes(assetId)
+      }
+      return false
+    })
+    if (hit) out.push(shot.id)
+  }
+  return out
+}

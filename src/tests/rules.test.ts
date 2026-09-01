@@ -27,7 +27,7 @@ import { mountIssues } from '../services/completeness'
 import { isLongShot, LONG_SHOT_SEC } from '../services/duration'
 
 /** 规则基线版本。整体版本升级时改这里，单条规则/断言的局部变更用行内标记覆盖。 */
-export const RULES_VERSION = 'v1.4' // 对应改动方案 v1.4
+export const RULES_VERSION = 'v2.0' // 对应改动方案 v2.0（模型层加了候选层）
 
 // 每个用例都从 seed 深拷贝，互不污染。
 const fresh = () => structuredClone(seedProject)
@@ -173,10 +173,10 @@ describe('R6 能力矩阵', () => {
     expect(can(p, 'editSceneTrack')).toBe(true)
   })
 
-  it('editLookBinding 任何阶段恒为 false（决策 1b）', () => {
-    // v1.2
+  it('editLookBinding：analysis 阶段为 true，visual 阶段为 false', () => {
+    // updated v2.0 —— 造型手动挂载已拍板可做（推翻决策 1b）。
     const p = fresh()
-    expect(can(p, 'editLookBinding')).toBe(false)
+    expect(can(p, 'editLookBinding')).toBe(true)
     p.stage = 'visual'
     expect(can(p, 'editLookBinding')).toBe(false)
   })
@@ -202,18 +202,26 @@ describe('R6 能力矩阵', () => {
     expect(next.scenes.s2!.shotIds).toBe(s2RefBefore)
   })
 
-  it('删除某集：只在该集出现的资产被清理，跨集资产保留（判定走派生索引）', () => {
-    // v1.2
+  it('R7 删除某集：项目资产库一条不减，本集独有资产变为「当前剧本未引用」', () => {
+    // updated v2.0 —— 反转：删集不再清理资产（v3 唯一删除出口在资产库侧）。
     const p = appendEpisode(fresh(), episode2Payload)
     const courier = Object.values(p.assets).find((a) => a.name === '快递员')!
     const parcel = Object.values(p.assets).find((a) => a.name === '退货包裹')!
     expect(courier && parcel).toBeTruthy()
+    const beforeCount = Object.keys(p.assets).length
 
     const next = deleteEpisode(p, 'e2')
-    expect(next.assets[courier.id]).toBeUndefined()
-    expect(next.assets[parcel.id]).toBeUndefined()
+    // 资产库零变化：本集独有的资产仍在库里。
+    expect(Object.keys(next.assets).length).toBe(beforeCount)
+    expect(next.assets[courier.id]).toBeTruthy()
+    expect(next.assets[parcel.id]).toBeTruthy()
     expect(next.assets[A.suke]).toBeTruthy()
     expect(next.assets[A.living]).toBeTruthy()
+    // 但它们不再被任何镜头挂载 → shotCount === 0（当前剧本未引用）。
+    const idx = buildUsageIndex(next)
+    expect(idx[courier.id]!.shotCount).toBe(0)
+    expect(idx[parcel.id]!.shotCount).toBe(0)
+    // 结构与镜头照常删除。
     expect(next.episodes.some((e) => e.id === 'e2')).toBe(false)
     expect(next.scenes.e2s1).toBeUndefined()
     expect(Object.keys(next.shots).some((id) => id.startsWith('e2s'))).toBe(false)
@@ -238,6 +246,25 @@ describe('R8 剧本导入两种模式', () => {
     const next = replaceScript(p, altScriptPayload)
     expect(next.assets[A.suke]).toBeUndefined()
     expect(next.shots.s1_sh1).toBeUndefined()
+  })
+
+  it('已入库（libraryCommittedAt != null）时 store.replaceScript 被拒绝，project 引用不变', () => {
+    // v2.0 —— 整本替换仅首次入库前可用（C4 gate）。seedProject 代表已入库状态。
+    useStore.setState({ project: structuredClone(seedProject) })
+    expect(useStore.getState().project.libraryCommittedAt).not.toBeNull()
+    const before = useStore.getState().project
+    useStore.getState().replaceScript(altScriptPayload)
+    // 被拒绝：project 原样不动（引用相等）。
+    expect(useStore.getState().project).toBe(before)
+  })
+
+  it('未入库（libraryCommittedAt == null）时 store.replaceScript 生效', () => {
+    // v2.0
+    const fresh0 = { ...structuredClone(seedProject), libraryCommittedAt: null }
+    useStore.setState({ project: fresh0 })
+    useStore.getState().replaceScript(altScriptPayload)
+    expect(useStore.getState().project).not.toBe(fresh0)
+    expect(useStore.getState().project.assets[A.suke]).toBeUndefined()
   })
 
   it('覆盖后回到 analysis，名称等 analysis-only 能力恢复可用', () => {
@@ -358,10 +385,20 @@ describe('R11 着装角色', () => {
     expect(lookName(look, assets)).toBe('苏可 · 宽松连帽卫衣+家常针织开衫')
   })
 
-  it('④ editLookBinding 恒假，store 不暴露修改 characterId/costumeIds 的 action', () => {
-    // v1.2 —— editLookBinding 恒假本身在 R6 已验，这里只测 store 不暴露改绑定的 action
-    const actions = Object.keys(useStore.getState())
-    expect(actions.some((k) => /lookbinding|characterid|costumeid/i.test(k))).toBe(false)
+  it('④ setLookCostumes 存在且受 editLookBinding 约束（analysis 生效 / visual 不动）', () => {
+    // updated v2.0 —— 造型手动挂载放开后，store 暴露 setLookCostumes，但受能力位 gate。
+    expect(typeof useStore.getState().setLookCostumes).toBe('function')
+
+    // analysis 阶段：改造型生效。
+    useStore.setState({ project: structuredClone(seedProject) })
+    useStore.getState().setLookCostumes(A.lookSuke, [A.hoodie, A.cardigan])
+    expect((useStore.getState().project.assets[A.lookSuke] as Look).costumeIds).toEqual([A.hoodie, A.cardigan])
+
+    // visual 阶段：editLookBinding 为假，setLookCostumes 应为 no-op。
+    const p2 = { ...structuredClone(seedProject), stage: 'visual' as const }
+    useStore.setState({ project: p2 })
+    useStore.getState().setLookCostumes(A.lookSuke, [A.rider])
+    expect((useStore.getState().project.assets[A.lookSuke] as Look).costumeIds).toEqual([A.hoodie])
   })
 })
 

@@ -1,9 +1,8 @@
-// 重拆与删集。纯函数。deleteEpisode：删集 + 只清「仅在该集出现」的资产，跨集资产保留。
-// 规则版本：v1.2（2026-08-12）。
+// 重拆与删集。纯函数。deleteEpisode：只删集的结构与镜头，资产库一条不动（v2.0）。
+// 规则版本：v2.0（2026-09-01）。断言见 tests/rules.test.ts 的 R7。
 // canEdit 已废除（决策 1a）—— 全局阶段锁改为 services/capability.ts 的 can(project, cap)。
-import type { Asset, Project, Shot } from '../data/types'
+import type { Project, Shot } from '../data/types'
 import { initialSceneShots } from '../data/seed'
-import { buildUsageIndex } from './appearanceIndex'
 
 /**
  * 重拆某场：把该场的镜恢复成 seed 里的初始状态，其他场一律不动。
@@ -38,8 +37,8 @@ export function resplitScene(project: Project, sceneId: string): Project {
 
 /**
  * 删除一集：连同它的场、镜一并移除。
- * 资产清理：只删「出场全部落在该集」的资产；跨集出现的一律保留（去重思路的反向应用）。
- * 出场由 mounts 派生（buildUsageIndex），在删除前基于当前索引判定。
+ * 资产：一条都不动。删集只删结构与镜头；本集独有的资产会因为不再被任何镜头挂载
+ * 而变成「当前剧本未引用」（services/appearanceIndex 的 shotCount === 0），但仍留在库里。
  * 其他集的 episodes / scenes / shots 保持原引用。
  * 不在此处做「至少保留一集」的守卫——那是调用方（store）的职责。
  */
@@ -49,16 +48,6 @@ export function deleteEpisode(project: Project, episodeId: string): Project {
 
   const sceneIds = ep.sceneIds
   const shotIds = sceneIds.flatMap((id) => project.scenes[id]?.shotIds ?? [])
-  const epNo = ep.no
-
-  // 基于删除前的派生索引判定「仅本集出现」。
-  const index = buildUsageIndex(project)
-  const nextAssets: Record<string, Asset> = {}
-  for (const [id, a] of Object.entries(project.assets)) {
-    const apps = index[id]?.appearances ?? []
-    const allInThisEp = apps.length > 0 && apps.every((ap) => ap.episodeNo === epNo)
-    if (!allInThisEp) nextAssets[id] = a // 跨集或无出场记录 → 保留
-  }
 
   const nextScenes = { ...project.scenes }
   for (const id of sceneIds) delete nextScenes[id]
@@ -70,6 +59,6 @@ export function deleteEpisode(project: Project, episodeId: string): Project {
     episodes: project.episodes.filter((e) => e.id !== episodeId),
     scenes: nextScenes,
     shots: nextShots,
-    assets: nextAssets,
+    assets: project.assets, // ★ v2.0：删集不动资产库。只增不减的删除出口只有项目资产库。
   }
 }

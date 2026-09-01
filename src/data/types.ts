@@ -26,6 +26,9 @@ export interface Project {
   scenes: Record<string, Scene>   // 扁平存，靠 id 引用
   shots: Record<string, Shot>
   assets: Record<string, Asset>   // 全剧唯一，这是「引用不是复制」的地基
+  /** 首次「确认并保存到项目资产库」的时刻。null = 还没入过库。
+   *  这是 replaceWholeScript 能力位与阶段②形态（完整确认 / 轻量增量）的唯一判据。 */
+  libraryCommittedAt: number | null
 }
 
 export interface Episode {

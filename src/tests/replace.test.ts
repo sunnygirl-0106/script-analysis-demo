@@ -25,15 +25,17 @@ describe('R8 替换本集资产 diff', () => {
     expect(diff.removedNames).not.toContain('苏可')
   })
 
-  it('仅在被替换集出现、新内容中不存在的资产计入 removed', () => {
-    // v1.3 —— prev 含第 2 集，next 删掉第 2 集后其独有资产（快递员 / 退货包裹）应被移除。
+  it('删集不再清理资产：本集独有资产仍在库，removed 为空（v2.0 口径）', () => {
+    // updated v2.0 —— 删集/替换集不动资产库（C1）。快递员 / 退货包裹留在库里，只是不再被引用。
     const prev = appendEpisode(fresh(), episode2Payload)
     const next = deleteEpisode(prev, 'e2')
     const diff = episodeReplaceDiff(prev, next)
 
-    expect(diff.removedNames).toContain('快递员')
-    expect(diff.removedNames).toContain('退货包裹')
-    expect(diff.removed).toBe(diff.removedNames.length)
+    // 资产原样保留 → 无一被移除。
+    expect(next.assets[Object.values(prev.assets).find((a) => a.name === '快递员')!.id]).toBeTruthy()
+    expect(next.assets[Object.values(prev.assets).find((a) => a.name === '退货包裹')!.id]).toBeTruthy()
+    expect(diff.removed).toBe(0)
+    expect(diff.removedNames).toEqual([])
     expect(diff.added).toBe(0)
   })
 

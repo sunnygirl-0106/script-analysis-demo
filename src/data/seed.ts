@@ -626,6 +626,9 @@ const scenes: Record<string, Scene> = {
 
 const assets: Record<string, Asset> = Object.fromEntries(catalog.map((a) => [a.id, a]))
 
+// 「已入库」的固定时刻（deterministic，测试可复现）。seedProject 代表现状：已确认入库 + 已有分镜。
+export const SEED_COMMITTED_AT = 1_756_684_800_000 // 2026-09-01
+
 export const seedProject: Project = {
   id: 'proj_last_dignity',
   title: '最后的尊严',
@@ -639,6 +642,7 @@ export const seedProject: Project = {
   scenes,
   shots,
   assets,
+  libraryCommittedAt: SEED_COMMITTED_AT,
 }
 
 // 供重拆使用：第 1 场镜头的初始副本（深拷贝，避免被运行时修改污染）。
