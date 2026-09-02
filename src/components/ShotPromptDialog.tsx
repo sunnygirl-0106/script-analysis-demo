@@ -34,7 +34,8 @@ export function ShotPromptDialog({
   const setPromptState = useStore((st) => st.setPromptState)
   const markPromptEdited = useStore((st) => st.markPromptEdited)
   const showToast = useStore((st) => st.showToast)
-  const promptState = useStore((st) => st.promptStates[shot.id])
+  // 缺键即 pending —— 状态表是惰性的，只记录「不是 pending」的镜头。
+  const promptState = useStore((st) => st.promptStates[shot.id] ?? 'pending')
 
   const revealed = promptState === 'ready' || promptState === 'stale'
   const [img, setImg] = useState(revealed ? shot.imagePrompt : '')

@@ -128,7 +128,12 @@ export const PANEL_MAX = { episode: 380, script: 620 }
 export interface StoreState extends UIState {
   project: Project
 
-  // 提示词生成状态：shotId → PromptState。第一眼全部 pending，需点「生成全部提示词」。
+  /** 提示词生成状态：shotId → PromptState。第一眼全部 pending，需点「生成全部提示词」。
+   *
+   *  **这两张表是惰性的：缺键即默认值**（promptStates 缺键 = 'pending'，promptEdited 缺键 = false）。
+   *  所以结构性改动后不需要把它们「对齐」到新的镜头集合——以前每个改 project 的动作
+   *  都要记得跟一句 reconcilePrompts()，漏一处就是新镜头没有状态，那是一类必然会犯的错。
+   *  真正需要清键的只有删镜 / 删场，它们本来就在各自的动作里显式 delete。 */
   promptStates: Record<string, PromptState>
 
   /** 镜头提示词是否被手动编辑过。与 promptStates 是两个正交维度：
@@ -287,21 +292,7 @@ function closestDensity(sceneId: string, target: number): ShotDensity {
   )
 }
 
-/** 结构性改动后，把两张提示词映射对齐到新 project 的镜头集合：
- *  幸存镜头沿用旧状态 / 编辑标记，新镜头回落 pending，被删镜头的孤儿键一并清掉。 */
-function reconcilePrompts(
-  project: Project,
-  states: Record<string, PromptState>,
-  edited: Record<string, boolean>,
-): { promptStates: Record<string, PromptState>; promptEdited: Record<string, boolean> } {
-  const promptStates: Record<string, PromptState> = {}
-  const promptEdited: Record<string, boolean> = {}
-  for (const id of Object.keys(project.shots)) {
-    promptStates[id] = states[id] ?? 'pending'
-    if (edited[id]) promptEdited[id] = true
-  }
-  return { promptStates, promptEdited }
-}
+
 
 export const useStore = create<StoreState>((set, get) => {
   // 改了某镜的「第一步字段 / 挂载」→ 若该镜提示词已就绪则落回 stale，并提示重新生成。
@@ -356,7 +347,6 @@ export const useStore = create<StoreState>((set, get) => {
       s.selectedSceneId
     set({
       project: next,
-      ...reconcilePrompts(next, s.promptStates, s.promptEdited),
       analysisStep: 'storyboard',
       activeTab: 'shot',
       selectedSceneId: first,
@@ -374,7 +364,7 @@ export const useStore = create<StoreState>((set, get) => {
       const reset = resplitScene(s.project, sceneId)
       const rscene = reset.scenes[sceneId]!
       const next = { ...reset, scenes: { ...reset.scenes, [sceneId]: { ...rscene, density: 'standard' as ShotDensity } } }
-      set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited), sceneSettingsOpen: false })
+      set({ project: next, sceneSettingsOpen: false })
       get().showToast('当前演示仅第 1 场支持不同镜头节奏，本场已按原方式重新生成')
       return
     }
@@ -383,7 +373,7 @@ export const useStore = create<StoreState>((set, get) => {
     if (opts.targetShots != null && opts.density == null) {
       const density = closestDensity(sceneId, opts.targetShots)
       const next = resplitSceneDensity(s.project, sceneId, density)
-      set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited), sceneSettingsOpen: false })
+      set({ project: next, sceneSettingsOpen: false })
       get().showToast(
         `已按「期望 ${opts.targetShots} 个镜头」重新拆分：当前演示中最接近的方案为「${DENSITY_LABEL[density]}」，共 ${densityShots(sceneId, density).length} 个镜头`,
       )
@@ -393,7 +383,7 @@ export const useStore = create<StoreState>((set, get) => {
     // 指定颗粒度（或照原颗粒度重拆一次）。
     const density = opts.density ?? scene.density
     const next = resplitSceneDensity(s.project, sceneId, density)
-    set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited), sceneSettingsOpen: false })
+    set({ project: next, sceneSettingsOpen: false })
     get().showToast(`「${scene.name}」已按${DENSITY_LABEL[density]}节奏重新拆分为 ${densityShots(sceneId, density).length} 个镜头，其他场景没有改变。`)
   }
 
@@ -420,7 +410,6 @@ export const useStore = create<StoreState>((set, get) => {
     }
     set({
       project: proj,
-      ...reconcilePrompts(proj, s.promptStates, s.promptEdited),
       selectedSceneId: ep.sceneIds[0] ?? s.selectedSceneId,
       sceneSettingsOpen: false,
     })
@@ -1063,7 +1052,6 @@ export const useStore = create<StoreState>((set, get) => {
     const k = Math.max(0, countUnreferenced(usageIndexOf(renum)) - unrefBefore)
     set({
       project: renum,
-      ...reconcilePrompts(renum, s.promptStates, s.promptEdited),
       selectedSceneId: firstScene,
       sceneSettingsOpen: false,
       activeTab: 'shot',
@@ -1266,7 +1254,6 @@ export const useStore = create<StoreState>((set, get) => {
     const project: Project = { ...s.project, episodes, scenes, shots }
     set({
       project,
-      ...reconcilePrompts(project, s.promptStates, s.promptEdited),
       analysisStep: 'storyboard',
       activeTab: 'shot',
       // 拆完落全剧视图（v2.7 §5.2）：第一眼该看到整部剧被拆成了什么样。
