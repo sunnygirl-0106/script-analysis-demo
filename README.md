@@ -18,7 +18,7 @@
 npm i
 npm run dev        # 本地开发
 npm run typecheck  # TypeScript strict 检查
-npm test           # 纯函数单测（4 个文件 / 32 条）
+npm test           # 单测（5 个文件 / 38 条）
 npm run lint       # oxlint
 npm run build      # 生产构建
 ```
@@ -65,11 +65,20 @@ src/styles/         theme.css 设计令牌 · global.css · ui.module.css 原子
 
 ## 测试口径
 
-只保留**纯函数**单测：`candidates` 候选去重与结算 · `promptScope` 生成范围求解 ·
-`mentions` 实体词表的长词优先 · `dialogue` 对白 DSL 的解析与往返。
+判据只有一条：**这个错误，类型检查能不能替我发现？** 能，就不写测试。
 
-不写、也不要补：demo 语料的长度阈值 / 段落齐全性断言、UI 集成断言、以及任何形式的「规则版本追溯」标记。
-这些在此前的版本里存在过，代价是每改一次口径就要手工同步一批标记，而收益为零——CI 并不跑它们。
+于是只剩两类：
+
+- **纯函数**（4 个文件）：`candidates` 候选去重与结算 · `promptScope` 生成范围求解 ·
+  `mentions` 实体词表的长词优先 · `dialogue` 对白 DSL 的解析与往返。
+- **主流程的视图链**（`flow.test.ts`）：`analysisView` 只有 7 个合法值，在类型检查眼里完全等价。
+  把「提取跑完」误写成落到 `episodes` 而不是 `assetConfirm`，`tsc` 不会响、`build` 照过，
+  要点到那一步才发现页面串了。所以这一条整链走一遍，逐屏核对落在哪。
+
+不写、也不要补：demo 语料的长度阈值 / 段落齐全性断言、渲染层断言，
+以及任何形式的「规则版本追溯」标记（`RULES_VERSION`、`since/updated`、行内 `// v1.x`、
+「断言见 tests/…」反向引用）。这些在此前的版本里存在过 —— 代价是每改一次口径就要手工同步一批标记，
+收益为零，因为 CI 从来不跑它们。
 
 ## 部署
 
