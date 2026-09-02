@@ -1,6 +1,7 @@
 import { useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { Dialog } from './Dialog'
 import { useStore } from '../store/useStore'
+import { clampToViewport } from '../services/popover'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { can } from '../services/capability'
 import { sceneDuration } from '../services/timeline'
@@ -38,13 +39,8 @@ export function EpisodeTree() {
   // 菜单固定定位：在光标/按钮的右下方弹出，脱离窄侧栏的 overflow 裁剪，并夹在视口内。
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const openMenuAt = (x: number, y: number) => {
-    const w = 182
-    const h = 120
-    const pad = 8
-    setMenuPos({
-      x: Math.min(x, window.innerWidth - w - pad),
-      y: Math.min(y, window.innerHeight - h - pad),
-    })
+    const { left, top } = clampToViewport(x, y, { w: 182, h: 120 })
+    setMenuPos({ x: left, y: top })
   }
   const openMenuFromBtn = (e: ReactMouseEvent) => {
     const r = e.currentTarget.getBoundingClientRect()

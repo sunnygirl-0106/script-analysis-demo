@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../store/useStore'
+import { placeClamp, placeFlip } from '../services/popover'
 import type { Look } from '../data/types'
 import { armEditSwallow, consumeEditSwallow } from '../services/editGuard'
 import {
@@ -163,11 +164,8 @@ export function DialogueCell({ shotId, value, readOnly }: Props) {
   const place = () => {
     const el = wrapRef.current
     if (!el) return
-    const r = el.getBoundingClientRect()
     const h = popRef.current?.offsetHeight || POP_MAX_H
-    let top = r.top - 4
-    if (top + h > window.innerHeight - 8) top = Math.max(8, window.innerHeight - h - 8)
-    const left = Math.max(8, Math.min(r.left - 4, window.innerWidth - POP_W - 8))
+    const { top, left } = placeClamp(el.getBoundingClientRect(), { w: POP_W, h }, { dy: -4, dx: -4 })
     setPos((p) => (p && p.top === top && p.left === left ? p : { top, left }))
   }
 
@@ -194,9 +192,7 @@ export function DialogueCell({ shotId, value, readOnly }: Props) {
   }, [open, pos, lines.length])
 
   const placeSpk = (r: DOMRect) => {
-    let top = r.bottom + 5
-    if (top + SPK_MAX_H > window.innerHeight - 8) top = Math.max(8, r.top - SPK_MAX_H - 5)
-    setSpkPos({ top, left: Math.max(8, Math.min(r.left, window.innerWidth - SPK_W - 8)) })
+    setSpkPos(placeFlip(r, { w: SPK_W, h: SPK_MAX_H }, { gap: 5 }))
   }
 
   // 问号说明：定位到问号的右下方（右缘对齐问号），portal 到 body，不占下拉布局故不闪。

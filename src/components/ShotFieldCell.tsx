@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../store/useStore'
+import { placeClamp } from '../services/popover'
 import type { Shot } from '../data/types'
 import { armEditSwallow, consumeEditSwallow } from '../services/editGuard'
 import { EntityText } from './EntityText'
@@ -111,19 +112,10 @@ export function ShotFieldCell({
       const el = wrapRef.current
       if (!el) return
       const r = el.getBoundingClientRect()
-      if (variant === 'pill') {
-        const width = PILL_POP_W
-        const left = Math.max(8, Math.min(r.left + 6, window.innerWidth - width - 8))
-        let top = r.top + 6
-        if (top + PILL_POP_H > window.innerHeight - 8) top = Math.max(8, window.innerHeight - PILL_POP_H - 8)
-        setPos({ top, left, width })
-      } else {
-        const width = Math.max(160, r.width - 8)
-        const left = Math.max(8, Math.min(r.left + 4, window.innerWidth - width - 8))
-        let top = r.top + 4
-        if (top + TEXT_POP_H > window.innerHeight - 8) top = Math.max(8, window.innerHeight - TEXT_POP_H - 8)
-        setPos({ top, left, width })
-      }
+      const width = variant === 'pill' ? PILL_POP_W : Math.max(160, r.width - 8)
+      const h = variant === 'pill' ? PILL_POP_H : TEXT_POP_H
+      const d = variant === 'pill' ? 6 : 4
+      setPos({ ...placeClamp(r, { w: width, h }, { dy: d, dx: d }), width })
     }
     place()
     window.addEventListener('scroll', place, true)

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../store/useStore'
+import { placeFlip } from '../services/popover'
 import type { Asset, Look, MountableKind } from '../data/types'
 import { KIND_COLOR, KIND_LABEL, MOUNT_KINDS } from './entity'
 import s from './AtMentionPicker.module.css'
@@ -129,11 +130,7 @@ export function AtMentionPicker({ textareaRef, value, onChange, shotId }: Props)
     const place = () => {
       const el = textareaRef.current
       if (!el) return
-      const r = el.getBoundingClientRect()
-      let top = r.bottom + 6
-      if (top + POP_MAX_H > window.innerHeight - 8) top = Math.max(8, r.top - POP_MAX_H - 6)
-      const left = Math.max(8, Math.min(r.left, window.innerWidth - POP_W - 8))
-      setPos({ top, left })
+      setPos(placeFlip(el.getBoundingClientRect(), { w: POP_W, h: POP_MAX_H }))
     }
     place()
     window.addEventListener('scroll', place, true)
