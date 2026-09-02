@@ -625,6 +625,23 @@ const scenes: Record<string, Scene> = {
   [scene3.id]: scene3,
 }
 
+/**
+ * 把若干场的原文拼成「一集正文」（v2.4 §2.1）。
+ * 每场前插一行 `§ 地点 · 时间` 作为场头——它是剧本作者写在原文里的排版，不是数据；
+ * 步骤①② 只认「集」，页面上不出现场号。场自己的 rawText 首行是同义的旧场头，去掉免得重复。
+ * 演示数据里的场头恒为 `${timeOfDay} · ...`，据此识别。
+ */
+export function buildEpisodeRawText(list: Scene[]): string {
+  return list
+    .map((sc) => {
+      const lines = sc.rawText.split('\n')
+      if (lines[0]?.startsWith(`${sc.timeOfDay} · `)) lines.shift()
+      const body = lines.join('\n').replace(/^\n+/, '')
+      return `§ ${sc.location} · ${sc.timeOfDay}\n\n${body}`
+    })
+    .join('\n\n')
+}
+
 const assets: Record<string, Asset> = Object.fromEntries(catalog.map((a) => [a.id, a]))
 
 // 「已入库」的固定时刻（deterministic，测试可复现）。seedProject 代表现状：已确认入库 + 已有分镜。
@@ -638,7 +655,13 @@ export const seedProject: Project = {
   defaultDensity: 'standard',
   stage: 'analysis',
   episodes: [
-    { id: 'e1', no: 1, title: '外卖与尊严', sceneIds: ['s1', 's2', 's3'] },
+    {
+      id: 'e1', no: 1, title: '外卖与尊严', sceneIds: ['s1', 's2', 's3'],
+      rawText: buildEpisodeRawText([scene1, scene2, scene3]),
+      // 演示口径：真产品数 rawText 长度，这里的原文太短，直接给一个像样的数（v2.4 §2.1）。
+      wordCount: 4800,
+      extractedAt: SEED_COMMITTED_AT,
+    },
   ],
   scenes,
   shots,
@@ -691,13 +714,16 @@ export const seedCandidates: CandidateAsset[] = assetList.map((a, i) => {
   return cand
 })
 
-/** 「首次导入」演示的起点项目：未入库、无分镜、资产库为空。 */
+/** 「整理完毕、还没提取资产」的起点项目（v2.4 §2.1）：
+ *  只有集与集正文——**没有场**（场是步骤③ 拆分的产物）、没有分镜、资产库为空、未入库。 */
 export const seedFreshProject: Project = {
   ...seedProject,
-  assets: {},
+  episodes: seedProject.episodes.map((e) => {
+    const { extractedAt: _drop, ...rest } = e
+    return { ...rest, sceneIds: [] }
+  }),
+  scenes: {},
   shots: {},
-  scenes: Object.fromEntries(
-    Object.entries(scenes).map(([id, sc]) => [id, { ...sc, shotIds: [] }]),
-  ),
+  assets: {},
   libraryCommittedAt: null,
 }

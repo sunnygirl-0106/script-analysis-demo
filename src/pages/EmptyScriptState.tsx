@@ -1,38 +1,33 @@
 import { useStore } from '../store/useStore'
 import { STEPS } from '../components/StepBar'
 import { TaskProgress } from '../components/TaskProgress'
-import { UploadConfirmDialog } from '../components/UploadConfirmDialog'
 import s from './EmptyScriptState.module.css'
 
-// 空态（源自 空剧本.html 的 2a）：进站第一屏。上传四拍见 v2.3 §二。
-// 第一拍上传（按钮不带价签）→ 第二拍预估中(3–5s，复用 TaskProgress) → 第三拍确认花费弹窗
-// → 第四拍点确认进 analyzing。取消回空态、什么都没发生。
-const ESTIMATE_MS = 3600
+// 空态（源自 空剧本.html 的 2a）：进站第一屏。v2.4 §3.1 起只有两拍——
+// 点「＋ 上传剧本」（不带价签）→ hero 原地切成 3.6s 的「整理中」→ 落到整理剧本页。
+// 没有确认花费弹窗：上传 / 研读 / 拆集免费，整理剧本页本身就是预估结果页，付费按钮在那一页的页脚。
+const ORGANIZE_MS = 3600
 
 export function EmptyScriptState() {
   const phase = useStore((st) => st.analysisPhase)
   const project = useStore((st) => st.project)
   const startUpload = useStore((st) => st.startUpload)
-  const setAnalysisPhase = useStore((st) => st.setAnalysisPhase)
+  const finishOrganize = useStore((st) => st.finishOrganize)
 
-  const estimating = phase === 'estimating'
-  const confirming = phase === 'confirm'
-  const busy = estimating || confirming
+  const organizing = phase === 'organizing'
 
-  // 第二拍文案：先读剧本、再估消耗（让用户看见系统在读他的剧本，不是纯等待）。
-  const estimatePhases = [
+  // 整理中的三段文案：让用户看见系统在读他的剧本、在切集，而不是干等一个转圈。
+  const organizePhases = [
     { label: `正在读取《${project.title}》`, weight: 1 },
-    { label: '正在预估拆解与资产提取的消耗', weight: 1 },
+    { label: '研读剧本中，整理剧本内容', weight: 1 },
+    { label: '正在识别剧集边界', weight: 1 },
   ]
+
+  // 进站指引里的第①步还没有任何产出，所以按「空剧本」渲染副文案（STEPS 仍是单一真相源）。
+  const emptyProject = { ...project, episodes: [] }
 
   return (
     <div className={s.wrap}>
-      <div className={s.toolbar}>
-        <button className={s.ghost} disabled={busy} onClick={startUpload}>
-          上传剧本
-        </button>
-      </div>
-
       <div className={s.hero}>
         <div className={s.glow} />
         <div className={s.dots} />
@@ -56,19 +51,15 @@ export function EmptyScriptState() {
 
         <div className={s.title}>这个项目还没有剧本</div>
         <div className={s.sub}>
-          导入剧本后，自动拆出集、场与镜头，并整理角色、服装、场景、道具四类资产。
+          上传剧本后，自动整理成集并校对，随后提取角色、服装、场景、道具四类资产。
         </div>
 
-        {estimating ? (
+        {organizing ? (
           <div className={s.estimateBox}>
-            <TaskProgress
-              phases={estimatePhases}
-              durationMs={ESTIMATE_MS}
-              onDone={() => setAnalysisPhase('confirm')}
-            />
+            <TaskProgress phases={organizePhases} durationMs={ORGANIZE_MS} onDone={finishOrganize} />
           </div>
         ) : (
-          <button className={s.cta} disabled={busy} onClick={startUpload}>
+          <button className={s.cta} onClick={startUpload}>
             <span className={s.ctaPlus}>＋</span>上传剧本
           </button>
         )}
@@ -81,20 +72,12 @@ export function EmptyScriptState() {
               <div className={s.step} key={step.n}>
                 <span className={[s.stepDot, i === 0 ? s.stepDotOn : ''].join(' ')}>{step.n}</span>
                 <span className={[s.stepTitle, i === 0 ? s.stepTitleOn : ''].join(' ')}>{step.label}</span>
-                <span className={s.stepSub}>{step.sub(project)}</span>
+                <span className={s.stepSub}>{step.sub(emptyProject)}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
-
-      {/* 第三拍：确认花费弹窗。取消回空态；确认进 analyzing。 */}
-      {confirming && (
-        <UploadConfirmDialog
-          onCancel={() => setAnalysisPhase('empty')}
-          onConfirm={() => setAnalysisPhase('analyzing')}
-        />
-      )}
     </div>
   )
 }

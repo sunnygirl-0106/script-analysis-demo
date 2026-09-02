@@ -1,0 +1,116 @@
+/* 步骤③ 起点页：三张节奏卡居中 + 固定页脚。色调只用 theme 变量。 */
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg0);
+}
+
+.center {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--t1);
+}
+.sub {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--t4);
+}
+
+.cards {
+  display: flex;
+  gap: 16px;
+  margin-top: 30px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.card {
+  appearance: none;
+  cursor: pointer;
+  width: 208px;
+  padding: 18px 18px 16px;
+  text-align: left;
+  background: var(--bg1);
+  border: 1px solid var(--line);
+  border-radius: var(--rlg);
+  transition: 0.18s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.card:hover {
+  border-color: var(--edge);
+  transform: translateY(-2px);
+}
+.cardOn {
+  border-color: var(--acc);
+  background: var(--acc-bg);
+  box-shadow: 0 8px 22px rgb(var(--acc-rgb) / 0.18);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--t1);
+}
+.check {
+  font-size: 12px;
+  color: var(--acc);
+}
+.cardDesc {
+  margin-top: 9px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--t3);
+  min-height: 40px;
+}
+.cardShots {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--t4);
+}
+.cardCost {
+  margin-top: 5px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--acc);
+}
+
+.progressBox {
+  margin-top: 30px;
+  width: 360px;
+  max-width: 100%;
+}
+
+/* ── 页脚 ── */
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 24px;
+  border-top: 1px solid var(--line);
+  background: var(--bg1);
+}
+.footNote {
+  font-size: 12px;
+  color: var(--t4);
+}
+.footEst {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: 11.5px;
+  color: var(--t4);
+}

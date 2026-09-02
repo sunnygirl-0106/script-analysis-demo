@@ -8,33 +8,7 @@
   animation: 0.4s ease both global(an-fade-in);
 }
 
-/* 顶部工具栏，与拆解页对齐（52px） */
-.toolbar {
-  height: 52px;
-  flex: none;
-  display: flex;
-  align-items: center;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--line);
-}
-.ghost {
-  margin-left: auto;
-  background: transparent;
-  border: 1px solid var(--line);
-  color: var(--t3);
-  padding: 5px 13px;
-  border-radius: var(--rpill);
-  font-size: 11.5px;
-  transition: 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-.ghost:hover:not(:disabled) {
-  border-color: var(--edge);
-  color: var(--t1);
-}
-.ghost:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
+/* v2.4 §3.1：一个页面一个入口 —— 工具条右上角那个 ghost「上传剧本」已撤，只留 hero 里的主 CTA。 */
 
 /* Hero */
 .hero {

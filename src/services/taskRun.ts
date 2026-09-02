@@ -6,25 +6,23 @@ export interface Phase {
 }
 
 export const PHASES = {
-  // 首次上传后的解析（v2.3 §二 第四拍）：只提取资产、不拆镜头。
+  // 步骤①的「提取资产」（v2.4 §3.3）：只提取资产。划分集与场不在这里——
+  // 集已在整理剧本那一步分好，场要等步骤③「开始拆分」才产生。
   parse: [
-    { label: '正在划分集与场', weight: 2 },
     { label: '正在提取角色 · 服装 · 场景 · 道具', weight: 3 },
     { label: '正在生成资产提示词', weight: 2 },
   ],
+  // 步骤③的「开始拆分」（v2.4 §5.2）：场与镜在这里才被创建。入库已在步骤②完成。
   split: [
-    { label: '正在保存资产到项目资产库', weight: 1 },
-    { label: '正在划分集与场', weight: 2 },
+    { label: '正在划分场次', weight: 2 },
     { label: '正在拆分镜头', weight: 4 },
     { label: '正在生成分镜脚本', weight: 3 },
   ],
   resplitScene: [
-    { label: '正在保存本次新资产', weight: 1 },
     { label: '正在重新拆分本场', weight: 4 },
     { label: '正在更新镜头引用', weight: 2 },
   ],
   resplitEp: [
-    { label: '正在保存本次新资产', weight: 1 },
     { label: '正在重新拆分本集各场', weight: 4 },
     { label: '正在更新镜头引用', weight: 2 },
   ],
@@ -33,9 +31,10 @@ export const PHASES = {
     { label: '正在替换本集镜头', weight: 4 },
     { label: '正在更新镜头引用', weight: 2 },
   ],
+  // 「补充剧本」弹窗里的整理（v2.4 §3.4）：只读原文、切集，不提取资产（那是页脚那一步）。
   appendParse: [
-    { label: '正在解析续集原文', weight: 3 },
-    { label: '正在检查尚未收录的资产', weight: 2 },
+    { label: '正在读取续集原文', weight: 3 },
+    { label: '正在识别剧集边界', weight: 2 },
   ],
   appendApply: [
     { label: '正在保存新资产', weight: 1 },

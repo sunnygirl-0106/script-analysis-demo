@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store/useStore'
-import type { CandidateDecision, ShotDensity } from '../data/types'
+import type { ShotDensity } from '../data/types'
 import { sceneDuration } from '../services/timeline'
 import { costSplit, fmtCost } from '../services/cost'
 import { PHASES, taskDuration } from '../services/taskRun'
 import { TaskProgress } from './TaskProgress'
-import { AssetPrecheck, applyDecisions, type Decision } from './AssetPrecheck'
 import ui from '../styles/ui.module.css'
 import d from './ScriptImportDialog.module.css'
 import s from './ResplitEpisodeDialog.module.css'
@@ -16,18 +15,15 @@ const DENSITY: { key: ShotDensity; label: string }[] = [
   { key: 'loose', label: '舒缓' },
 ]
 
-// ★ 重拆本集（v2.2 统一弹窗 §4.4②）：设置 + 资产检查 + 消耗，一次确认，弹窗内跑进度。
+// ★ 重拆本集：设置 + 消耗，一次确认，弹窗内跑进度。
+// v2.4 §7：重拆不再提取资产，资产检查区换成一行静态灰字（同重拆本场）。
 export function ResplitEpisodeDialog({ episodeId, onClose }: { episodeId: string; onClose: () => void }) {
   const project = useStore((st) => st.project)
-  const previewCandidates = useStore((st) => st.previewCandidates)
-  const scannedForResplitEpisode = useStore((st) => st.scannedForResplitEpisode)
-  const commitScanned = useStore((st) => st.commitScanned)
   const runResplitEpisode = useStore((st) => st.runResplitEpisode)
 
   const ep = project.episodes.find((e) => e.id === episodeId)
   const [density, setDensity] = useState<ShotDensity>('standard')
   const [sceneMode, setSceneMode] = useState<'auto' | 'custom'>('auto')
-  const [decisions, setDecisions] = useState<Record<string, Decision>>({})
   const [running, setRunning] = useState(false)
 
   const stats = useMemo(() => {
@@ -40,14 +36,12 @@ export function ResplitEpisodeDialog({ episodeId, onClose }: { episodeId: string
   }, [ep, project])
 
   const [customScenes, setCustomScenes] = useState(stats.scenes)
-  const cands = useMemo(() => previewCandidates(scannedForResplitEpisode(episodeId)), [previewCandidates, scannedForResplitEpisode, episodeId])
   const cost = costSplit(stats.sceneIds, density)
 
   if (!ep) return null
 
   const confirm = () => setRunning(true)
   const runDone = () => {
-    commitScanned(applyDecisions(cands, decisions))
     runResplitEpisode(episodeId, { density, sceneCount: sceneMode === 'custom' ? customScenes : undefined })
     onClose()
   }
@@ -97,18 +91,9 @@ export function ResplitEpisodeDialog({ episodeId, onClose }: { episodeId: string
               ))}
             </div>
 
-            <AssetPrecheck
-              cands={cands}
-              assets={project.assets}
-              decisions={decisions}
-              onChange={(id, dec, link) => setDecisions((m) => ({ ...m, [id]: { decision: dec as CandidateDecision, linkTargetId: link } }))}
-              applySummary={
-                <>
-                  {cands.length > 0 && `本次将新增相关资产到项目资产库，并`}
-                  重新生成第 {ep.no} 集各场分镜。已有资产及图片不会被覆盖，其他集不受影响。
-                </>
-              }
-            />
+            <div className={s.assetNote}>
+              ✓ 本次将使用项目资产库中的现有资产，不新增。如需补充请到项目资产库添加。
+            </div>
 
             <div className={s.impact}>
               <div className={s.impactTitle}>预计消耗</div>

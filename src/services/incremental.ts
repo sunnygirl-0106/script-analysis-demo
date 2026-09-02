@@ -13,12 +13,10 @@ function normalize(name: string): string {
 export const assetKey = (a: Pick<Asset, 'kind' | 'name'>) => `${a.kind}::${normalize(a.name)}`
 
 /**
- * 追加一集：
- * - 已有的集 / 场 / 镜 / 资产一个字节都不动（保持引用相等）。
- * - 新集资产按归一化名称比对，命中已有则复用旧 id，不新建。
- * - 新集的镜挂载指向复用后的 id。
+ * 一集内容并进项目前的两件事：资产按归一化名称去重、镜头挂载重指到复用后的 id。
+ * appendEpisode（集也是新的）与 fillEpisode（集已存在，只补场镜）共用这一段。
  */
-export function appendEpisode(project: Project, payload: EpisodePayload): Project {
+function mergePayload(project: Project, payload: EpisodePayload) {
   // 1. 建立既有资产的「名称 → id」索引。
   const byKey = new Map<string, string>()
   for (const asset of Object.values(project.assets)) {
@@ -62,10 +60,39 @@ export function appendEpisode(project: Project, payload: EpisodePayload): Projec
     remappedShots[shot.id] = { ...shot, mounts }
   }
 
-  // 4. 合并。既有 episodes / scenes / shots / assets 全部保持原引用。
+  return { addedAssets, remappedShots }
+}
+
+/**
+ * 追加一集：
+ * - 已有的集 / 场 / 镜 / 资产一个字节都不动（保持引用相等）。
+ * - 新集资产按归一化名称比对，命中已有则复用旧 id，不新建。
+ * - 新集的镜挂载指向复用后的 id。
+ */
+export function appendEpisode(project: Project, payload: EpisodePayload): Project {
+  const { addedAssets, remappedShots } = mergePayload(project, payload)
+  // 既有 episodes / scenes / shots / assets 全部保持原引用。
   return {
     ...project,
     episodes: [...project.episodes, payload.episode],
+    scenes: { ...project.scenes, ...payload.scenes },
+    shots: { ...project.shots, ...remappedShots },
+    assets: { ...project.assets, ...addedAssets },
+  }
+}
+
+/**
+ * 集已经在项目里（v2.4：「补充剧本」先落一个只有原文、没有场镜的草稿集），
+ * 这一步只补它的场与镜：回填 sceneIds，集自己的 title / rawText / wordCount / extractedAt 原样保留。
+ * 资产去重与挂载重指与 appendEpisode 完全一致。
+ */
+export function fillEpisode(project: Project, payload: EpisodePayload): Project {
+  const { addedAssets, remappedShots } = mergePayload(project, payload)
+  return {
+    ...project,
+    episodes: project.episodes.map((e) =>
+      e.id === payload.episode.id ? { ...e, sceneIds: [...payload.episode.sceneIds] } : e,
+    ),
     scenes: { ...project.scenes, ...payload.scenes },
     shots: { ...project.shots, ...remappedShots },
     assets: { ...project.assets, ...addedAssets },

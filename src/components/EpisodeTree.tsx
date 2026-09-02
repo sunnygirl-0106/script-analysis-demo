@@ -3,8 +3,6 @@ import { useStore } from '../store/useStore'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { can } from '../services/capability'
 import { sceneDuration } from '../services/timeline'
-import { ScriptImportDialog } from './ScriptImportDialog'
-import { ReplaceEpisodeDialog } from './ReplaceEpisodeDialog'
 import { ResplitEpisodeDialog } from './ResplitEpisodeDialog'
 import { ResplitSceneDialog } from './ResplitSceneDialog'
 import ui from '../styles/ui.module.css'
@@ -37,19 +35,13 @@ const ic = {
       <path d="M8.3 8.1 20 15.5M8.3 15.9 20 8.5" strokeLinecap="round" />
     </>,
   ),
-  append: svg(<path d="M12 5v14M5 12h14" strokeLinecap="round" />),
-  replace: svg(
-    <>
-      <path d="M4 9h13l-3.2-3.2M20 15H7l3.2 3.2" strokeLinecap="round" strokeLinejoin="round" />
-    </>,
-  ),
   trash: svg(<path d="M5 7h14M10 7V5h4v2M6 7l1 12h10l1-12" strokeLinecap="round" strokeLinejoin="round" />),
 }
 
+// v2.4 §六：集级菜单只剩「重新拆分本集镜头 / 删除本集」——
+// 追加剧集与替换本集剧本都退役了，补充剧本的唯一入口在步骤① 整理剧本页的 ⋯ 里。
 type Dialog =
   | { type: 'resplit'; epId: string }
-  | { type: 'append' }
-  | { type: 'replace'; epId: string }
   | { type: 'delete'; epId: string }
   | { type: 'deleteScene'; sceneId: string }
   | { type: 'resplitScene'; sceneId: string }
@@ -73,7 +65,7 @@ export function EpisodeTree() {
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const openMenuAt = (x: number, y: number) => {
     const w = 182
-    const h = 218
+    const h = 120
     const pad = 8
     setMenuPos({
       x: Math.min(x, window.innerWidth - w - pad),
@@ -180,24 +172,6 @@ export function EpisodeTree() {
                           }}
                         >
                           <i className={s.mIcon}>{ic.resplit}</i>重新拆分本集镜头
-                        </button>
-                        <button
-                          className={s.menuItem}
-                          onClick={() => {
-                            setDialog({ type: 'append' })
-                            setMenuEp(null)
-                          }}
-                        >
-                          <i className={s.mIcon}>{ic.append}</i>追加剧集
-                        </button>
-                        <button
-                          className={s.menuItem}
-                          onClick={() => {
-                            setDialog({ type: 'replace', epId: ep.id })
-                            setMenuEp(null)
-                          }}
-                        >
-                          <i className={s.mIcon}>{ic.replace}</i>替换本集剧本
                         </button>
                         <div className={s.menuSep} />
                         <button
@@ -324,14 +298,6 @@ export function EpisodeTree() {
       {/* 集级弹窗 */}
       {dialog?.type === 'resplit' && (
         <ResplitEpisodeDialog episodeId={dialog.epId} onClose={() => setDialog(null)} />
-      )}
-      <ScriptImportDialog
-        open={dialog?.type === 'append'}
-        defaultMode="append"
-        onClose={() => setDialog(null)}
-      />
-      {dialog?.type === 'replace' && (
-        <ReplaceEpisodeDialog episodeId={dialog.epId} onClose={() => setDialog(null)} />
       )}
 
       {dialog?.type === 'delete' && delEp && delStat && (

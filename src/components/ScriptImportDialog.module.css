@@ -1,3 +1,7 @@
+/* 弹窗公共壳：遮罩 / 容器 / 标题 / 危险条 / 操作栏。
+   ⚠ 同名的 ScriptImportDialog.tsx 已于 v2.4 退役（导入剧本入口撤下），但这几个类是全仓库
+   弹窗的公共样式，被 ConfirmPromptDialog / RenameAssetDialog / Resplit* / ShotRow / VisualPrep
+   等多处 import（`import d from './ScriptImportDialog.module.css'`）。文件保留，勿删。 */
 .overlay {
   position: fixed;
   inset: 0;

@@ -35,7 +35,15 @@ export interface Episode {
   id: string
   no: number
   title: string
+  /** 步骤③「开始拆分」之前恒为 []：场与镜头是拆分的产物，不是上传的产物。 */
   sceneIds: string[]
+  /** ★ 本集原文。步骤①② 唯一的正文来源。以 "§ " 开头的行是剧本作者自己写的场头，
+   *  渲染成小标题——那是排版，不是数据（场这一实体在步骤③ 才产生）。 */
+  rawText: string
+  /** ★ 演示口径的字数。计价（提取 / 拆分）都按它算。 */
+  wordCount: number
+  /** ★ 提取过资产的时刻。有值 = 🔒 已锁只读；undefined = 新补充进来、还没提取。 */
+  extractedAt?: number
 }
 
 export interface Scene {
@@ -142,9 +150,11 @@ export type Asset = Character | Costume | Location | Prop | Look
 
 // ── 候选层与流程相位（v2.0）──
 
-/** 剧本分析的流程相位（v2.0）。资产确认是一道闸：分镜在闸之后才存在。
- *  与既有 AnalysisPhase（拆解动画的呈现相位）是两个正交概念，不要合并。 */
-export type AnalysisStep = 'import' | 'assetConfirm' | 'storyboard'
+/** 剧本分析的流程相位（v2.4）。现在在四步里的哪一步：
+ *  episodes 整理剧本 → assetConfirm 确认资产清单 → storyboard 分镜（拆分起点页 / 分镜表）。
+ *  资产确认仍是一道闸：分镜在闸之后才存在。
+ *  与 AnalysisPhase（上传演示的呈现相位）是两个正交概念，不要合并。 */
+export type AnalysisStep = 'episodes' | 'assetConfirm' | 'storyboard'
 
 /** 用户对一条候选的处理方式（v3 §4.2）。 */
 export type CandidateDecision = 'new' | 'link' | 'skip'

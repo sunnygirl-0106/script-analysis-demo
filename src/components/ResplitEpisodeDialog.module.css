@@ -96,3 +96,15 @@
   letter-spacing: 0.5px;
   margin-bottom: 4px;
 }
+
+/* v2.4 §7：重拆不再提取资产 —— 原「资产检查」区换成这一行静态灰字。 */
+.assetNote {
+  margin: 14px 0 0;
+  padding: 9px 12px;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--t4);
+  background: var(--bg1);
+  border: 1px solid var(--line2);
+  border-radius: var(--rsm);
+}

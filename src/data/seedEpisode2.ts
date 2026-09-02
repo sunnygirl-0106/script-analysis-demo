@@ -3,7 +3,7 @@
 // 新集该带什么资产就带什么 —— 净增数量由内容决定，不是一个写死的常数。
 // 本集新增：角色「快递员」+ 道具「退货包裹」。
 import type { Episode, Scene, Shot, Asset, Look, MountRef } from './types'
-import { A, m } from './seed'
+import { A, buildEpisodeRawText, m } from './seed'
 import { PROMPTS } from './prompts'
 
 // 第 2 集内部临时 id：苏可用临时 id，交给 appendEpisode 按名称去重后重指向旧 id。
@@ -168,6 +168,8 @@ const ep2s2 = buildScene(
 
 export const ep2Episode: Episode = {
   id: 'e2', no: 2, title: '视频求生', sceneIds: ['e2s1', 'e2s2'],
+  rawText: buildEpisodeRawText([ep2s1, ep2s2]),
+  wordCount: 3600, // 演示口径，同 e1（v2.4 §2.1）
 }
 
 export const ep2Scenes: Record<string, Scene> = {

@@ -60,21 +60,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   const toggleNav = useStore((st) => st.toggleNav)
   const analysisPhase = useStore((st) => st.analysisPhase)
   const replayDemo = useStore((st) => st.replayDemo)
-  const setAnalysisPhase = useStore((st) => st.setAnalysisPhase)
-  const finishFirstImport = useStore((st) => st.finishFirstImport)
+  const finishOrganize = useStore((st) => st.finishOrganize)
+  const finishExtract = useStore((st) => st.finishExtract)
 
-  // 演示控制器 pill：解析中可「跳过」直达完整页；完整页可「重新演示」复位重播。
-  // 空态 / 预估中 / 确认弹窗都算「还没真正开跑」，不显示 pill（空态自带 CTA）。
-  const running = analysisPhase === 'analyzing'
+  // 演示控制器 pill：有进度在跑就能「跳过」直达结果；跑完可「重新演示」复位重播。
+  // 空态不显示 pill（空态自带 CTA）。
+  const running = analysisPhase === 'organizing' || analysisPhase === 'extracting'
   const demoPill =
-    activePage === 'analysis' && (analysisPhase === 'analyzing' || analysisPhase === 'done') ? (
+    activePage === 'analysis' && analysisPhase !== 'empty' ? (
       running ? (
         <button
           className={s.demoPill}
-          onClick={() => {
-            finishFirstImport()
-            setAnalysisPhase('done')
-          }}
+          onClick={analysisPhase === 'organizing' ? finishOrganize : finishExtract}
         >
           跳过 ⏭
         </button>
@@ -157,7 +154,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           <div className={s.content}>
-            {activePage === 'analysis' && <StepBar />}
+            {(activePage === 'analysis' || activePage === 'visual') && <StepBar />}
             <div className={s.contentBody}>{children}</div>
           </div>
         </div>

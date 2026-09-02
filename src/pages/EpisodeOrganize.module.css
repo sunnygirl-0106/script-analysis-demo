@@ -1,0 +1,275 @@
+/* 步骤① 整理剧本页。单栏手风琴 + 固定页脚。色调只用 theme 变量。 */
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg0);
+}
+
+/* ── 标题行：共 N 集 · X 字 + ⋯ ── */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--line);
+}
+.headTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--t1);
+}
+
+.menuWrap {
+  position: relative;
+  display: inline-flex;
+}
+.dots {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  color: var(--t4);
+  font-size: 15px;
+  line-height: 1;
+  padding: 2px 8px;
+  border-radius: var(--rpill);
+  transition: 0.16s;
+}
+.dots:hover {
+  color: var(--t1);
+  background: var(--bg3);
+  border-color: var(--line);
+}
+.menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  z-index: 20;
+  min-width: 168px;
+  padding: 5px;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: var(--rsm);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 0.5);
+  display: flex;
+  flex-direction: column;
+}
+.menuItem {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--t2);
+  padding: 7px 10px;
+  border-radius: 5px;
+  transition: 0.14s;
+}
+.menuItem:hover:not(:disabled) {
+  background: var(--raise);
+  color: var(--t1);
+}
+.menuItem:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.menuDanger:hover:not(:disabled) {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.menuSep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--line2);
+}
+
+/* ── 异常提示条（没有异常就整条不渲染） ── */
+.anomaly {
+  margin: 12px 24px 0;
+  padding: 9px 13px;
+  border: 1px solid var(--amber-line);
+  background: var(--amber-bg);
+  border-radius: var(--rsm);
+}
+.anomalyLine {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--amber);
+}
+
+/* ── 集列表 ── */
+.listScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 24px 24px;
+}
+.list {
+  border: 1px solid var(--line);
+  border-radius: var(--rlg);
+  background: var(--bg1);
+  overflow: hidden;
+}
+.epBlock + .epBlock {
+  border-top: 1px solid var(--line);
+}
+
+.epHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+}
+.epHead:hover {
+  background: var(--bg2);
+}
+.caret {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--t4);
+  font-size: 11px;
+  width: 16px;
+  padding: 0;
+}
+.caret:hover {
+  color: var(--t1);
+}
+.epNo {
+  font-size: 13px;
+  color: var(--t4);
+  flex: none;
+}
+.epTitle {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--t1);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.epInput {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--t1);
+  background: var(--bg3);
+  border: 1px solid var(--acc-line);
+  border-radius: 4px;
+  padding: 2px 7px;
+  outline: none;
+  min-width: 160px;
+}
+.lock {
+  font-size: 11px;
+  opacity: 0.85;
+  cursor: help;
+}
+.newBadge {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--acc);
+  background: var(--acc-bg);
+  border: 1px solid var(--acc-line);
+  border-radius: var(--rpill);
+  padding: 0.5px 8px;
+}
+.epWords {
+  flex: 1;
+  text-align: right;
+  font-size: 11.5px;
+  color: var(--t4);
+}
+
+/* 集级 ⋯：hover 才出现（选中/展开菜单时常驻）。 */
+.epMenuWrap {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+.epDots {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--t4);
+  font-size: 15px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: var(--rpill);
+  opacity: 0;
+  transition: 0.14s;
+}
+.epHead:hover .epDots,
+.epDotsOn {
+  opacity: 1;
+}
+.epDots:hover {
+  color: var(--t1);
+  background: var(--bg3);
+}
+
+/* ── 集正文：场头是排版，不是数据 ── */
+.body {
+  padding: 2px 20px 18px 38px;
+}
+.sceneHead {
+  margin: 18px 0 8px;
+  font-size: 11.5px;
+  color: var(--t4);
+  letter-spacing: 0.02em;
+}
+.sceneHead:first-child {
+  margin-top: 4px;
+}
+.para {
+  margin: 6px 0;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--t2);
+}
+
+/* ── 页脚固定条 ── */
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 24px;
+  border-top: 1px solid var(--line);
+  background: var(--bg1);
+}
+.footInfo {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--t2);
+}
+.liveDot {
+  color: var(--acc);
+  font-size: 10px;
+}
+.okDot {
+  color: var(--acc);
+}
+.ctaWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.ctaNote {
+  font-size: 11px;
+  color: var(--t4);
+}

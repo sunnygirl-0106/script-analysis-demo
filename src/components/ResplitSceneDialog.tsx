@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store/useStore'
-import type { CandidateDecision, ShotDensity } from '../data/types'
+import type { ShotDensity } from '../data/types'
 import { densityShots, hasDensityPresets } from '../services/density'
 import { isLongShot } from '../services/duration'
 import { sceneDuration } from '../services/timeline'
 import { costSplit, fmtCost } from '../services/cost'
 import { PHASES, taskDuration } from '../services/taskRun'
 import { TaskProgress } from './TaskProgress'
-import { AssetPrecheck, applyDecisions, type Decision } from './AssetPrecheck'
 import ui from '../styles/ui.module.css'
 import d from './ScriptImportDialog.module.css'
 import s from './ResplitSceneDialog.module.css'
@@ -20,25 +19,19 @@ const DENSITY_META: { key: ShotDensity; label: string; hint: string }[] = [
   { key: 'loose', label: '舒缓', hint: '镜头更长，节奏更慢' },
 ]
 
-// ★ 重拆本场（v2.2 统一弹窗 §4.4②）：节奏设置 + 资产检查 + 消耗汇总，一次确认到底。
-// 原文已在库里，打开即自动预检、免费、毫秒级出结果。点确认后弹窗原地跑进度，跑完关闭。
+// ★ 重拆本场：节奏设置 + 消耗汇总，一次确认到底。点确认后弹窗原地跑进度，跑完关闭。
+// v2.4 §7：重拆保留，但**不再提取资产**——资产检查区换成一行静态灰字。
+// 重拆是「换一种拆法」，不是「再读一遍剧本」；要补资产请去项目资产库加。
 export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onClose: () => void }) {
   const scene = useStore((st) => st.project.scenes[sceneId])
   const shots = useStore((st) => st.project.shots)
-  const assets = useStore((st) => st.project.assets)
-  const previewCandidates = useStore((st) => st.previewCandidates)
-  const scannedForResplitScene = useStore((st) => st.scannedForResplitScene)
-  const commitScanned = useStore((st) => st.commitScanned)
   const runResplitScene = useStore((st) => st.runResplitScene)
 
   const hasPresets = hasDensityPresets(sceneId)
   const curCount = scene?.shotIds.length ?? 0
   const [choice, setChoice] = useState<Choice>(scene?.density ?? 'standard')
   const [customN, setCustomN] = useState(curCount)
-  const [decisions, setDecisions] = useState<Record<string, Decision>>({})
   const [running, setRunning] = useState(false)
-
-  const cands = useMemo(() => previewCandidates(scannedForResplitScene(sceneId)), [previewCandidates, scannedForResplitScene, sceneId])
 
   const countOf = (dn: ShotDensity) =>
     hasPresets ? densityShots(sceneId, dn).length : dn === scene?.density ? curCount : 0
@@ -65,7 +58,6 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
 
   const confirm = () => setRunning(true)
   const runDone = () => {
-    commitScanned(applyDecisions(cands, decisions))
     if (!hasPresets) runResplitScene(sceneId, {})
     else if (choice === 'custom') runResplitScene(sceneId, { targetShots: customN })
     else runResplitScene(sceneId, { density: choice })
@@ -127,18 +119,9 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
               <div className={s.warn}>⚠ 其中 {longCount} 个镜头时长较长，生成视频时可能需要拆成多段。</div>
             )}
 
-            <AssetPrecheck
-              cands={cands}
-              assets={assets}
-              decisions={decisions}
-              onChange={(id, dec, link) => setDecisions((m) => ({ ...m, [id]: { decision: dec as CandidateDecision, linkTargetId: link } }))}
-              applySummary={
-                <>
-                  {cands.length > 0 && `本次将新增相关资产到项目资产库，并`}
-                  重新生成第 {scene.no} 场分镜。已有资产及图片不会被覆盖，其他场不受影响。
-                </>
-              }
-            />
+            <div className={s.assetNote}>
+              ✓ 本次将使用项目资产库中的现有资产，不新增。如需补充请到项目资产库添加。
+            </div>
 
             <div className={s.impact}>
               <div className={s.impactTitle}>预计消耗</div>

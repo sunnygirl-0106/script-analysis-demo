@@ -5,11 +5,15 @@ import { densityShots } from './density'
 import { seedProject } from '../data/seed'
 
 export const RATE = {
-  parsePerKChar: 2, // 解析剧本 / 抽资产：每千字 ✦2
-  shot: 1, // 拆分镜头：每镜 ✦1
+  extractPerKChar: 8, // 提取资产：每千字 ✦8
+  splitPerKChar: 6, // 拆分场 / 镜：每千字 ✦6
+  shot: 1, // 按镜估价，保留给两个重拆弹窗（它们仍按镜数报价）
   assetPrompt: 1, // 单条资产提示词补全：✦1
   shotPrompt: 6, // 单镜画面/视频提示词：✦6
 } as const
+
+/** 节奏档位对拆分单价的系数（v2.4 §8）。镜头越密，拆分的活越多。 */
+export const DENSITY_COEF: Record<ShotDensity, number> = { compact: 1.25, standard: 1, loose: 0.8 }
 
 /**
  * 预计某场在某颗粒度下会拆出多少镜。
@@ -26,9 +30,14 @@ export function estimateShots(sceneIds: string[], density: ShotDensity = 'standa
   }, 0)
 }
 
-/** 按字数估解析消耗：每千字 ✦2，最少 ✦1。 */
-export function costParse(text: string): number {
-  return Math.max(1, Math.round((text.length / 1000) * RATE.parsePerKChar))
+/** 提取资产 = 字数 × ✦8/千字。字数已知 ⇒ 这是确定值，不给区间（v2.4 §8）。 */
+export function costExtract(words: number): number {
+  return Math.max(1, Math.ceil(words / 1000) * RATE.extractPerKChar)
+}
+
+/** 拆分 = 字数 × ✦6/千字 × 档位系数。同样是确定值。 */
+export function costSplitByWords(words: number, density: ShotDensity): number {
+  return Math.max(1, Math.round(Math.ceil(words / 1000) * RATE.splitPerKChar * DENSITY_COEF[density]))
 }
 
 /** 按预计镜数估拆分消耗：每镜 ✦1。 */

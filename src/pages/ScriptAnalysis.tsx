@@ -7,8 +7,6 @@ import { AssetList } from '../components/AssetList'
 import { SORT_LABEL, type AssetSort } from '../components/AssetOverviewBar'
 import { Storyboard } from '../components/Storyboard'
 import { PanelResizer } from '../components/PanelResizer'
-import { ScriptImportDialog } from '../components/ScriptImportDialog'
-import { ResplitSceneDialog } from '../components/ResplitSceneDialog'
 import { ConfirmPromptDialog } from '../components/ConfirmPromptDialog'
 import type { PromptScope } from '../services/promptScope'
 import { can } from '../services/capability'
@@ -17,11 +15,15 @@ import { unreferencedCount } from '../services/reference'
 import ui from '../styles/ui.module.css'
 import s from './ScriptAnalysis.module.css'
 
-// 阶段① 主战场。
+// 步骤③④ 的主战场：分镜表。
+// v2.4 §六 收口：工具栏 shot tab 只留「导出分镜脚本」——重拆本场的唯一入口在场级 ⋯ 菜单里，
+// 「导入剧本」整个退役（补充剧本在步骤① 整理剧本页）。页脚「去资产库生图」常驻，
+// 提示词没全就绪时置灰而不是整个换掉——客户上次找不到下一步，就是因为它不在。
 export function ScriptAnalysis() {
   const project = useStore((st) => st.project)
   const promptStates = useStore((st) => st.promptStates)
   const generatePrompts = useStore((st) => st.generatePrompts)
+  const setStage = useStore((st) => st.setStage)
   const sceneId = useStore((st) => st.selectedSceneId)
   const activeTab = useStore((st) => st.activeTab)
   const showToast = useStore((st) => st.showToast)
@@ -35,8 +37,6 @@ export function ScriptAnalysis() {
 
   const [assetSort, setAssetSort] = useState<AssetSort>('first') // 资产表排序：四类共用
   const isAssetTab = activeTab !== 'shot'
-  const [importOpen, setImportOpen] = useState(false)
-  const [resplitOpen, setResplitOpen] = useState(false)
   // 生成弹窗：null = 关闭；打开时记住本次范围（页脚按钮=本场，完成度提示=全剧）。
   const [promptScope, setPromptScope] = useState<PromptScope | null>(null)
 
@@ -56,6 +56,8 @@ export function ScriptAnalysis() {
   const busy = allShotIds.some((id) => stateOf(id) === 'generating')
   // 含至少一个待生成镜头的场数。
   const needSceneCount = new Set(needIds.map((id) => project.shots[id]?.sceneId)).size
+  // 全剧提示词已就绪：页脚引导从「生成提示词」切换为「去资产库生图」（= 流程条⑤，进库交付第一批）。
+  const allReady = allShotIds.length > 0 && needIds.length === 0 && !busy
 
   return (
     <div className={s.page}>
@@ -71,14 +73,9 @@ export function ScriptAnalysis() {
           <TabBar scene={scene} />
           <div className={s.tbr}>
             {activeTab === 'shot' && (
-              <>
-                <button className={ui.btn} disabled={readOnly} onClick={() => setResplitOpen(true)}>
-                  重新拆分本场镜头
-                </button>
-                <button className={ui.btn} onClick={() => showToast('已导出分镜脚本（示例，不落盘）')}>
-                  导出分镜脚本
-                </button>
-              </>
+              <button className={ui.btn} onClick={() => showToast('已导出分镜脚本（示例，不落盘）')}>
+                导出分镜脚本
+              </button>
             )}
             {isAssetTab && (
               <>
@@ -97,9 +94,6 @@ export function ScriptAnalysis() {
                 </button>
               </>
             )}
-            <button className={ui.btn} disabled={readOnly} onClick={() => setImportOpen(true)}>
-              导入剧本
-            </button>
           </div>
         </div>
 
@@ -123,28 +117,30 @@ export function ScriptAnalysis() {
               {staleCount > 0 && `（含 ${staleCount} 镜内容已改动待更新）`} →
             </button>
           ) : (
-            allShotIds.length > 0 && (
+            allReady && (
               <span className={s.doneStatic}>全剧 {allShotIds.length} 个镜头提示词已就绪</span>
             )
           )}
+          {!allReady && (
+            <button
+              className={ui.btn}
+              disabled={busy}
+              onClick={() => setPromptScope('scene')}
+            >
+              {busy ? '生成中…' : '生成提示词'}
+            </button>
+          )}
           <button
             className={[ui.btn, ui.btnPrimary].join(' ')}
-            disabled={busy}
-            onClick={() => setPromptScope('scene')}
+            disabled={!allReady}
+            title={allReady ? undefined : '全剧提示词就绪后可进入'}
+            onClick={() => setStage('visual')}
           >
-            {busy ? '生成中…' : '生成提示词'}
+            去资产库生图 →
           </button>
         </div>
       </div>
 
-      <ScriptImportDialog
-        open={importOpen}
-        defaultMode="append"
-        onClose={() => setImportOpen(false)}
-      />
-      {resplitOpen && scene && (
-        <ResplitSceneDialog sceneId={scene.id} onClose={() => setResplitOpen(false)} />
-      )}
       {promptScope && (
         <ConfirmPromptDialog
           defaultScope={promptScope}

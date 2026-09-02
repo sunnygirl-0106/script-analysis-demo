@@ -1,5 +1,6 @@
-/* 替换本集剧本弹窗。遮罩 / 标题 / 危险条 / 操作栏沿用 ScriptImportDialog 的类，
-   容器与上传区、tab、对照行等自成一套。全部取仓库 token。 */
+/* 选文件类弹窗的公共样式：容器 / tab / 拖拽上传区 / 粘贴框 / 底部灰字。
+   遮罩 / 标题 / 操作栏沿用 ScriptImportDialog.module.css 的类。
+   ⚠ 同名的 ReplaceEpisodeDialog.tsx 已于 v2.4 退役，样式由 SupplementScriptDialog 接管。 */
 .dialog {
   width: 480px;
   max-width: calc(100vw - 40px);

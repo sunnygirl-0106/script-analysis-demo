@@ -1,20 +1,21 @@
 import { Fragment, useMemo, useState, type ReactNode } from 'react'
 import { useStore, type Tab } from '../store/useStore'
-import type { Asset, AssetKind, CandidateAsset } from '../data/types'
+import type { Asset, AssetKind, CandidateAsset, CandidateDecision } from '../data/types'
 import { KIND_DOT, KIND_LABEL } from '../components/entity'
-import { can } from '../services/capability'
+import { DECISION_META, type Decision } from '../components/decision'
 import { refState } from '../services/reference'
-import { fmtCost, costSplit } from '../services/cost'
+import { fmtCost, costSplitByWords } from '../services/cost'
 import { PanelResizer } from '../components/PanelResizer'
 import { CandidatePromptDialog } from '../components/CandidatePromptDialog'
-import { ReuploadDialog } from '../components/ReuploadDialog'
-import { StartSplitDialog } from '../components/StartSplitDialog'
 import ui from '../styles/ui.module.css'
 import s from './AssetConfirm.module.css'
 
-// 阶段② 完整确认（v2.0 + v2.3 §三）：解析结果先落 candidates，用户确认后才入库。
-// 与 ScriptAnalysis（阶段③ 分镜表）是两个界面；这里没有 shots，也没有集/场/镜。
-// 表格只留三类信息：名称 | 生成提示词 | 状态 | 操作；「在剧本中出现」列与名下小字都已删（§3.3）。
+// 步骤② 确认资产清单（v2.0 + v2.3 §三 + v2.4 §四）：提取结果先落 candidates，用户确认后才入库。
+// 左栏是**按集**的全剧原文——步骤② 系统只认「集」，场与镜要等步骤③ 才产生，
+// 所以这里不出现「第 N 场」「共 N 场」。表格三类信息：名称 | 生成提示词 | 状态 | 操作。
+//
+// 已入库之后（补充剧本 → 只提取新集资产）这一页变成「轻量增量」形态：
+// 老资产灰显只读，新候选的「状态」列变成三选一下拉（新增 / 使用已有 / 本次不入库）。
 
 const KINDS: AssetKind[] = ['character', 'costume', 'location', 'prop']
 
@@ -76,23 +77,27 @@ export function AssetConfirm() {
   const setHoverAssetTerm = useStore((st) => st.setHoverAssetTerm)
   const usageIndex = useStore((st) => st.usageIndex())
 
+  const setAnalysisStep = useStore((st) => st.setAnalysisStep)
+  const commitLibrary = useStore((st) => st.commitLibrary)
+  const confirmIncremental = useStore((st) => st.confirmIncremental)
+
   const committed = project.libraryCommittedAt != null
-  const canReupload = can(project, 'replaceWholeScript') // 等价于「未入库」
 
   const kind: AssetKind = (KINDS as string[]).includes(activeTab) ? (activeTab as AssetKind) : 'character'
-  const [reuploadOpen, setReuploadOpen] = useState(false)
-  const [splitOpen, setSplitOpen] = useState(false)
   const [newOpen, setNewOpen] = useState(false)
+  // 已入库时每条新候选的处理方式；点主按钮时一次性交给 confirmIncremental 结算。
+  const [decisions, setDecisions] = useState<Record<string, Decision>>({})
   const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('occ')
   const [scriptW, setScriptW] = useState(460)
 
   const candOf = (k: AssetKind) => candidates.filter((c) => c.kind === k)
   const committedOf = (k: AssetKind) => Object.values(project.assets).filter((a) => a.kind === k)
-  const newCount = candidates.filter((c) => c.decision === 'new').length
-  const splitCost = useMemo(
-    () => costSplit(project.episodes.flatMap((e) => e.sceneIds), project.defaultDensity),
-    [project.episodes, project.defaultDensity],
+  // 已入库时的主按钮带价：本次要拆的是那些「已提取、还没有场」的集，按字数 × 档位系数算。
+  const draftEpisodes = project.episodes.filter((e) => e.extractedAt && e.sceneIds.length === 0)
+  const splitCost = costSplitByWords(
+    draftEpisodes.reduce((n, e) => n + e.wordCount, 0),
+    project.defaultDensity,
   )
 
   // 高亮词表：候选名 + 已入库资产名（都参与原文标注）。
@@ -107,8 +112,7 @@ export function AssetConfirm() {
     [hoverAssetTerm],
   )
 
-  // 全剧原文：按集 → 场顺序连读（阶段②只有场结构，没有分镜）。
-  const scenesInOrder = project.episodes.flatMap((e) => e.sceneIds.map((id) => project.scenes[id]).filter(Boolean))
+  // 全剧原文：按集连读。`§ ` 开头的行是剧本作者写的场头，渲染成小标题（排版，不是数据）。
 
   // 悬浮：只点亮名字，不滚动（hover 就滚会晕）。
   const enter = (names: (string | undefined)[]) =>
@@ -160,15 +164,21 @@ export function AssetConfirm() {
       <div className={s.scriptCol} style={{ width: scriptW }}>
         <div className={s.scriptHead}>
           全剧原文
-          <span className={s.scriptMeta}>共 {scenesInOrder.length} 场 · 阶段② 尚未拆分镜头</span>
+          <span className={s.scriptMeta}>
+            共 {project.episodes.length} 集 · 场与镜头在第 ③ 步产生
+          </span>
         </div>
         <div className={[s.scriptBody, hoverAssetTerm ? s.hovering : ''].join(' ')}>
-          {scenesInOrder.map((sc) => (
-            <div key={sc!.id} className={s.sceneBlock}>
-              <div className={s.sceneTitle}>第 {sc!.no} 场 · {sc!.name}</div>
-              {toBeats(sc!.rawText).map((beat, i) => (
-                <p key={i} className={s.beat}>{highlight(beat, terms, hotSet)}</p>
-              ))}
+          {project.episodes.map((ep) => (
+            <div key={ep.id} className={s.sceneBlock}>
+              <div className={s.sceneTitle}>第 {ep.no} 集 · {ep.title}</div>
+              {toBeats(ep.rawText).map((line, i) =>
+                line.startsWith('§ ') ? (
+                  <div key={i} className={s.epSceneHead}>{line.slice(2)}</div>
+                ) : (
+                  <p key={i} className={s.beat}>{highlight(line, terms, hotSet)}</p>
+                ),
+              )}
             </div>
           ))}
         </div>
@@ -218,11 +228,11 @@ export function AssetConfirm() {
         </div>
 
         <div className={s.listScroll}>
-          <div className={s.colHead}>
+          <div className={[s.colHead, committed ? s.gridDecide : ''].join(' ')}>
             <span />
             <span>名称</span>
             <span>生成提示词</span>
-            <span>状态</span>
+            <span>{committed ? '处理方式' : '状态'}</span>
             <span>操作</span>
           </div>
 
@@ -232,6 +242,11 @@ export function AssetConfirm() {
               key={c.tempId}
               cand={c}
               committed={committed}
+              assets={project.assets}
+              decision={decisions[c.tempId]}
+              onDecide={(dec, link) =>
+                setDecisions((m) => ({ ...m, [c.tempId]: { decision: dec, linkTargetId: link } }))
+              }
               onEnter={() => enter([c.name, ...(c.aliases ?? [])])}
               onLeave={leave}
               onRename={(v) => renameCandidate(c.tempId, v)}
@@ -247,7 +262,7 @@ export function AssetConfirm() {
             return (
               <div
                 key={a.id}
-                className={[s.row, s.rowLocked].join(' ')}
+                className={[s.row, s.rowLocked, committed ? s.gridDecide : ''].join(' ')}
                 onMouseEnter={() => enter(names)}
                 onMouseLeave={leave}
               >
@@ -273,28 +288,32 @@ export function AssetConfirm() {
           )}
         </div>
 
-        {/* 页脚：合并成一个动作（§3.5） */}
+        {/* 页脚（v2.4 §4.2）：左退回整理剧本（非销毁），右一个主动作。
+            首次不带价——钱在下一页选完节奏才知道；已入库时本次就要拆，所以带价。 */}
         <div className={s.foot}>
-          <button
-            className={ui.btn}
-            disabled={!canReupload}
-            title={canReupload ? '换一份剧本重新拆解' : '已保存到项目资产库；换一部剧本请新建项目'}
-            onClick={() => canReupload && setReuploadOpen(true)}
-          >
-            ↺ 重新上传剧本
+          <button className={ui.btn} onClick={() => setAnalysisStep('episodes')}>
+            ← 返回整理剧本
           </button>
-          <button
-            className={[ui.btn, ui.btnPrimary].join(' ')}
-            disabled={committed}
-            onClick={() => setSplitOpen(true)}
-          >
-            确认资产并开始拆分 · {fmtCost(splitCost)}
-          </button>
+          <span className={s.footSpacer} />
+          {committed ? (
+            <button
+              className={[ui.btn, ui.btnPrimary].join(' ')}
+              onClick={() => confirmIncremental(decisions)}
+            >
+              确认新增资产并拆分第 {draftEpisodes.map((e) => e.no).join(' / ') || '新'} 集 ·{' '}
+              {fmtCost(splitCost)}
+            </button>
+          ) : (
+            <button
+              className={[ui.btn, ui.btnPrimary].join(' ')}
+              onClick={() => { commitLibrary(); setAnalysisStep('storyboard') }}
+            >
+              确认资产，进入拆分 →
+            </button>
+          )}
         </div>
       </div>
 
-      {reuploadOpen && <ReuploadDialog count={newCount} onClose={() => setReuploadOpen(false)} />}
-      {splitOpen && <StartSplitDialog onClose={() => setSplitOpen(false)} />}
       {newOpen && <NewAssetDialog kind={kind} onClose={() => setNewOpen(false)} />}
     </div>
   )
@@ -338,11 +357,16 @@ function PromptCell({
 }
 
 // 一条候选：主行 + （角色展开时）造型子行。子行是同一张网格的兄弟行，与主行的列对齐（§3.5）。
+// committed 只切换「状态」列的形态（待入库 ↔ 三选一下拉）——候选本身在两种形态下都可编辑，
+// 灰显只读的是已经入过库的老资产，不是这一批新候选。
 function CandidateGroup({
-  cand, committed, onEnter, onLeave, onRename, onRemove,
+  cand, committed, assets, decision, onDecide, onEnter, onLeave, onRename, onRemove,
 }: {
   cand: CandidateAsset
   committed: boolean
+  assets: Record<string, Asset>
+  decision?: Decision
+  onDecide: (decision: CandidateDecision, linkTargetId?: string) => void
   onEnter: () => void
   onLeave: () => void
   onRename: (v: string) => void
@@ -352,22 +376,71 @@ function CandidateGroup({
   const isChar = cand.kind === 'character'
   return (
     <>
-      <div className={s.row} onMouseEnter={onEnter} onMouseLeave={onLeave}>
+      <div
+        className={[s.row, committed ? s.gridDecide : ''].join(' ')}
+        onMouseEnter={onEnter}
+        onMouseLeave={onLeave}
+      >
         <i className={s.dot} style={{ background: KIND_DOT[cand.kind] }} />
         <div className={s.nameCell}>
-          <EditableName name={cand.name} editable={!committed} onCommit={onRename} />
+          <EditableName name={cand.name} editable onCommit={onRename} />
           {isChar && <CandidateLooksToggle cand={cand} open={open} setOpen={setOpen} />}
         </div>
-        <CandidateMainPrompt cand={cand} committed={committed} />
-        <span className={s.stPending}>待入库</span>
+        <CandidateMainPrompt cand={cand} committed={false} />
+        {committed ? (
+          <DecisionCell cand={cand} assets={assets} decision={decision} onDecide={onDecide} />
+        ) : (
+          <span className={s.stPending}>待入库</span>
+        )}
         <div className={s.ops}>
-          <button className={s.iconBtn} disabled={committed} title="移除此候选" onClick={onRemove}>🗑</button>
+          <button className={s.iconBtn} title="移除此候选" onClick={onRemove}>🗑</button>
         </div>
       </div>
       {isChar && open && (
-        <CandidateLookRows cand={cand} committed={committed} onEnter={onEnter} onLeave={onLeave} />
+        <CandidateLookRows cand={cand} committed={false} onEnter={onEnter} onLeave={onLeave} />
       )}
     </>
+  )
+}
+
+// 已入库之后，候选行的「状态」列不再显示「待入库」，而是这个三选一（v2.4 §4.3）。
+function DecisionCell({
+  cand, assets, decision, onDecide,
+}: {
+  cand: CandidateAsset
+  assets: Record<string, Asset>
+  decision?: Decision
+  onDecide: (decision: CandidateDecision, linkTargetId?: string) => void
+}) {
+  const d = decision ?? { decision: 'new' as CandidateDecision }
+  const pool = Object.values(assets).filter((a) => a.kind === cand.kind)
+  return (
+    <div className={s.decideCell}>
+      <select
+        className={s.decideSel}
+        value={d.decision}
+        onChange={(e) => {
+          const dec = e.target.value as CandidateDecision
+          onDecide(dec, dec === 'link' ? (d.linkTargetId ?? pool[0]?.id) : undefined)
+        }}
+      >
+        {DECISION_META.map((m) => (
+          <option key={m.key} value={m.key} disabled={m.key === 'link' && pool.length === 0}>
+            {m.label}
+          </option>
+        ))}
+      </select>
+      {d.decision === 'link' && (
+        <select
+          className={s.decideSel}
+          value={d.linkTargetId ?? pool[0]?.id ?? ''}
+          onChange={(e) => onDecide('link', e.target.value)}
+        >
+          {pool.length === 0 && <option value="">（无同类已入库资产）</option>}
+          {pool.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+      )}
+    </div>
   )
 }
 
@@ -395,7 +468,6 @@ function CandidateLooksToggle({
   const attachCandidateCostume = useStore((st) => st.attachCandidateCostume)
   const createCandidateCostume = useStore((st) => st.createCandidateCostume)
   const candidates = useStore((st) => st.candidates)
-  const committed = project.libraryCommittedAt != null
   const [picking, setPicking] = useState(false)
 
   // 服装池：本批 costume 候选 + 已入库 costume，去掉已挂的。
@@ -412,25 +484,23 @@ function CandidateLooksToggle({
           {count} 套造型 <span className={s.caret}>{open ? '⌃' : '⌄'}</span>
         </button>
       )}
-      {!committed && (
-        <span className={s.addLookWrap}>
-          <button className={s.addLook} onClick={() => { setPicking((p) => !p); setOpen(true) }}>
-            ＋ 服装
-          </button>
-          {picking && (
-            <CostumePicker
-              pool={pool}
-              onPick={(id) => { attachCandidateCostume(cand.tempId, id); setPicking(false) }}
-              onCreate={(name) => {
-                const id = createCandidateCostume(name)
-                if (id) attachCandidateCostume(cand.tempId, id)
-                setPicking(false)
-              }}
-              onClose={() => setPicking(false)}
-            />
-          )}
-        </span>
-      )}
+      <span className={s.addLookWrap}>
+        <button className={s.addLook} onClick={() => { setPicking((p) => !p); setOpen(true) }}>
+          ＋ 服装
+        </button>
+        {picking && (
+          <CostumePicker
+            pool={pool}
+            onPick={(id) => { attachCandidateCostume(cand.tempId, id); setPicking(false) }}
+            onCreate={(name) => {
+              const id = createCandidateCostume(name)
+              if (id) attachCandidateCostume(cand.tempId, id)
+              setPicking(false)
+            }}
+            onClose={() => setPicking(false)}
+          />
+        )}
+      </span>
     </span>
   )
 }

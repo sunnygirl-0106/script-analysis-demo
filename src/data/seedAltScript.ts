@@ -3,6 +3,7 @@
 // 提示词直接引用 PROMPTS 里 ep2 那 5 条，不新写。
 import type { Asset, AssetKind, Episode, Look, MountableKind, MountRef, Scene, Shot } from './types'
 import type { ScriptPayload } from '../services/replace'
+import { buildEpisodeRawText } from './seed'
 import { PROMPTS } from './prompts'
 
 // ── 独立资产 id（不与被覆盖的旧项目撞车）──
@@ -167,7 +168,11 @@ const altScene2 = buildAltScene(
   altS2Seeds, altShots,
 )
 
-const altEpisode: Episode = { id: 'alt_e1', no: 1, title: '退货风波', sceneIds: ['alt_s1', 'alt_s2'] }
+const altEpisode: Episode = {
+  id: 'alt_e1', no: 1, title: '退货风波', sceneIds: ['alt_s1', 'alt_s2'],
+  rawText: buildEpisodeRawText([altScene1, altScene2]),
+  wordCount: 2400,
+}
 
 /** 覆盖导入的新剧本载荷。title 只用于 toast，不写回被保留的 project.title。 */
 export const altScriptPayload: ScriptPayload = {
