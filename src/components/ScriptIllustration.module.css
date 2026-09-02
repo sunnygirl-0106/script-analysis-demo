@@ -1,0 +1,157 @@
+/* 文档堆叠插画。从 EmptyScriptState.module.css 抽出来，空态与整页动效共用。
+   色值只用 theme.css 变量；动效全是 CSS keyframes，不引第三方库。 */
+.doc {
+  position: relative;
+  width: 190px;
+  height: 158px;
+}
+
+.ring1,
+.ring2 {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+.ring1 {
+  width: 150px;
+  height: 150px;
+  border: 1px solid rgb(var(--acc-rgb) / 0.14);
+}
+.ring2 {
+  width: 196px;
+  height: 196px;
+  border: 1px solid rgb(var(--acc-rgb) / 0.06);
+}
+
+.card {
+  position: absolute;
+  border-radius: 11px;
+}
+.card1 {
+  left: 26px;
+  top: 26px;
+  width: 76px;
+  height: 100px;
+  border: 1px solid #313131;
+  background: linear-gradient(180deg, #202020, #1b1b1b);
+  transform: rotate(-11deg);
+  box-shadow: 0 10px 26px rgb(0 0 0 / 0.4);
+}
+.card2 {
+  left: 44px;
+  top: 20px;
+  width: 76px;
+  height: 100px;
+  border: 1px solid #3e3e3e;
+  background: linear-gradient(180deg, #252525, #1f1f1f);
+  transform: rotate(-5deg);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 0.45);
+}
+.cardFront {
+  left: 64px;
+  top: 12px;
+  width: 78px;
+  height: 104px;
+  border: 1px solid var(--acc-line);
+  background: linear-gradient(180deg, #2b2b2b, #232323);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 16px 14px;
+  overflow: hidden;
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.05);
+  animation: 4.5s ease-in-out infinite global(an-float);
+}
+
+.lineAcc {
+  height: 5px;
+  width: 32px;
+  border-radius: 3px;
+  background: var(--acc);
+  flex: none;
+}
+.line {
+  height: 4px;
+  border-radius: 3px;
+  background: #454545;
+  flex: none;
+}
+
+.spark1,
+.spark2 {
+  position: absolute;
+  border-radius: 50%;
+}
+.spark1 {
+  right: 8px;
+  top: 8px;
+  width: 11px;
+  height: 11px;
+  background: rgb(var(--acc-rgb) / 0.5);
+  box-shadow: 0 0 14px rgb(var(--acc-rgb) / 0.3);
+}
+.spark2 {
+  left: 10px;
+  bottom: 24px;
+  width: 7px;
+  height: 7px;
+  background: rgb(var(--acc-rgb) / 0.28);
+}
+
+/* ── active：正在研读 ── */
+
+/* 扫描光带：在最前面那张卡上自上而下往复扫。 */
+.scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 26px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgb(var(--acc-rgb) / 0.28) 45%,
+    rgb(var(--acc-rgb) / 0.42) 55%,
+    transparent
+  );
+  animation: si-scan 1.8s ease-in-out infinite alternate;
+}
+
+/* 横线依次被点亮（stagger 由内联 animation-delay 给）。 */
+.on .line {
+  animation: si-light 1.8s ease-in-out infinite;
+}
+
+/* 光环缓慢呼吸。 */
+.on .ring1 {
+  animation: si-breathe 3.2s ease-in-out infinite;
+}
+.on .ring2 {
+  animation: si-breathe 3.2s ease-in-out infinite 0.4s;
+}
+
+@keyframes si-scan {
+  from { top: -18px; }
+  to { top: 100%; }
+}
+@keyframes si-light {
+  0%, 100% { background: #454545; }
+  40% { background: rgb(var(--acc-rgb) / 0.75); }
+}
+@keyframes si-breathe {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  50% { transform: translate(-50%, -50%) scale(1.06); opacity: 0.65; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardFront,
+  .scan,
+  .on .line,
+  .on .ring1,
+  .on .ring2 {
+    animation: none;
+  }
+  .scan { display: none; }
+}

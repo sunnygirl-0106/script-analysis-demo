@@ -6,6 +6,7 @@ import type { Scene } from '../data/types'
 import { computeTimeline, sceneDuration } from '../services/timeline'
 import { SceneTimeline } from './SceneTimeline'
 import { SceneSettingsDrawer } from './SceneSettingsDrawer'
+import { ResplitSceneDialog } from './ResplitSceneDialog'
 import { ShotRow } from './ShotRow'
 import s from './Storyboard.module.css'
 
@@ -20,22 +21,30 @@ const MIN_WIDTHS = [96, 76, 100, 170, 240, 100, 140, 96, 130]
 // 最右侧固定的删除列宽（钉在「最终提示词」右边，不参与拖拽）。需与 CSS 中 .cPromptStat 的 right 偏移一致。
 const DEL_W = 46
 
-export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolean }) {
+/**
+ * 分镜表（v2.7 §5.4）。从「一次一场」改成**一次一批场**：接 `scenes`，每场一个纵向区块。
+ *
+ * 全剧 / 本集 / 本场三种视图共用这一个组件，区别只有传进来几场、以及要不要时间轴——
+ * 表头只在最顶上渲染一次，列宽 state 也只有顶层这一份，所以三个区块的列永远是对齐的。
+ * 这就是「每场一张独立表格」这条路被否掉的原因：那样列宽会各走各的，纵向扫读立刻散架。
+ */
+export function Storyboard({
+  scenes, readOnly, showTimeline,
+}: {
+  scenes: Scene[]
+  readOnly: boolean
+  /** 只有「本场」视图渲染场时间轴；全剧 / 本集视图省下这段高度（v2.7 §5.4）。 */
+  showTimeline: boolean
+}) {
   const shots = useStore((st) => st.project.shots)
-  const promptStates = useStore((st) => st.promptStates)
-  const insertShot = useStore((st) => st.insertShot)
-  const deleteShot = useStore((st) => st.deleteShot)
   const flashShotIds = useStore((st) => st.flashShotIds)
-  // 表尾「在末尾插入一镜」热区：悬停显形、停住几秒自动隐藏。
-  const appendIns = useAutoHideHover()
 
-  // 高亮完全由悬停驱动：不悬停就没有任何镜被高亮。
+  // 高亮完全由悬停驱动：不悬停就没有任何镜被高亮。跨场按 shotId 走，互不干扰。
   const [hoverId, setHoverId] = useState<string | null>(null)
+  // 「重拆本场」弹窗：区块头上那个顺手的口，与场 ⋯ 菜单里那个是同一个弹窗。
+  const [resplitId, setResplitId] = useState<string | null>(null)
 
-  const timeline = computeTimeline(scene, shots)
-  const total = sceneDuration(scene, shots)
-
-  // ── 列宽（可拖拽）──
+  // ── 列宽（可拖拽）：一份，所有场区块共用 ──
   const [widths, setWidths] = useState<number[]>(DEFAULT_WIDTHS)
   const [dragCol, setDragCol] = useState<number | null>(null)
   const drag = useRef<{ i: number; startX: number; startW: number } | null>(null)
@@ -94,6 +103,7 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
   // ── 最终提示词列的悬浮阴影：默认显示（有内容被它挡住），只有横向滚到最右端才去掉 ──
   const scrollRef = useRef<HTMLDivElement>(null)
   const [atRight, setAtRight] = useState(false)
+  const shotTotal = scenes.reduce((n, sc) => n + sc.shotIds.length, 0)
   useLayoutEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -108,7 +118,7 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
       el.removeEventListener('scroll', update)
       window.removeEventListener('resize', update)
     }
-  }, [timeline.length, gridW])
+  }, [shotTotal, gridW])
 
   // 从「出场明细」跳转过来：把首个被高亮的镜头滚到视野中央。
   useEffect(() => {
@@ -117,10 +127,14 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
     el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }, [flashShotIds])
 
+  const only = scenes.length === 1 ? scenes[0] : undefined
+
   return (
     <div className={s.pane}>
       <SceneSettingsDrawer />
-      <SceneTimeline scene={scene} shots={shots} activeId={hoverId} onHover={setHoverId} />
+      {showTimeline && only && (
+        <SceneTimeline scene={only} shots={shots} activeId={hoverId} onHover={setHoverId} />
+      )}
       {readOnly && <div className={s.lockNote}>🔒 已进入项目资产库，剧本分析只读</div>}
 
       <div className={[s.scroll, atRight ? s.scrollAtEnd : ''].join(' ')} ref={scrollRef}>
@@ -142,47 +156,20 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
             <div className={[s.hCell, s.hCellDel].join(' ')} />
           </div>
 
-          {timeline.map((entry, i) => {
-            const shot = shots[entry.shotId]
-            if (!shot) return null
-            return (
-              <ShotRow
-                key={shot.id}
-                shot={shot}
-                startAt={entry.startAt}
-                endAt={entry.endAt}
-                active={hoverId === shot.id}
-                alt={i % 2 === 1}
-                readOnly={readOnly}
-                promptState={promptStates[shot.id] ?? 'pending'}
-                flash={flashShotIds.includes(shot.id)}
-                onHover={setHoverId}
-                onInsertAbove={readOnly ? undefined : () => insertShot(scene.id, i)}
-                onDelete={readOnly ? undefined : () => deleteShot(shot.id)}
-              />
-            )
-          })}
+          {scenes.map((sc) => (
+            <SceneBlock
+              key={sc.id}
+              scene={sc}
+              readOnly={readOnly}
+              hoverId={hoverId}
+              onHover={setHoverId}
+              onResplit={() => setResplitId(sc.id)}
+            />
+          ))}
 
-          <div className={s.tail}>
-            {!readOnly && (
-              <div
-                className={[s.insRow, appendIns.visible ? s.insRowShow : ''].join(' ')}
-                title="在末尾插入一镜"
-                onMouseEnter={appendIns.onMouseEnter}
-                onMouseMove={appendIns.onMouseMove}
-                onMouseLeave={appendIns.onMouseLeave}
-                onClick={() => {
-                  if (appendIns.isVisible()) insertShot(scene.id, timeline.length)
-                }}
-              >
-                <span className={s.insRowBar} />
-                <span className={s.insRowPlus}>＋</span>
-                <span className={s.insRowBar} />
-              </div>
-            )}
-            <div className={s.tailNo}>{fmt(total)}</div>
-            <div className={s.tailText}>本场共 {total} 秒</div>
-          </div>
+          {scenes.length === 0 && (
+            <div className={s.emptyScene}>当前范围内还没有场</div>
+          )}
 
           {/* 全高列宽把手层：覆盖整张表，pointer-events 只在把手上生效 */}
           <div className={s.handleLayer}>
@@ -200,6 +187,117 @@ export function Storyboard({ scene, readOnly }: { scene: Scene; readOnly: boolea
           </div>
         </div>
       </div>
+
+      {resplitId && <ResplitSceneDialog sceneId={resplitId} onClose={() => setResplitId(null)} />}
     </div>
+  )
+}
+
+/**
+ * 一场 = 一个区块：区块头 + 若干镜头行 + 收尾行。
+ *
+ * 返回 Fragment 而不是包一层 div —— 每一行都得是 `.grid` 的直接子节点，
+ * 列宽变量 `--cols` 才管得到它们，包一层就散了。
+ * 镜号仍是场内编号（1、2、3…）：区块头已经交代了这是哪一集哪一场。
+ */
+function SceneBlock({
+  scene, readOnly, hoverId, onHover, onResplit,
+}: {
+  scene: Scene
+  readOnly: boolean
+  hoverId: string | null
+  onHover: (id: string | null) => void
+  onResplit: () => void
+}) {
+  const shots = useStore((st) => st.project.shots)
+  const episodes = useStore((st) => st.project.episodes)
+  const promptStates = useStore((st) => st.promptStates)
+  const insertShot = useStore((st) => st.insertShot)
+  const deleteShot = useStore((st) => st.deleteShot)
+  const flashShotIds = useStore((st) => st.flashShotIds)
+  const selectScene = useStore((st) => st.selectScene)
+  const openSceneSettings = useStore((st) => st.openSceneSettings)
+  const setViewScope = useStore((st) => st.setViewScope)
+  // 表尾「在末尾插入一镜」热区：悬停显形、停住几秒自动隐藏。每个区块各一套。
+  const appendIns = useAutoHideHover()
+
+  const timeline = computeTimeline(scene, shots)
+  const total = sceneDuration(scene, shots)
+  const epNo = episodes.find((e) => e.sceneIds.includes(scene.id))?.no
+
+  return (
+    <>
+      <div className={s.sceneBar}>
+        <button
+          className={s.sceneBarMain}
+          title="只看这一场"
+          onClick={() => setViewScope({ kind: 'scene', sceneId: scene.id })}
+        >
+          <span className={s.sceneBarTitle}>
+            {epNo != null && <>第 {epNo} 集 · </>}第 {scene.no} 场 · {scene.name}
+          </span>
+          <span className={s.sceneBarMeta}>{scene.shotIds.length} 镜 · {total} 秒</span>
+        </button>
+        {!readOnly && (
+          <>
+            <button
+              className={s.sceneBarBtn}
+              onClick={() => { selectScene(scene.id); openSceneSettings() }}
+            >
+              场级设定
+            </button>
+            <button className={s.sceneBarBtn} onClick={onResplit}>重拆本场</button>
+          </>
+        )}
+      </div>
+
+      {timeline.map((entry, i) => {
+        const shot = shots[entry.shotId]
+        if (!shot) return null
+        return (
+          <ShotRow
+            key={shot.id}
+            shot={shot}
+            startAt={entry.startAt}
+            endAt={entry.endAt}
+            active={hoverId === shot.id}
+            alt={i % 2 === 1}
+            readOnly={readOnly}
+            promptState={promptStates[shot.id] ?? 'pending'}
+            flash={flashShotIds.includes(shot.id)}
+            onHover={onHover}
+            onInsertAbove={readOnly ? undefined : () => insertShot(scene.id, i)}
+            onDelete={readOnly ? undefined : () => deleteShot(shot.id)}
+          />
+        )
+      })}
+
+      {timeline.length === 0 && (
+        <div className={s.emptyScene}>
+          本场还没有镜头，用「插入镜头」手动添加
+        </div>
+      )}
+
+      <div className={s.tail}>
+        {!readOnly && (
+          <div
+            className={[s.insRow, appendIns.visible ? s.insRowShow : ''].join(' ')}
+            title="在末尾插入一镜"
+            onMouseEnter={appendIns.onMouseEnter}
+            onMouseMove={appendIns.onMouseMove}
+            onMouseLeave={appendIns.onMouseLeave}
+            onClick={() => {
+              if (appendIns.isVisible()) insertShot(scene.id, timeline.length)
+            }}
+          >
+            <span className={s.insRowBar} />
+            <span className={s.insRowPlus}>＋</span>
+            <span className={s.insRowBar} />
+          </div>
+        )}
+        <div className={s.tailNo}>{fmt(total)}</div>
+        <div className={s.tailText}>本场共 {total} 秒</div>
+      </div>
+    </>
   )
 }

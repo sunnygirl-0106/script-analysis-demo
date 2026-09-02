@@ -1,26 +1,43 @@
-/* 步骤① 整理剧本页。单栏手风琴 + 固定页脚。色调只用 theme 变量。 */
+/* 步骤① 整理剧本页（v2.6 §三）。一张居中大卡 + 悬浮胶囊页脚。色调只用 theme 变量。 */
+/* ⚠ AppShell 的 .contentBody 是横向 flex 容器：本页作为它的 flex 子项必须自己声明
+   flex:1 + min-width:0，否则按内容宽度收缩，右边空掉一半（v2.5 §一）。 */
+/* 滚动的是整页（不再是「列表区自己滚」）：读剧本就该像读一份文档，
+   页脚跟着一起走、靠 sticky 停在视口底部。 */
 .page {
-  display: flex;
-  flex-direction: column;
+  flex: 1;
+  min-width: 0;
   height: 100%;
   min-height: 0;
+  overflow-y: auto;
   background: var(--bg0);
 }
 
-/* ── 标题行：共 N 集 · X 字 + ⋯ ── */
-.head {
+/* 头 / 异常条 / 卡片共用同一条 1080 的边界。 */
+.wrap {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 24px 0;
+}
+
+/* ── 标题行：共 N 集 + ⋯，其下一行灰副文案 ── */
+.headInner {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 24px;
-  border-bottom: 1px solid var(--line);
 }
 .headTitle {
   flex: 1;
   min-width: 0;
-  font-size: 13.5px;
+  font-size: 28px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--t1);
+}
+.headSub {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--t4);
 }
 
 .menuWrap {
@@ -64,12 +81,24 @@
   border: none;
   background: transparent;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 9px;
   text-align: left;
   font-size: 12.5px;
   color: var(--t2);
   padding: 7px 10px;
   border-radius: 5px;
   transition: 0.14s;
+  white-space: nowrap;
+}
+.menuIcon {
+  flex: none;
+  display: inline-flex;
+  color: var(--t4);
+}
+.menuItem:hover:not(:disabled) .menuIcon {
+  color: var(--acc);
 }
 .menuItem:hover:not(:disabled) {
   background: var(--raise);
@@ -89,10 +118,10 @@
   background: var(--line2);
 }
 
-/* ── 异常提示条（没有异常就整条不渲染） ── */
+/* ── 异常提示条（没有异常就整条不渲染）：卡片上方、同宽 ── */
 .anomaly {
-  margin: 12px 24px 0;
-  padding: 9px 13px;
+  margin: 20px 0 0;
+  padding: 10px 14px;
   border: 1px solid var(--amber-line);
   background: var(--amber-bg);
   border-radius: var(--rsm);
@@ -103,31 +132,25 @@
   color: var(--amber);
 }
 
-/* ── 集列表 ── */
-.listScroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 16px 24px 24px;
-}
-.list {
+/* ── 集列表：一张 1080 宽的大卡 ── */
+.card {
+  margin-top: 20px;
+  padding: 40px 56px;
   border: 1px solid var(--line);
   border-radius: var(--rlg);
   background: var(--bg1);
-  overflow: hidden;
 }
 .epBlock + .epBlock {
+  margin-top: 28px;
+  padding-top: 28px;
   border-top: 1px solid var(--line);
 }
 
 .epHead {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 11px 14px;
-}
-.epHead:hover {
-  background: var(--bg2);
+  gap: 10px;
+  padding: 14px 0;
 }
 .caret {
   appearance: none;
@@ -142,9 +165,11 @@
 .caret:hover {
   color: var(--t1);
 }
+/* 主标签是「第 N 集」；AI 起的标题只是灰色副标签（v2.6 §2.3）。 */
 .epNo {
-  font-size: 13px;
-  color: var(--t4);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--t1);
   flex: none;
 }
 .epTitle {
@@ -153,17 +178,19 @@
   background: transparent;
   cursor: pointer;
   padding: 0;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--t1);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--t4);
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.epTitle:hover {
+  color: var(--t2);
+}
 .epInput {
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: 13px;
   color: var(--t1);
   background: var(--bg3);
   border: 1px solid var(--acc-line);
@@ -221,55 +248,81 @@
   background: var(--bg3);
 }
 
-/* ── 集正文：场头是排版，不是数据 ── */
+/* ── 集正文：一段一段的散文，没有小标题、没有场头（v2.6 §2.1） ── */
 .body {
-  padding: 2px 20px 18px 38px;
-}
-.sceneHead {
-  margin: 18px 0 8px;
-  font-size: 11.5px;
-  color: var(--t4);
-  letter-spacing: 0.02em;
-}
-.sceneHead:first-child {
-  margin-top: 4px;
+  padding: 2px 0 6px 28px;
 }
 .para {
-  margin: 6px 0;
-  font-size: 13px;
-  line-height: 1.8;
+  margin: 0 0 18px;
+  font-size: 14.5px;
+  line-height: 1.95;
   color: var(--t2);
 }
+.para:last-child {
+  margin-bottom: 0;
+}
 
-/* ── 页脚固定条 ── */
-.foot {
+/* ── 悬浮胶囊页脚（v2.6 §3.2 / v2.7 §2.2）：sticky 在视口底部，贴 1080 卡片右缘 ── */
+.capsuleRow {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+.capsule {
+  position: sticky;
+  bottom: 24px;
+  z-index: 4;
+  width: fit-content;
+  min-width: 520px;
+  max-width: calc(100% - 48px);
+  margin: 28px 24px 24px auto;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 24px;
-  border-top: 1px solid var(--line);
-  background: var(--bg1);
+  gap: 12px;
+  padding: 10px 12px 10px 20px;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
 }
-.footInfo {
+.liveDot {
+  flex: none;
+  color: var(--acc);
+  font-size: 10px;
+}
+.capsuleText {
   flex: 1;
   min-width: 0;
   font-size: 12.5px;
   color: var(--t2);
+  white-space: nowrap;
 }
-.liveDot {
-  color: var(--acc);
-  font-size: 10px;
+
+/* ── 手动新建集的正文录入（v2.5 §5.3）──
+   只做到「能输文字、能算字数」：一有内容就切回普通正文渲染，不做富编辑。 */
+.draftBody {
+  padding: 2px 0 6px 28px;
 }
-.okDot {
-  color: var(--acc);
+.draftInput {
+  width: 100%;
+  min-height: 168px;
+  padding: 11px 13px;
+  font-size: 13px;
+  line-height: 1.8;
+  font-family: inherit;
+  color: var(--t1);
+  background: var(--bg1);
+  border: 1px dashed var(--line);
+  border-radius: var(--rlg);
+  resize: vertical;
 }
-.ctaWrap {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+.draftInput:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--acc-line);
 }
-.ctaNote {
+.draftHint {
+  margin-top: 7px;
   font-size: 11px;
-  color: var(--t4);
+  color: var(--t5);
 }

@@ -1,0 +1,152 @@
+/* 节奏弹窗（v2.5 §6.2）。宽 720，三张卡并排。色值只用 theme 变量。 */
+.dialog {
+  width: 720px;
+  max-width: calc(100vw - 40px);
+  background: var(--bg2);
+  border: 1px solid var(--edge);
+  border-radius: var(--rlg);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.5);
+  padding: 20px 22px;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.close {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  margin-left: auto;
+  color: var(--t4);
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 2px;
+  transition: 0.14s;
+}
+.close:hover { color: var(--t1); }
+
+.sub {
+  margin: -6px 0 16px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--t3);
+}
+
+.secTitle {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--t2);
+  margin-bottom: 10px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.card {
+  appearance: none;
+  cursor: pointer;
+  padding: 14px 14px 13px;
+  text-align: left;
+  background: var(--bg1);
+  border: 1px solid var(--line);
+  border-radius: var(--rlg);
+  transition: 0.18s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.card:hover { border-color: var(--edge); }
+.cardOn {
+  border-width: 2px;
+  border-color: var(--acc);
+  background: var(--bg2);
+  padding: 13px 13px 12px;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.cardName {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--t1);
+}
+.rec {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--t4);
+  border: 1px solid var(--line2);
+  border-radius: var(--rpill);
+  padding: 0.5px 7px;
+}
+.cardDesc {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--t3);
+  min-height: 40px;
+}
+
+/* 三格小条：亮几格由档位定 */
+.bars {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.barsLabel {
+  font-size: 11.5px;
+  color: var(--t4);
+  margin-right: 4px;
+}
+.bar {
+  width: 12px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line2);
+}
+.barOn { background: var(--acc); }
+
+.cardSec {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: var(--t4);
+}
+.cardEst {
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--t2);
+}
+.cardEst b {
+  color: var(--acc);
+  font-weight: 700;
+}
+
+/* 已选摘要 */
+.summary {
+  margin-top: 14px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--rlg);
+  background: var(--bg1);
+}
+.summaryTop {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.summaryTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t1);
+}
+.summaryVal {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--acc);
+}

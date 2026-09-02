@@ -1,10 +1,10 @@
 // Zustand：一个 project + 所有动作。不做持久化，刷新回到初始状态。
 import { create } from 'zustand'
 import type {
-  AnalysisStep, AssetKind, CandidateAsset, CandidateDecision, Look, MountRef,
+  AnalysisStep, AssetKind, CandidateAsset, CandidateDecision, Episode, Look, MountRef,
   PendingTask, Project, PromptState, Scene, Shot, ShotDensity, Stage,
 } from '../data/types'
-import { seedProject, seedFreshProject, seedCandidates } from '../data/seed'
+import { seedProject, seedFreshProject, seedCandidates, emptyProject } from '../data/seed'
 import {
   commitCandidates as commitCandidatesSvc,
   extractCandidates,
@@ -13,7 +13,7 @@ import {
 import { episode2Payload, ep2Episode, type EpisodePayload } from '../data/seedEpisode2'
 import { appendEpisode, fillEpisode } from '../services/incremental'
 import { replaceScript as replaceScriptSvc, type ScriptPayload } from '../services/replace'
-import { densityShots, hasDensityPresets, resplitSceneDensity } from '../services/density'
+import { DENSITY_LABEL, densityShots, hasDensityPresets, resplitSceneDensity } from '../services/density'
 import { deleteEpisode as deleteEpisodeSvc, resplitScene } from '../services/lock'
 import { can } from '../services/capability'
 import { buildUsageIndex, type AssetUsage } from '../services/appearanceIndex'
@@ -21,6 +21,7 @@ import { unreferencedCount as countUnreferenced } from '../services/reference'
 import { deliverFirstBatch, shotsAffectedByAsset } from '../services/staleness'
 import { lookName } from '../services/looks'
 import { sceneDuration } from '../services/timeline'
+import type { ViewScope } from '../services/viewScope'
 import { findDuplicate, PROSE_FIELDS, scanRenameImpact } from '../services/mentions'
 import { applyDecisions, type Decision } from '../components/decision'
 
@@ -37,10 +38,15 @@ function usageIndexOf(project: Project): Record<string, AssetUsage> {
 
 export type Tab = 'character' | 'costume' | 'location' | 'prop' | 'shot'
 
-/** 上传演示的呈现相位（v2.4 §2.2）：空态 → 整理中(3–5s) → 完成；页脚点「提取资产」时短暂进 extracting。
+/** 上传演示的呈现相位（v2.5 §三）。三个「中」相位各对应一段整页动效，且**各跨一步**：
+ *    organizing → 跑完落整理剧本页（步骤①）
+ *    extracting → 跑完落资产确认页（步骤②）
+ *    splitting  → 跑完落分镜表（步骤③）
+ *  动效页属于**目标**步骤：点下「进入下一步」的瞬间 analysisStep 就已经切过去了，
+ *  步骤条立刻响应，动效是下一步在干活。
  *  纯 UI 态，不进领域模型。seed 始终完整加载，动画只做呈现层揭示。
- *  与 AnalysisStep（现在在四步的哪一步）正交，不要合并。 */
-export type AnalysisPhase = 'empty' | 'organizing' | 'extracting' | 'done'
+ *  与 AnalysisStep（现在在三步的哪一步）正交，不要合并。 */
+export type AnalysisPhase = 'empty' | 'organizing' | 'extracting' | 'splitting' | 'done'
 
 export interface ToastAction {
   label: string
@@ -53,16 +59,36 @@ export interface Toast {
   action?: ToastAction
 }
 
-const DENSITY_LABEL: Record<ShotDensity, string> = {
-  compact: '紧凑',
-  standard: '标准',
-  loose: '舒缓',
-}
-
 // 追加/替换第 2 集时「本次范围内 AI 抽到的资产」。着装角色由 appendEpisode 处理，不进候选闸。
 const EP2_SCANNED: ScannedAsset[] = episode2Payload.assets
   .filter((a) => a.kind !== 'look')
   .map((a) => ({ kind: a.kind, name: a.name, imagePrompt: a.imagePrompt, aliases: a.aliases }))
+
+// 手动新建的集（v2.5 §5.3）没有任何 seed 数据可对照。拆分时给它建**一个**空场：
+// 场名 = 集名，原文 = 集正文，镜头留空——分镜表里那一场是空态，用「插入镜头」手动补。
+const isManualEpisode = (id: string) => id.startsWith('e_manual_')
+
+function manualScene(ep: Episode, density: ShotDensity): Scene {
+  return {
+    id: `sc_${ep.id}`, episodeId: ep.id, no: 1,
+    name: ep.title, location: '', timeOfDay: '',
+    rawText: ep.rawText, shotIds: [], density, track: { mood: '', bgm: '' },
+  }
+}
+
+/** 给所有「已提取、还没有场」的手动集各建一个空场。返回新的 project（无手动集则原样返回）。 */
+function withManualScenes(project: Project): Project {
+  const targets = project.episodes.filter((e) => e.sceneIds.length === 0 && isManualEpisode(e.id))
+  if (!targets.length) return project
+  const scenes = { ...project.scenes }
+  const episodes = project.episodes.map((e) => {
+    if (e.sceneIds.length > 0 || !isManualEpisode(e.id)) return e
+    const sc = manualScene(e, project.defaultDensity)
+    scenes[sc.id] = sc
+    return { ...e, sceneIds: [sc.id] }
+  })
+  return { ...project, episodes, scenes }
+}
 
 // 重拆的「补漏」口径（v3）：只有 seed 预置的首轮漏提项才产生候选、才打断；其余场零候选、不打断。
 // 这里给第 1 场预置一条演示用漏提（客厅茶几，首轮没单独提取成道具）。
@@ -72,6 +98,9 @@ const RESPLIT_MISSED: Record<string, ScannedAsset[]> = {
 
 interface UIState {
   activePage: Stage
+  /** 步骤③ 左侧目录的视图作用域（v2.7 §5.2）：全剧 / 本集 / 本场。纯 UI 态。 */
+  viewScope: ViewScope
+  /** 「本场剧本」面板与场级设定抽屉正对着哪一场。视图作用域是集 / 全剧时，它指向范围内第一场。 */
   selectedSceneId: string
   activeTab: Tab
   scriptOpen: boolean
@@ -80,6 +109,10 @@ interface UIState {
   toast: Toast | null
   // ── 拆解过程演示 ──
   analysisPhase: AnalysisPhase
+  /** 节奏弹窗里选中的档位，只在「确认 → 动效跑完」之间活着（v2.5 §三）。 */
+  pendingDensity: ShotDensity | null
+  /** 增量确认时同批带过去的候选处理方式；null = 本次是首次拆分，不是增量。 */
+  pendingDecisions: Record<string, Decision> | null
   // 解析中已揭示到第几阶段（0=读取，1=集场，2=剧本，3=分镜，4=资产）。控制器递增。
   revealStage: number
   // ── 可拖拽面板宽度：集·场目录 / 本场剧本（展开时）。右侧大区吃剩余空间。──
@@ -131,6 +164,7 @@ export interface StoreState extends UIState {
   toggleNav: () => void
   setPage: (page: Stage) => void
   selectScene: (sceneId: string) => void
+  setViewScope: (scope: ViewScope) => void
   setTab: (tab: Tab) => void
   // 从资产「出场明细」点某集某场：跳到该场的分镜表，并高亮该资产出现的镜头。
   jumpToAppearance: (assetId: string, episodeNo: number, sceneNo: number) => void
@@ -141,22 +175,31 @@ export interface StoreState extends UIState {
   showToast: (text: string, action?: ToastAction) => void
   dismissToast: () => void
 
-  // ── 步骤① 整理剧本（v2.4 §二）──
-  /** 空态选完文件：进 organizing（原地跑 3–5s「整理中」，不弹任何窗）。 */
-  startUpload: () => void
+  // ── 步骤① 整理剧本（v2.5 §五）──
+  /** 空态上传弹窗点「开始整理」：进 organizing，跑整页动效。 */
+  beginOrganize: () => void
   /** 整理跑完：落到「整理完毕、还没提取」的起点，进整理剧本页。 */
   finishOrganize: () => void
-  /** 「补充剧本」弹窗跑完：往集列表末尾接一个只有原文、没有场镜的草稿集。 */
+  /** 「上传文件 · 解析新集」弹窗跑完：往集列表末尾接一个只有原文、没有场镜的草稿集。 */
   supplementScript: () => void
+  /** ⋯ 菜单「新建一集」：追加一个空白草稿集，正文由用户自己敲。 */
+  createBlankEpisode: () => void
+  /** 手动集的正文录入（textarea 失焦时写回，字数按去空白后的字符数算）。 */
+  setEpisodeText: (episodeId: string, text: string) => void
   renameEpisode: (episodeId: string, title: string) => void
   /** 删除一个还没提取过资产的集（有锁的集不动）。 */
   deleteDraftEpisode: (episodeId: string) => void
   /** 把一个无锁集并进上一集：原文拼接、字数相加、集号顺延。 */
   mergeEpisodeUp: (episodeId: string) => void
-  /** 页脚主按钮「确认集数并提取资产」：进 extracting。 */
+  /** 页脚主按钮「确认集数并提取资产」：**步骤条瞬间到②** + 进 extracting 跑整页动效。 */
   startExtract: () => void
   /** 提取跑完：草稿集上锁 + 抽候选 → 步骤②（无新候选则直接拆分进步骤③）。 */
   finishExtract: () => void
+  /** 节奏弹窗点「确认并开始拆分」：未入库先入库，**步骤条瞬间到③** + 进 splitting。
+   *  decisions 只在已入库的增量场景传，它同时也是「本次是增量」的判据。 */
+  beginSplit: (density: ShotDensity, decisions?: Record<string, Decision>) => void
+  /** 拆分动效跑完：首次走 startSplit，增量走 confirmIncremental。 */
+  finishSplit: () => void
   /** 步骤②（已入库后）的主按钮：结算新候选 + 给草稿集补场镜 → 步骤③。 */
   confirmIncremental: (decisions: Record<string, Decision>) => void
   setAnalysisPhase: (phase: AnalysisPhase) => void
@@ -301,18 +344,6 @@ function closestDensity(sceneId: string, target: number): ShotDensity {
   )
 }
 
-/** 初始把某 project 下所有镜头置为 pending（第一眼没生成提示词）。 */
-function initPromptStates(project: Project): Record<string, PromptState> {
-  const m: Record<string, PromptState> = {}
-  for (const id of Object.keys(project.shots)) m[id] = 'pending'
-  return m
-}
-
-/** 初始的手动编辑标记：空对象（没人编辑过）。 */
-function initPromptEdited(_project: Project): Record<string, boolean> {
-  return {}
-}
-
 /** 结构性改动后，把两张提示词映射对齐到新 project 的镜头集合：
  *  幸存镜头沿用旧状态 / 编辑标记，新镜头回落 pending，被删镜头的孤儿键一并清掉。 */
 function reconcilePrompts(
@@ -377,10 +408,17 @@ export const useStore = create<StoreState>((set, get) => {
   // 所以走 fillEpisode 的「只补场镜」分支，集的标题 / 原文 / 字数 / 锁一个字节都不动。
   const fillDraftEpisodes = () => {
     const s = get()
-    const draft = s.project.episodes.find((e) => e.sceneIds.length === 0 && e.id === 'e2')
-    if (!draft) return
-    const next = fillEpisode(s.project, ep2PayloadFor(s.project))
-    const first = next.episodes.find((e) => e.id === 'e2')?.sceneIds[0] ?? s.selectedSceneId
+    const hasEp2Draft = s.project.episodes.some((e) => e.sceneIds.length === 0 && e.id === 'e2')
+    const hasManual = s.project.episodes.some((e) => e.sceneIds.length === 0 && isManualEpisode(e.id))
+    if (!hasEp2Draft && !hasManual) return
+    const filled = hasEp2Draft ? fillEpisode(s.project, ep2PayloadFor(s.project)) : s.project
+    const next = withManualScenes(filled)
+    // 选中刚补完场的那一集的第一场（e2 优先，否则取本次新得到场的那一集）。
+    const had = new Set(s.project.episodes.filter((e) => e.sceneIds.length > 0).map((e) => e.id))
+    const first =
+      next.episodes.find((e) => e.id === 'e2' && e.sceneIds.length > 0)?.sceneIds[0] ??
+      next.episodes.find((e) => e.sceneIds.length > 0 && !had.has(e.id))?.sceneIds[0] ??
+      s.selectedSceneId
     set({
       project: next,
       ...reconcilePrompts(next, s.promptStates, s.promptEdited),
@@ -499,10 +537,14 @@ export const useStore = create<StoreState>((set, get) => {
   }
 
   return {
-  project: structuredClone(seedProject),
-  promptStates: initPromptStates(seedProject),
-  promptEdited: initPromptEdited(seedProject),
+  // 进站起点是**空项目**（v2.6 §1.2）：没有集、没有场镜、没有资产、未入库。
+  // 从前这里是 seedProject（一个「全做完了」的项目），步骤条据此把 ② ③ 打上 ✓，
+  // 而用户此刻连剧本都还没上传。
+  project: structuredClone(emptyProject),
+  promptStates: {},
+  promptEdited: {},
   activePage: 'analysis',
+  viewScope: { kind: 'project' },
   selectedSceneId: 's1',
   activeTab: 'shot',
   scriptOpen: false,
@@ -511,6 +553,8 @@ export const useStore = create<StoreState>((set, get) => {
   toast: null,
   // 进站默认空态：先看到空剧本页，点「＋ 上传剧本」才开始演示。
   analysisPhase: 'empty',
+  pendingDensity: null,
+  pendingDecisions: null,
   revealStage: 0,
   episodeW: 192,
   scriptW: 308,
@@ -530,8 +574,27 @@ export const useStore = create<StoreState>((set, get) => {
 
   toggleNav: () => set((s) => ({ navCollapsed: !s.navCollapsed })),
   setPage: (activePage) => set({ activePage }),
-  // 切场时关掉场级设定抽屉（抽屉里的内容属于上一场）。
+  // 把「本场剧本」面板 / 场级设定抽屉指向某一场，**不改视图作用域**（v2.7 §5.2）——
+  // 在全剧视图里点某个场区块的「场级设定」，不该顺手把表格收窄到那一场。
+  // 真要切视图走 setViewScope，它会顺带把 selectedSceneId 带过去。
   selectScene: (sceneId) => set({ selectedSceneId: sceneId, sceneSettingsOpen: false }),
+  // 切视图（v2.7 §5.2）：selectedSceneId 跟着落到范围内第一场——
+  // 「本场剧本」面板与场级设定抽屉永远得有一个明确的对象，哪怕表格铺的是全剧。
+  setViewScope: (scope) => {
+    const p = get().project
+    const firstOf = (ids: string[]) => ids.find((id) => p.scenes[id])
+    const target =
+      scope.kind === 'scene'
+        ? scope.sceneId
+        : scope.kind === 'episode'
+          ? firstOf(p.episodes.find((e) => e.id === scope.episodeId)?.sceneIds ?? [])
+          : firstOf(p.episodes.flatMap((e) => e.sceneIds))
+    set({
+      viewScope: scope,
+      selectedSceneId: target ?? get().selectedSceneId,
+      sceneSettingsOpen: false,
+    })
+  },
   setTab: (activeTab) => set({ activeTab }),
   jumpToAppearance: (assetId, episodeNo, sceneNo) => {
     const proj = get().project
@@ -556,7 +619,13 @@ export const useStore = create<StoreState>((set, get) => {
       const sh = proj.shots[id]
       return sh && involves(sh)
     })
-    set({ selectedSceneId: sceneId, activeTab: 'shot', sceneSettingsOpen: false, flashShotIds: ids })
+    set({
+      selectedSceneId: sceneId,
+      viewScope: { kind: 'scene', sceneId },
+      activeTab: 'shot',
+      sceneSettingsOpen: false,
+      flashShotIds: ids,
+    })
     // 高亮几秒后自动消退；若期间又发起新的跳转（ids 引用变了）则不误清。
     setTimeout(() => {
       if (get().flashShotIds === ids) set({ flashShotIds: [] })
@@ -572,10 +641,10 @@ export const useStore = create<StoreState>((set, get) => {
   },
   dismissToast: () => set({ toast: null }),
 
-  // ── 步骤① 整理剧本（v2.4 §三）──
-  // 空态选完文件 → 原地跑「整理中」（EmptyScriptState 里的 TaskProgress 跑完调 finishOrganize）。
-  // 没有确认弹窗、没有价格：上传 / 研读 / 拆集都免费，整理剧本页本身就是那份预估结果。
-  startUpload: () => set({ analysisPhase: 'organizing', revealStage: 0 }),
+  // ── 步骤① 整理剧本（v2.5 §五）──
+  // 上传弹窗点「开始整理」 → 关窗 → 整页动效（FullPageProcess 跑完调 finishOrganize）。
+  // 没有确认花费弹窗、没有价格：上传 / 研读 / 拆集都免费，整理剧本页本身就是那份预估结果。
+  beginOrganize: () => set({ analysisPhase: 'organizing', revealStage: 0 }),
 
   finishOrganize: () => set({
     project: structuredClone(seedFreshProject),
@@ -596,6 +665,28 @@ export const useStore = create<StoreState>((set, get) => {
     const draft = { ...structuredClone(ep2Episode), sceneIds: [] }
     delete draft.extractedAt
     set({ project: { ...s.project, episodes: [...s.project.episodes, draft] } })
+  },
+
+  // 新建一集（v2.5 §5.3）：只做到「能输文字、能算字数」。不做富文本、不做自动拆场——
+  // 它的场要等步骤③ 拆分时补一个空场出来（见 manualScene）。
+  createBlankEpisode: () => {
+    const s = get()
+    const no = s.project.episodes.length + 1
+    const ep: Episode = {
+      id: `e_manual_${no}`, no, title: '未命名', rawText: '', wordCount: 0, sceneIds: [],
+    }
+    set({ project: { ...s.project, episodes: [...s.project.episodes, ep] } })
+  },
+
+  setEpisodeText: (episodeId, text) => {
+    set((st) => ({
+      project: {
+        ...st.project,
+        episodes: st.project.episodes.map((e) =>
+          e.id === episodeId ? { ...e, rawText: text, wordCount: text.replace(/\s/g, '').length } : e,
+        ),
+      },
+    }))
   },
 
   renameEpisode: (episodeId, title) => {
@@ -639,7 +730,9 @@ export const useStore = create<StoreState>((set, get) => {
     get().showToast(`已并入「${prev.title}」，现共 ${merged.wordCount.toLocaleString()} 字。`)
   },
 
-  startExtract: () => set({ analysisPhase: 'extracting' }),
+  // 步骤条在点下去的瞬间就切到②（v2.5 §2.2）：用户点的是「进入下一步」，
+  // 动效是下一步在干活，不该还停在①。
+  startExtract: () => set({ analysisPhase: 'extracting', analysisStep: 'assetConfirm' }),
 
   finishExtract: () => {
     const s = get()
@@ -673,6 +766,25 @@ export const useStore = create<StoreState>((set, get) => {
     })
   },
 
+  beginSplit: (density, decisions) => {
+    // 首次拆分：入库这一下没有单独的确认页，它和拆分是同一个决定，在这里一起做掉。
+    if (get().project.libraryCommittedAt == null) get().commitLibrary()
+    set({
+      analysisPhase: 'splitting',
+      analysisStep: 'storyboard',
+      pendingDensity: density,
+      pendingDecisions: decisions ?? null,
+    })
+  },
+
+  finishSplit: () => {
+    const s = get()
+    // pendingDecisions 非空 = 本次是「已入库 + 新集」的增量结算；否则是首次整本拆分。
+    if (s.pendingDecisions) get().confirmIncremental(s.pendingDecisions)
+    else get().startSplit({ density: s.pendingDensity ?? s.project.defaultDensity })
+    set({ analysisPhase: 'done', pendingDensity: null, pendingDecisions: null })
+  },
+
   confirmIncremental: (decisions) => {
     const s = get()
     get().commitScanned(applyDecisions(s.candidates, decisions))
@@ -682,6 +794,7 @@ export const useStore = create<StoreState>((set, get) => {
     const after = get().project.shots
     const draft = get().project.episodes.find((e) => e.id === 'e2')
     const added = Object.keys(after).length - before
+    set({ viewScope: { kind: 'project' } })
     get().showToast(`第 ${draft?.no ?? 2} 集已拆分为 ${added} 个镜头。`)
   },
   setAnalysisPhase: (analysisPhase) => set({ analysisPhase }),
@@ -693,8 +806,13 @@ export const useStore = create<StoreState>((set, get) => {
   },
   replayDemo: () =>
     set({
+      // 重新演示 = 回到空项目（v2.6 §1.2）：只复位相位不换 project，步骤条会继续拿着旧数据打 ✓。
+      project: structuredClone(emptyProject),
+      promptStates: {},
+      promptEdited: {},
       analysisPhase: 'empty',
       revealStage: 0,
+      viewScope: { kind: 'project' },
       selectedSceneId: 's1',
       activeTab: 'shot',
       scriptOpen: false,
@@ -704,6 +822,8 @@ export const useStore = create<StoreState>((set, get) => {
       analysisStep: 'episodes',
       candidates: [],
       pendingTask: null,
+      pendingDensity: null,
+      pendingDecisions: null,
       hoverAssetTerm: null,
     }),
 
@@ -1546,6 +1666,12 @@ export const useStore = create<StoreState>((set, get) => {
     let created = 0
     const episodes = s.project.episodes.map((ep) => {
       if (!ep.extractedAt || ep.sceneIds.length > 0) return ep
+      // 手动新建的集：seed 里没有它，建一个空场收着正文，镜头留给用户手动插。
+      if (isManualEpisode(ep.id)) {
+        const sc = manualScene(ep, density)
+        scenes[sc.id] = sc
+        return { ...ep, sceneIds: [sc.id] }
+      }
       const sceneIds: string[] = []
       for (const [sid, tmpl] of Object.entries(seedProject.scenes)) {
         if (tmpl.episodeId !== ep.id) continue
@@ -1575,6 +1701,8 @@ export const useStore = create<StoreState>((set, get) => {
       ...reconcilePrompts(project, s.promptStates, s.promptEdited),
       analysisStep: 'storyboard',
       activeTab: 'shot',
+      // 拆完落全剧视图（v2.7 §5.2）：第一眼该看到整部剧被拆成了什么样。
+      viewScope: { kind: 'project' },
       selectedSceneId: project.episodes.find((e) => e.sceneIds.length > 0)?.sceneIds[0] ?? '',
       sceneSettingsOpen: false,
     })

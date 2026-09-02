@@ -136,33 +136,23 @@
   color: var(--t1);
 }
 
-/* 正文：衬线（系统兜底）+ 左侧段号栏 */
+/* 正文：衬线（系统兜底）+ 左侧段号栏。字族 / 行高与步骤② 左栏共用一份（v2.7 §3.2）。 */
 .script {
+  composes: serif from '../styles/script.module.css';
   padding: 8px 18px 28px;
   overflow: auto;
   flex: 1;
-  font-family: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   font-size: 13px;
-  line-height: 2.05;
-  color: var(--t2);
 }
 /* 场头：SCENE 03 / 场名，正文顶部的报头 */
 .masthead {
-  padding: 14px 0 18px;
+  composes: masthead from '../styles/script.module.css';
 }
 .eyebrow {
-  font-family: -apple-system, 'PingFang SC', sans-serif;
-  font-size: 11px;
-  letter-spacing: 4px;
-  color: var(--t4);
+  composes: eyebrow from '../styles/script.module.css';
 }
 .title {
-  margin-top: 8px;
-  font-size: 23px;
-  font-weight: 600;
-  line-height: 1.25;
-  color: var(--t1);
-  text-wrap: balance;
+  composes: title from '../styles/script.module.css';
 }
 
 .beat {
@@ -172,7 +162,9 @@
   border-top: 1px solid var(--line2);
   transition: background 0.14s;
 }
-.beat:first-child {
+.beat:first-child,
+/* 每场报头下的第一段不带上边线：那条线是段与段之间的分隔，不是场与报头之间的（v2.7 §5.5）。 */
+.masthead + .beat {
   border-top: none;
 }
 .beat:hover {

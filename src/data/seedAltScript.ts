@@ -3,7 +3,6 @@
 // 提示词直接引用 PROMPTS 里 ep2 那 5 条，不新写。
 import type { Asset, AssetKind, Episode, Look, MountableKind, MountRef, Scene, Shot } from './types'
 import type { ScriptPayload } from '../services/replace'
-import { buildEpisodeRawText } from './seed'
 import { PROMPTS } from './prompts'
 
 // ── 独立资产 id（不与被覆盖的旧项目撞车）──
@@ -157,20 +156,20 @@ function buildAltScene(
 const altShots: Record<string, Shot> = {}
 const altScene1 = buildAltScene(
   'alt_s1', 1, '客厅沙发', '客厅', '当天下午',
-  '当天下午 · 客厅沙发\n\n苏可瘫软在沙发里。手机再次震动，是快递上门取件的提醒。她万般不情愿地爬起身。',
+  '苏可瘫软在沙发里。手机再次震动，是快递上门取件的提醒。她万般不情愿地爬起身。',
   { mood: '松弛 → 又被打扰的无奈。', bgm: '慵懒的午后小调，被提醒音打断。' },
   altS1Seeds, altShots,
 )
 const altScene2 = buildAltScene(
   'alt_s2', 2, '玄关取件', '玄关', '紧接上场',
-  '紧接上场 · 玄关\n\n快递员在门外催促取件。苏可从门缝把退货包裹塞出去，飞速关门，全程社恐不露脸。',
+  '快递员在门外催促取件。苏可从门缝把退货包裹塞出去，飞速关门，全程社恐不露脸。',
   { mood: '社恐式的应付，速战速决。', bgm: '带点滑稽的紧张短音。' },
   altS2Seeds, altShots,
 )
 
 const altEpisode: Episode = {
   id: 'alt_e1', no: 1, title: '退货风波', sceneIds: ['alt_s1', 'alt_s2'],
-  rawText: buildEpisodeRawText([altScene1, altScene2]),
+  rawText: [altScene1, altScene2].map((sc) => sc.rawText).join('\n\n'),
   wordCount: 2400,
 }
 

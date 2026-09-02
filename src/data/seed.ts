@@ -2,6 +2,7 @@
 // 内容全部取材自剧本原文，不用 lorem —— 原型的说服力全在这。
 import type { CandidateAsset, Project, Scene, Shot, Asset, AssetKind, Look, MountableKind, MountRef } from './types'
 import { PROMPTS } from './prompts'
+import { EP1_CHUNKS, joinChunks } from './rawScripts'
 import { buildUsageIndex } from '../services/appearanceIndex'
 
 // ── 资产 id（全剧唯一，供挂载引用）──
@@ -591,7 +592,7 @@ const shots: Record<string, Shot> = {}
 
 const scene1: Scene = buildScene(
   's1', 1, '客厅沙发', '客厅', '周六 中午 12:00',
-  '周六 中午 12:00 · 客厅沙发\n\n特写镜头。苏可蜷缩在沙发里，手机屏幕疯狂闪烁。来电显示：「健身教练-王（15）」。\n\n苏可一脸「视死如归」，用脚趾把手机踢到了抱枕下面。手机在抱枕下闷声震动。\n\n苏可（碎碎念）：「看不见我……你看不见我……我已经在跑步机上猝死了……」\n\n震动停止。苏可像土拨鼠一样从抱枕里探出头，确认安全。她如释重负地瘫倒，刚想闭眼。\n\n「叮咚——」清脆的门铃声，在安静的房间里像防空警报。苏可整个人原地弹起，动作敏捷地钻到了大毛绒熊后面躲着。\n\n门外（外卖员喊声）：「尾号 0617 的外卖！加辣加臭加炸蛋的那份！没人在家我拿走退单了啊？」',
+  EP1_CHUNKS[0]!,
   {
     mood: '慵懒偷懒 → 来电惊扰 → 门铃惊魂，喜剧张力逐步升级。',
     bgm: '轻喜剧悬疑感，木管拨奏为主；门铃响起时节奏骤停后加速。',
@@ -601,7 +602,7 @@ const scene1: Scene = buildScene(
 
 const scene2: Scene = buildScene(
   's2', 2, '玄关', '玄关到客厅', '3 分钟后',
-  '3 分钟后 · 玄关到客厅\n\n镜头跟着苏可。她像特工一样，贴着墙根挪到门口，通过猫眼观察。走廊空无一人。地上放着一个冒着热气的袋子。\n\n她迅速开门，像抓猎物一样把外卖捞进来，迅速锁门，背靠门板大喘气。\n\n苏可（狂喜）：「呼……社交危机解除。现在是，我的时间。」',
+  EP1_CHUNKS[1]!,
   {
     mood: '潜行式的紧张 → 得手后的狂喜释然。',
     bgm: '弱音弦乐制造潜行感，开门得手时切入一段上扬的木管。',
@@ -611,7 +612,7 @@ const scene2: Scene = buildScene(
 
 const scene3: Scene = buildScene(
   's3', 3, '餐桌', '客厅餐桌区', '紧接上场',
-  '紧接上场 · 客厅餐桌区\n\n她欢快地跑到餐桌前，仪式感极强地铺开餐巾纸，掰开一次性筷子。拆开包装袋——红油的香味瞬间溢出屏幕。\n\n特写：她夹起一颗裹满汤汁的鱼丸，正要往嘴里送。\n\n手机再次亮起。不是电话，是一条微信视频邀请。备注：「亲妈」。停顿 5 秒。\n\n苏可（看着鱼丸，又看着手机）：「妈……你可真会掐点……」\n\n她深吸一口气，整理了一下乱发，点击接听，瞬间切换成「乖巧且虚弱」的滤镜。\n\n苏可（对着屏幕，嗓音甜美）：「喂妈？哎呀刚睡醒，正准备喝白粥呢，减肥嘛，不饿不饿……」\n\n镜头拉远。画面左边是她对着手机屏幕演「清纯大学生」，右边是那一碗冒着红油、甚至还在冒热气的豪华麻辣烫。\n\n视频里妈妈：「可可啊，我怎么闻着你那边有股炸蛋的味道？」\n\n苏可瞳孔地震，拿着筷子的手在半空僵住。切黑。',
+  EP1_CHUNKS[2]!,
   {
     mood: '独享美食的满足 → 被亲妈掐点打断的慌张 → 演技救场 → 被戳穿的社死定格。',
     bgm: '轻快的美食小调，视频邀请响起时急转紧张，结尾一记重音戛然而止。',
@@ -623,23 +624,6 @@ const scenes: Record<string, Scene> = {
   [scene1.id]: scene1,
   [scene2.id]: scene2,
   [scene3.id]: scene3,
-}
-
-/**
- * 把若干场的原文拼成「一集正文」（v2.4 §2.1）。
- * 每场前插一行 `§ 地点 · 时间` 作为场头——它是剧本作者写在原文里的排版，不是数据；
- * 步骤①② 只认「集」，页面上不出现场号。场自己的 rawText 首行是同义的旧场头，去掉免得重复。
- * 演示数据里的场头恒为 `${timeOfDay} · ...`，据此识别。
- */
-export function buildEpisodeRawText(list: Scene[]): string {
-  return list
-    .map((sc) => {
-      const lines = sc.rawText.split('\n')
-      if (lines[0]?.startsWith(`${sc.timeOfDay} · `)) lines.shift()
-      const body = lines.join('\n').replace(/^\n+/, '')
-      return `§ ${sc.location} · ${sc.timeOfDay}\n\n${body}`
-    })
-    .join('\n\n')
 }
 
 const assets: Record<string, Asset> = Object.fromEntries(catalog.map((a) => [a.id, a]))
@@ -657,7 +641,7 @@ export const seedProject: Project = {
   episodes: [
     {
       id: 'e1', no: 1, title: '外卖与尊严', sceneIds: ['s1', 's2', 's3'],
-      rawText: buildEpisodeRawText([scene1, scene2, scene3]),
+      rawText: joinChunks(EP1_CHUNKS),
       // 演示口径：真产品数 rawText 长度，这里的原文太短，直接给一个像样的数（v2.4 §2.1）。
       wordCount: 4800,
       extractedAt: SEED_COMMITTED_AT,
@@ -722,6 +706,18 @@ export const seedFreshProject: Project = {
     const { extractedAt: _drop, ...rest } = e
     return { ...rest, sceneIds: [] }
   }),
+  scenes: {},
+  shots: {},
+  assets: {},
+  libraryCommittedAt: null,
+}
+
+/** 进站起点（v2.6 §1.2）：一个什么都没有的项目。
+ *  episodes / scenes / shots / assets 全空、未入库 —— 步骤条据此算出「② ③ 还没做」，
+ *  而不是拿着一个「全做完了」的 seedProject 去打 ✓。 */
+export const emptyProject: Project = {
+  ...seedProject,
+  episodes: [],
   scenes: {},
   shots: {},
   assets: {},

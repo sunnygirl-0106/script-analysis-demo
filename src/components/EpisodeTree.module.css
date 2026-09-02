@@ -26,6 +26,37 @@
   overflow: auto;
   flex: 1;
 }
+/* 顶行「全部镜头」（v2.7 §5.3）：粗体，选中态与场行同一套 .on。 */
+.allRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  margin-bottom: 6px;
+  border-radius: var(--rsm);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--t2);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.16s, color 0.16s;
+}
+.allRow:hover:not(.on) {
+  background: var(--bg3);
+  color: var(--t1);
+}
+.allMeta {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--t4);
+}
+.allRow.on .allMeta {
+  color: var(--acc);
+}
+
 .ep {
   position: relative;
   display: flex;
@@ -33,15 +64,33 @@
   gap: 6px;
   padding: 8px 8px 8px 10px;
   border-radius: var(--rsm);
+  transition: background 0.16s;
+}
+/* 集标题行可点 = 本集视图；hover 整行有底色（v2.7 §5.3）。 */
+.ep:hover:not(.on) {
+  background: var(--bg3);
 }
 .epMain {
   min-width: 0;
   flex: 1;
+  display: block;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
 }
 .epTitle {
+  display: block;
   font-size: 12px;
   font-weight: 600;
   color: var(--t2);
+}
+.ep.on .epTitle {
+  color: var(--acc);
+}
+.ep.on .epSub {
+  color: var(--acc);
+  opacity: 0.75;
 }
 /* ⋯ 菜单：hover 集行时显现 */
 .menuWrap {
@@ -147,6 +196,7 @@
   color: var(--prop);
 }
 .epSub {
+  display: block;
   font-size: 10.5px;
   color: var(--t4);
   margin-top: 1px;
@@ -172,7 +222,8 @@
   color: var(--t2);
   transform: translateX(3px);
 }
-.sc.on {
+/* 选中态（三种行共用）：目录里恰有一行是它。 */
+.on {
   background: var(--acc-bg);
   color: var(--acc);
   font-weight: 600;

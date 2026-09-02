@@ -63,7 +63,7 @@ export function CandidatePromptDialog({
           autoFocus
           readOnly={!editable}
           spellCheck={false}
-          placeholder={editable ? '描述这条资产的画面（可留空，用下方 AI 补全生成草案）…' : ''}
+          placeholder={editable ? '在此填入详细提示词' : ''}
           onChange={(e) => setDraft(e.target.value)}
         />
 

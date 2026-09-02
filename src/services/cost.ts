@@ -59,3 +59,31 @@ export function costAssetPrompt(): number {
 export function fmtCost(n: number): string {
   return `✦${n}`
 }
+
+// ── 生成前估算（v2.5 §6.3）──
+// 口径全部从**字数**推：seed 只有 3 场 25 镜，拿它当参照会算出「25 镜」这种明显偏小的数，
+// 而用户手上是 4,800 字的一集。字数是上传那一刻就确定的量，用它推场 / 镜才有说服力。
+// 镜数是生成前的估算 ⇒ 一律给区间；价格按字数 × 档位系数 ⇒ 是确定值，不给区间。
+export const EST = {
+  /** 每 400 字约 1 场。 */
+  charsPerScene: 400,
+  /** 每镜承载的字数：镜头越密，一个镜吃的字越少。 */
+  charsPerShot: { compact: 24, standard: 30, loose: 40 } as Record<ShotDensity, number>,
+  /** 每镜时长，只作展示。 */
+  secPerShot: { compact: '3–5', standard: '5–8', loose: '8–12' } as Record<ShotDensity, string>,
+  /** 区间上限 = 下限 × 1.08。 */
+  rangeSpread: 0.08,
+} as const
+
+/** 预计场数：字数 / 400，至少 1 场。 */
+export function estimateScenes(words: number): number {
+  return Math.max(1, Math.round(words / EST.charsPerScene))
+}
+
+/** 预计镜数区间（取整到 5）：4,800 字标准档 → [160, 175]。 */
+export function estimateShotRange(words: number, dn: ShotDensity): [number, number] {
+  const base = words / EST.charsPerShot[dn]
+  const lo = Math.max(5, Math.round(base / 5) * 5)
+  const hi = Math.max(lo + 5, Math.ceil((lo * (1 + EST.rangeSpread)) / 5) * 5)
+  return [lo, hi]
+}

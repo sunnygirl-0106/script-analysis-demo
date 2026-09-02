@@ -1,0 +1,100 @@
+/* 整页动效：正中插画 + 一句大标题 + 一句灰字 + 一条 2px 细进度条。
+   不显示百分比（假精度），不放按钮（跳过在顶栏 pill）。 */
+.wrap {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--bg0);
+  animation: 0.4s ease both global(an-fade-in);
+}
+
+/* 插画外的一圈柔光 */
+.glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(620px 400px at 50% 42%, rgb(var(--acc-rgb) / 0.09), transparent 70%);
+  pointer-events: none;
+}
+
+.center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px;
+  max-width: 560px;
+  text-align: center;
+}
+
+.title {
+  margin-top: 30px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--t1);
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: baseline;
+}
+
+/* 标题末尾三个点逐个亮 */
+.dots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 3px;
+}
+.dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--acc);
+  opacity: 0.25;
+  animation: fp-dot 1.2s ease-in-out infinite;
+}
+.dots i:nth-child(2) { animation-delay: 0.4s; }
+.dots i:nth-child(3) { animation-delay: 0.8s; }
+
+/* 当前阶段灰字：换一句淡入一次 */
+.phase {
+  margin-top: 14px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--t4);
+  min-height: 22px;
+  animation: fp-in 0.42s ease both;
+}
+
+.track {
+  margin-top: 26px;
+  width: 260px;
+  max-width: 70vw;
+  height: 2px;
+  border-radius: var(--rpill);
+  background: var(--line2);
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  width: 0;
+  border-radius: var(--rpill);
+  background: var(--acc);
+  transition-property: width;
+  transition-timing-function: linear;
+}
+
+@keyframes fp-dot {
+  0%, 100% { opacity: 0.2; }
+  40% { opacity: 1; }
+}
+@keyframes fp-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dots i, .phase { animation: none; }
+  .fill { transition: none; }
+}

@@ -1,6 +1,6 @@
 /* 选文件类弹窗的公共样式：容器 / tab / 拖拽上传区 / 粘贴框 / 底部灰字。
    遮罩 / 标题 / 操作栏沿用 ScriptImportDialog.module.css 的类。
-   ⚠ 同名的 ReplaceEpisodeDialog.tsx 已于 v2.4 退役，样式由 SupplementScriptDialog 接管。 */
+   ⚠ 同名的 ReplaceEpisodeDialog.tsx 已于 v2.4 退役，样式由 ScriptSourceDialog 接管。 */
 .dialog {
   width: 480px;
   max-width: calc(100vw - 40px);

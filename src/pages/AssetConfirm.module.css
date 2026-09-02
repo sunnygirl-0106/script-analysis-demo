@@ -1,5 +1,8 @@
 /* 阶段② 完整确认页。两列：左全剧原文 / 右候选清单 + 页脚。色调只用 theme 变量。 */
 .page {
+  /* AppShell 的 .contentBody 是横向 flex 容器：不声明 flex:1 就按内容宽度收缩（v2.5 §一）。 */
+  flex: 1;
+  min-width: 0;
   display: flex;
   height: 100%;
   min-height: 0;
@@ -26,15 +29,18 @@
   color: var(--t1);
 }
 .scriptMeta { font-size: 11px; font-weight: 400; color: var(--t4); }
-.scriptBody { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 16px 24px; }
-.sceneBlock { margin-bottom: 18px; }
-.sceneTitle {
-  font-size: 12px; color: var(--t3); font-weight: 600;
-  margin: 10px 0 6px; padding-bottom: 4px; border-bottom: 1px dashed var(--line2);
+.scriptBody { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 20px 28px; }
+.sceneBlock { margin-bottom: 22px; }
+/* 集块报头：`E P I S O D E  0 1` + `第 1 集 · 外卖与尊严`（v2.7 §3.2，与步骤③ 同一套）。 */
+.epMast { composes: masthead from '../styles/script.module.css'; }
+.epEyebrow { composes: eyebrow from '../styles/script.module.css'; }
+.epTitle { composes: title from '../styles/script.module.css'; }
+/* 原文没有任何结构标记（v2.6 §二）：一行一段散文。排版与步骤③「本场剧本」同源（v2.7 §3.2）。 */
+.beat {
+  composes: serif from '../styles/script.module.css';
+  font-size: 14px;
+  margin: 0 0 14px;
 }
-/* 原文里剧本作者写的场头（`§ 地点 · 时间`）：排版，不是数据。 */
-.epSceneHead { margin: 16px 0 6px; font-size: 11px; color: var(--t4); letter-spacing: 0.02em; }
-.beat { font-size: 13px; line-height: 1.7; color: var(--t2); margin: 4px 0; }
 
 /* 三档高亮（§3.2）：默认静态类目色；hover 时非命中压暗、命中项描边+光晕+加粗（不给整段底色）。 */
 .hl { font-weight: 600; transition: opacity 0.15s ease; }
@@ -58,10 +64,10 @@
 
 /* ── 右：候选清单 ── */
 .rcol { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.tabs { display: flex; gap: 2px; padding: 10px 16px 0; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; gap: 28px; padding: 10px 16px 0; border-bottom: 1px solid var(--line); }
 .tab {
   appearance: none; border: none; background: transparent; cursor: pointer;
-  padding: 8px 12px; font-size: 13px; color: var(--t2);
+  padding: 8px 0; font-size: 14px; color: var(--t2);
   border-bottom: 2px solid transparent; display: inline-flex; align-items: center; gap: 6px;
 }
 .tab:hover { color: var(--t1); }
@@ -99,11 +105,11 @@
 }
 .addBtn:hover { color: var(--acc-hi); border-color: var(--acc); }
 
-.listScroll { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 0; }
-/* 三类信息四列（§3.3）：色点 | 名称 | 生成提示词 | 状态 | 操作。 */
+.listScroll { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 0 4px; }
+/* 三类信息四列（§3.3）：色点 | 名称 | 生成提示词 | 状态 | 操作。列宽见 v2.6 §四。 */
 .colHead, .row {
   display: grid;
-  grid-template-columns: 18px minmax(92px, 1.1fr) minmax(150px, 2.2fr) 52px 74px;
+  grid-template-columns: 36px minmax(92px, 1.1fr) minmax(160px, 2.4fr) 88px 56px;
   align-items: center;
   gap: 10px;
   padding: 0 16px;
@@ -115,7 +121,7 @@
 }
 /* 已入库后的增量形态：状态列换成三选一下拉，列宽跟着放宽（v2.4 §4.3）。 */
 .colHead.gridDecide, .row.gridDecide {
-  grid-template-columns: 18px minmax(92px, 1.1fr) minmax(120px, 1.6fr) 176px 74px;
+  grid-template-columns: 36px minmax(92px, 1.1fr) minmax(120px, 1.6fr) 176px 56px;
 }
 .decideCell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .decideSel {
@@ -125,14 +131,14 @@
 }
 .decideSel:hover { border-color: var(--edge); color: var(--t1); }
 
-.row { min-height: 46px; border-bottom: 1px solid var(--line); }
+.row { min-height: 64px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .row:hover { background: var(--bg1); }
 .rowLocked { opacity: 0.7; }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
 /* 名称列：名字 + （角色）造型开关，单行。 */
 .nameCell { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
-.name { font-size: 13px; color: var(--t1); cursor: default; }
+.name { font-size: 15px; font-weight: 600; color: var(--t1); cursor: default; }
 .rowLocked .name { cursor: default; }
 
 /* 造型子行：名列缩进 + 连接轨。 */
@@ -145,28 +151,27 @@
 }
 .railLast { }
 .lookName { font-size: 12px; color: var(--role); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lookSwap {
-  appearance: none; font-size: 11px; color: var(--t3); background: var(--bg2);
-  border: 1px solid var(--line2); border-radius: var(--rpill); padding: 1px 5px; cursor: pointer; max-width: 34px;
-}
 .ops { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 
-/* 造型开关 + ＋服装 */
+/* 造型开关（v2.7 §3.4：角色行只剩它，新增造型挪到子行末尾） */
 .looksToggleWrap { display: inline-flex; align-items: center; gap: 8px; }
 .looksToggle {
-  appearance: none; cursor: pointer; font-size: 11px; color: var(--role);
-  background: var(--role-bg); border: none; border-radius: var(--rpill); padding: 1px 9px;
+  appearance: none; cursor: pointer; font-size: 12.5px; color: var(--role);
+  background: var(--role-bg); border: none; border-radius: var(--rpill);
+  height: 26px; padding: 0 11px;
 }
 .caret { font-size: 9px; }
+
+/* 造型子行末尾的「＋ 增加一套造型」：虚线、灰，hover 变实。 */
 .addLookWrap { position: relative; display: inline-flex; }
 .addLook {
-  appearance: none; font-size: 11px; color: var(--t3);
-  background: var(--bg2); border: 1px dashed var(--line); border-radius: var(--rpill);
-  padding: 1px 8px; cursor: pointer;
+  appearance: none; font-size: 12px; color: var(--t3);
+  background: transparent; border: 1px dashed var(--line); border-radius: var(--rpill);
+  height: 24px; padding: 0 10px; cursor: pointer;
 }
-.addLook:hover { border-color: var(--acc); color: var(--acc); }
+.addLook:hover { border-style: solid; border-color: var(--acc); color: var(--acc); }
 
-/* ＋服装 下拉：选已有 / 新建 */
+/* 选服装下拉（v2.7 §3.4）：只列已有服装，底部一行去服装 tab 的灰链接。 */
 .pickerPop {
   position: absolute; top: 100%; left: 0; margin-top: 4px; z-index: 5;
   background: var(--panel); border: 1px solid var(--edge); border-radius: var(--rsm);
@@ -178,26 +183,23 @@
   text-align: left; font-size: 12px; color: var(--t2); padding: 5px 8px; border-radius: 4px;
 }
 .pickerItem:hover { background: var(--raise); color: var(--t1); }
-.pickerNew { display: flex; gap: 6px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line2); }
-.pickerInput {
-  flex: 1; min-width: 0; font-size: 12px; color: var(--t1); background: var(--bg3);
-  border: 1px solid var(--line2); border-radius: 4px; padding: 4px 8px; outline: none;
+.pickerGo {
+  appearance: none; display: block; width: 100%; text-align: left; cursor: pointer;
+  font-size: 11.5px; color: var(--t4); background: transparent; border: none;
+  padding: 6px 8px 2px; margin-top: 4px; border-top: 1px solid var(--line2);
 }
-.pickerInput:focus { border-color: var(--acc-line); }
-.pickerAdd {
-  appearance: none; cursor: pointer; font-size: 12px; color: var(--acc);
-  background: var(--acc-bg); border: 1px solid var(--acc-line); border-radius: 4px; padding: 0 10px;
-}
-.pickerAdd:disabled { opacity: 0.4; cursor: not-allowed; }
+.pickerGo:hover { color: var(--acc); }
 
 /* 提示词单元格（§3.4）：一行预览按钮，点击弹浮层；底下的数据行完全不动。 */
 .promptCell {
   appearance: none; border: none; background: transparent; cursor: pointer;
   text-align: left; padding: 4px 0; min-width: 0; width: 100%;
 }
+/* 两行 clamp（v2.6 §四）：一行既挤又截得太狠，两行才看得出这条提示词在写什么。 */
 .promptPreview {
-  font-size: 11.5px; color: var(--t4); line-height: 1.5; max-width: 100%;
-  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12px; color: var(--t4); line-height: 1.55; max-width: 100%;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .promptCell:hover .promptPreview { color: var(--t3); }
 .promptEmpty { font-size: 11.5px; color: var(--t5); }
@@ -208,12 +210,12 @@
   font-size: 13px; color: var(--t1); background: var(--bg2);
   border: 1px solid var(--acc-line); border-radius: 4px; padding: 3px 6px; width: 100%;
 }
-.stUnref { font-size: 12px; color: var(--unref-fg); }
-.stPending { font-size: 12px; color: var(--pending-fg); }
-.stSaved { font-size: 12px; color: var(--unref-fg); }
+.stUnref { font-size: 13px; color: var(--unref-fg); }
+.stPending { font-size: 13px; color: var(--pending-fg); }
+.stSaved { font-size: 13px; color: var(--unref-fg); }
 .iconBtn {
   appearance: none; border: none; background: transparent; cursor: pointer;
-  color: var(--t4); font-size: 13px; padding: 4px; border-radius: 4px;
+  color: var(--t4); font-size: 20px; line-height: 1; padding: 2px; border-radius: 4px;
 }
 .iconBtn:hover:not(:disabled) { color: var(--danger); background: var(--danger-bg); }
 .iconBtn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -236,7 +238,6 @@
   border: 1px solid var(--line2); border-radius: 6px; padding: 8px 10px; outline: none;
 }
 .newInput:focus { border-color: var(--acc-line); }
-.newHint { margin-top: 10px; font-size: 11.5px; line-height: 1.6; color: var(--t4); }
 .newWarn { margin-top: 10px; font-size: 11.5px; line-height: 1.6; color: var(--danger); }
 .newActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 

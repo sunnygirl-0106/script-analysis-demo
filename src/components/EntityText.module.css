@@ -1,22 +1,24 @@
-/* 主要内容里的实体词：默认与正文完全一样（静态零色），
-   只有 hover 时才给一点交互色底 —— 用天青（交互色）而不是类目色，
-   因为此刻要表达的是「这两个是同一个东西」，不是「它属于哪一类」。 */
+/* 「主要内容」里的实体词（v2.6 §5.2）：**静态就带类目色**（色值由 JS 按 KIND_DOT 内联给出，
+   与左侧「本场剧本」原文面板同一口径）+ 一条同色 40% 的淡下划线补对比。
+   字重不变——上色是为了「认出这是资产」，不是为了抢正文的注意力。
+   hover 仍然只做一件事：点亮右侧「出场的人和物」里对应的那一项（联动逻辑在 useEntityLit）。 */
 .ment {
   border-radius: 2px;
   padding: 0 1px;
   cursor: default;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
   transition: background 0.12s;
 }
 .ment:hover {
   background: var(--acc-bg);
-  box-shadow: inset 0 -1px 0 var(--acc-line);
 }
 
-/* 「查看提示词」里的实体高亮：统一用交互色天青（--acc），不再按类目上色——
-   一段提示词里全上类目色太花，这里只要「一眼认出是资产名」。垫一条同色淡下划线补对比。
+/* 「查看提示词」的彩色背板：同一套类目色。
    不改字重/字距：背板要和上层透明 textarea 像素对齐。 */
 .markColor {
-  color: var(--acc);
   text-decoration: underline;
   text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
   text-decoration-thickness: 1px;

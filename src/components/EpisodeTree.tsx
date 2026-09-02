@@ -49,7 +49,8 @@ type Dialog =
 
 export function EpisodeTree() {
   const project = useStore((st) => st.project)
-  const selectedSceneId = useStore((st) => st.selectedSceneId)
+  const viewScope = useStore((st) => st.viewScope)
+  const setViewScope = useStore((st) => st.setViewScope)
   const selectScene = useStore((st) => st.selectScene)
   const insertScene = useStore((st) => st.insertScene)
   const renameScene = useStore((st) => st.renameScene)
@@ -97,6 +98,10 @@ export function EpisodeTree() {
   const episodeCount = project.episodes.length
   const sceneCount = Object.keys(project.scenes).length
   const onlyOne = episodeCount <= 1
+  // 顶行「全部镜头」的总量：目录里三种行都报 `N 镜 · Ns`，口径一致才好横向比。
+  const allScenes = Object.values(project.scenes)
+  const allShots = allScenes.reduce((n, sc) => n + sc.shotIds.length, 0)
+  const allDur = allScenes.reduce((n, sc) => n + sceneDuration(sc, project.shots), 0)
 
   const delEp = dialog?.type === 'delete' ? project.episodes.find((e) => e.id === dialog.epId) : undefined
   const delStat = delEp
@@ -134,6 +139,14 @@ export function EpisodeTree() {
         </span>
       </div>
       <div className={s.tree}>
+        {/* 顶行「全部镜头」= 全剧视图（v2.7 §5.3）。目录里恰有一行是选中态，由 viewScope 判。 */}
+        <button
+          className={[s.allRow, viewScope.kind === 'project' ? s.on : ''].join(' ')}
+          onClick={() => setViewScope({ kind: 'project' })}
+        >
+          全部镜头
+          <span className={s.allMeta}>{allShots} 镜 · {allDur}s</span>
+        </button>
         {project.episodes.map((ep, ei) => {
           const scenes = ep.sceneIds.map((id) => project.scenes[id]!).filter(Boolean)
           const shotTotal = scenes.reduce((n, sc) => n + sc.shotIds.length, 0)
@@ -141,15 +154,16 @@ export function EpisodeTree() {
           return (
             <div key={ep.id}>
               {ei > 0 && <div className={s.epgap} />}
-              <div className={s.ep}>
-                <div className={s.epMain}>
-                  <div className={s.epTitle}>
+              <div className={[s.ep, viewScope.kind === 'episode' && viewScope.episodeId === ep.id ? s.on : ''].join(' ')}>
+                {/* 点集标题文字 = 本集视图；⋯ 菜单（重拆 / 删除）不变（v2.7 §5.3）。 */}
+                <button className={s.epMain} onClick={() => setViewScope({ kind: 'episode', episodeId: ep.id })}>
+                  <span className={s.epTitle}>
                     第 {ep.no} 集 · {ep.title}
-                  </div>
-                  <div className={s.epSub}>
+                  </span>
+                  <span className={s.epSub}>
                     {scenes.length} 场 · {shotTotal} 镜 · {durTotal}s
-                  </div>
-                </div>
+                  </span>
+                </button>
                 {!readOnly && (
                   <div className={s.menuWrap} ref={menuEp === ep.id ? menuRef : undefined}>
                     <button
@@ -194,8 +208,8 @@ export function EpisodeTree() {
               {scenes.map((sc, si) => (
                 <div className={s.scWrap} key={sc.id}>
                   <div
-                    className={[s.sc, sc.id === selectedSceneId ? s.on : ''].join(' ')}
-                    onClick={() => selectScene(sc.id)}
+                    className={[s.sc, viewScope.kind === 'scene' && viewScope.sceneId === sc.id ? s.on : ''].join(' ')}
+                    onClick={() => setViewScope({ kind: 'scene', sceneId: sc.id })}
                     onDoubleClick={readOnly ? undefined : () => startRename(sc.id, sc.name)}
                     onContextMenu={
                       readOnly
@@ -227,7 +241,9 @@ export function EpisodeTree() {
                     ) : (
                       sc.name
                     )}
-                    <span className={s.d}>{sc.shotIds.length} 镜</span>
+                    <span className={s.d}>
+                      {sc.shotIds.length} 镜 · {sceneDuration(sc, project.shots)}s
+                    </span>
                   </div>
                   {!readOnly && (
                     <div className={s.scMenuWrap} ref={menuScene === sc.id ? menuSceneRef : undefined}>

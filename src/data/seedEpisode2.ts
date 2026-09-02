@@ -3,7 +3,8 @@
 // 新集该带什么资产就带什么 —— 净增数量由内容决定，不是一个写死的常数。
 // 本集新增：角色「快递员」+ 道具「退货包裹」。
 import type { Episode, Scene, Shot, Asset, Look, MountRef } from './types'
-import { A, buildEpisodeRawText, m } from './seed'
+import { A, m } from './seed'
+import { EP2_CHUNKS, joinChunks } from './rawScripts'
 import { PROMPTS } from './prompts'
 
 // 第 2 集内部临时 id：苏可用临时 id，交给 appendEpisode 按名称去重后重指向旧 id。
@@ -155,20 +156,20 @@ function buildScene(
 const ep2Shots: Record<string, Shot> = {}
 const ep2s1 = buildScene(
   'e2s1', 1, '客厅沙发', '客厅', '当天下午',
-  '当天下午 · 客厅沙发\n\n挂断妈妈的视频后，苏可瘫软在沙发里。手机再次震动，是快递上门取件的提醒。她万般不情愿地爬起身。',
+  EP2_CHUNKS[0]!,
   { mood: '劫后余生的松弛 → 又被打扰的无奈。', bgm: '慵懒的午后小调，被提醒音打断。' },
   ep2s1Shots, ep2Shots,
 )
 const ep2s2 = buildScene(
   'e2s2', 2, '玄关取件', '玄关', '紧接上场',
-  '紧接上场 · 玄关\n\n快递员在门外催促取件。苏可从门缝把退货包裹塞出去，飞速关门，全程社恐不露脸。',
+  EP2_CHUNKS[1]!,
   { mood: '社恐式的应付，速战速决。', bgm: '带点滑稽的紧张短音。' },
   ep2s2Shots, ep2Shots,
 )
 
 export const ep2Episode: Episode = {
   id: 'e2', no: 2, title: '视频求生', sceneIds: ['e2s1', 'e2s2'],
-  rawText: buildEpisodeRawText([ep2s1, ep2s2]),
+  rawText: joinChunks(EP2_CHUNKS),
   wordCount: 3600, // 演示口径，同 e1（v2.4 §2.1）
 }
 

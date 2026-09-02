@@ -27,19 +27,6 @@
   font-size: 11.5px;
   color: var(--t4);
 }
-/* 资产表排序：并入工具栏，跟在 tabs 右侧 */
-.sortLabel {
-  font-size: 11px;
-  color: var(--t5);
-}
-.sortSel {
-  background: var(--bg3);
-  border: 1px solid var(--line);
-  color: var(--t2);
-  border-radius: var(--rsm);
-  font-size: 11.5px;
-  padding: 5px 10px;
-}
 .seg {
   display: flex;
   background: var(--bg3);
@@ -84,40 +71,62 @@
   color: var(--t4);
 }
 .foot .info {
-  flex: 1;
+  min-width: 0;
 }
 .foot .info b {
   color: var(--t2);
   font-weight: 600;
 }
-/* 「N 项当前剧本未引用」：弱化黄字（§4.2）。 */
-.unrefTag {
-  color: var(--amber);
-  opacity: 0.8;
-}
-/* 有镜头被标脏时的提醒行，贴在主 CTA 左侧 */
-.warn {
+/* 提示词进度（v2.7 §5.6）：一根 120px 的细条 + `3 / 25`。整组是一个按钮，点开全剧生成弹窗。
+   从前这里是「N 场 N 个镜头待生成提示词（含 N 镜内容已改动待更新）→」——
+   一句得读完才知道进度的长句子，换成一眼就看得出还剩多少的条。 */
+.progWrap {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11.5px;
-  color: var(--amber);
-  white-space: nowrap;
-}
-/* 完成度提示行：可点，点开生成弹窗（全剧范围） */
-.doneLink {
-  font-size: 11.5px;
-  color: var(--acc);
-  white-space: nowrap;
+  gap: 8px;
+  padding: 4px 8px;
+  margin-left: auto;
+  border-radius: var(--rpill);
+  background: transparent;
   cursor: pointer;
-  transition: 0.14s;
+  white-space: nowrap;
+  transition: background 0.14s;
 }
-.doneLink:hover {
-  text-decoration: underline;
+.progWrap:hover:not(:disabled) {
+  background: var(--bg3);
 }
-/* 全剧已就绪：静态灰字，不可点 */
-.doneStatic {
+.progWrap:disabled {
+  cursor: default;
+}
+.progLabel {
   font-size: 11.5px;
   color: var(--t4);
-  white-space: nowrap;
+}
+.progTrack {
+  width: 120px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+.progFill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--acc);
+  transition: width 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.progNum {
+  font-size: 11.5px;
+  color: var(--t2);
+  font-variant-numeric: tabular-nums;
+}
+.progNote {
+  font-size: 11.5px;
+  color: var(--t4);
+}
+/* 待更新用琥珀：它跟「还没生成」不是一回事，得看得出来。 */
+.progStale {
+  font-size: 11.5px;
+  color: var(--amber);
 }

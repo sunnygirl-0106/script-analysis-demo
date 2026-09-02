@@ -48,3 +48,17 @@ export function resplitSceneDensity(project: Project, sceneId: string, density: 
     shots: nextShots,
   }
 }
+
+/** 三档节奏的中文名。单一真相源：store 的 toast、节奏弹窗、整页动效文案都取这里。 */
+export const DENSITY_LABEL: Record<ShotDensity, string> = {
+  compact: '紧凑',
+  standard: '标准',
+  loose: '舒缓',
+}
+
+/** 节奏卡的文案（v2.5 §6.2，照竞品截屏）。 */
+export const DENSITY_META: { key: ShotDensity; label: string; desc: string; bars: number }[] = [
+  { key: 'compact', label: '紧凑', desc: '高频切镜，动作和对白推进更快', bars: 3 },
+  { key: 'standard', label: '标准', desc: '叙事、动作与情绪留白相对均衡', bars: 2 },
+  { key: 'loose', label: '舒缓', desc: '长镜头更多，保留表演和情绪发酵', bars: 1 },
+]

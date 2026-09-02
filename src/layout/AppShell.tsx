@@ -62,17 +62,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   const replayDemo = useStore((st) => st.replayDemo)
   const finishOrganize = useStore((st) => st.finishOrganize)
   const finishExtract = useStore((st) => st.finishExtract)
+  const finishSplit = useStore((st) => st.finishSplit)
 
-  // 演示控制器 pill：有进度在跑就能「跳过」直达结果；跑完可「重新演示」复位重播。
+  // 演示控制器 pill：三段整页动效里都能「跳过」直达该段的结果；跑完可「重新演示」复位重播。
   // 空态不显示 pill（空态自带 CTA）。
-  const running = analysisPhase === 'organizing' || analysisPhase === 'extracting'
+  const skip =
+    analysisPhase === 'organizing' ? finishOrganize
+    : analysisPhase === 'extracting' ? finishExtract
+    : analysisPhase === 'splitting' ? finishSplit
+    : null
   const demoPill =
     activePage === 'analysis' && analysisPhase !== 'empty' ? (
-      running ? (
-        <button
-          className={s.demoPill}
-          onClick={analysisPhase === 'organizing' ? finishOrganize : finishExtract}
-        >
+      skip ? (
+        <button className={s.demoPill} onClick={skip}>
           跳过 ⏭
         </button>
       ) : (

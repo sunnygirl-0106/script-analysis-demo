@@ -1,4 +1,4 @@
-/* 五步流程条：主内容区顶部的窄条。仅用 theme 变量取色。 */
+/* 三步流程条：主内容区顶部的窄条。仅用 theme 变量取色。 */
 .bar {
   flex: none;
   display: flex;
@@ -104,22 +104,3 @@
   opacity: 0.5;
 }
 .disabled .label { color: var(--t5); }
-
-/* 作用域标签：右侧，回答「为什么这一步没有集场镜」。 */
-.scope {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  flex: none;
-  white-space: nowrap;
-}
-.scopeLabel {
-  font-size: 10.5px;
-  color: var(--t5);
-}
-.scopeVal {
-  font-size: 12px;
-  color: var(--t2);
-  font-weight: 600;
-}

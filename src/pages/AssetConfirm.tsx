@@ -1,12 +1,12 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useStore, type Tab } from '../store/useStore'
 import type { Asset, AssetKind, CandidateAsset, CandidateDecision } from '../data/types'
 import { KIND_DOT, KIND_LABEL } from '../components/entity'
 import { DECISION_META, type Decision } from '../components/decision'
 import { refState } from '../services/reference'
-import { fmtCost, costSplitByWords } from '../services/cost'
 import { PanelResizer } from '../components/PanelResizer'
 import { CandidatePromptDialog } from '../components/CandidatePromptDialog'
+import { SplitDensityDialog } from '../components/SplitDensityDialog'
 import ui from '../styles/ui.module.css'
 import s from './AssetConfirm.module.css'
 
@@ -27,8 +27,9 @@ const SORT_LABEL: Record<SortKey, string> = { occ: '按出现次数', first: '�
 const isManual = (tempId: string) => tempId.startsWith('cand_manual_')
 
 // 左原文栏宽度：可拖拽（§3.2），夹取在这个范围内。
-const SCRIPT_MIN = 300
-const SCRIPT_MAX = 720
+// v2.7 §3.1：初始左右 3 : 4——原文只是对照，清单才是这一步要动的东西，右边该更宽。
+const SCRIPT_MIN = 380
+const SCRIPT_MAX = 820
 
 // 用候选名 + 别名把全剧原文里的实体高亮（阶段②资产还在候选里，不在 project.assets）。
 //
@@ -77,10 +78,6 @@ export function AssetConfirm() {
   const setHoverAssetTerm = useStore((st) => st.setHoverAssetTerm)
   const usageIndex = useStore((st) => st.usageIndex())
 
-  const setAnalysisStep = useStore((st) => st.setAnalysisStep)
-  const commitLibrary = useStore((st) => st.commitLibrary)
-  const confirmIncremental = useStore((st) => st.confirmIncremental)
-
   const committed = project.libraryCommittedAt != null
 
   const kind: AssetKind = (KINDS as string[]).includes(activeTab) ? (activeTab as AssetKind) : 'character'
@@ -90,15 +87,17 @@ export function AssetConfirm() {
   const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('occ')
   const [scriptW, setScriptW] = useState(460)
+  // 挂载时量一次内容区宽度，把左栏摆成 3 : 4（v2.7 §3.1）。之后由拖拽接管，不再自动改。
+  const containerRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const w = containerRef.current?.clientWidth
+    if (w) setScriptW(Math.round(Math.min(SCRIPT_MAX, Math.max(SCRIPT_MIN, (w * 3) / 7))))
+  }, [])
+  // 主按钮不带价：价要等节奏选完才知道，所以它只负责打开节奏弹窗（v2.5 §6.1）。
+  const [densityOpen, setDensityOpen] = useState(false)
 
   const candOf = (k: AssetKind) => candidates.filter((c) => c.kind === k)
   const committedOf = (k: AssetKind) => Object.values(project.assets).filter((a) => a.kind === k)
-  // 已入库时的主按钮带价：本次要拆的是那些「已提取、还没有场」的集，按字数 × 档位系数算。
-  const draftEpisodes = project.episodes.filter((e) => e.extractedAt && e.sceneIds.length === 0)
-  const splitCost = costSplitByWords(
-    draftEpisodes.reduce((n, e) => n + e.wordCount, 0),
-    project.defaultDensity,
-  )
 
   // 高亮词表：候选名 + 已入库资产名（都参与原文标注）。
   const terms = [
@@ -112,7 +111,7 @@ export function AssetConfirm() {
     [hoverAssetTerm],
   )
 
-  // 全剧原文：按集连读。`§ ` 开头的行是剧本作者写的场头，渲染成小标题（排版，不是数据）。
+  // 全剧原文：按集连读。原文没有任何结构标记（v2.6 §二），一行一段直接铺开。
 
   // 悬浮：只点亮名字，不滚动（hover 就滚会晕）。
   const enter = (names: (string | undefined)[]) =>
@@ -159,8 +158,8 @@ export function AssetConfirm() {
   const visibleAssets = sortAssets(committedOf(kind).filter(assetMatches))
 
   return (
-    <div className={s.page}>
-      {/* 左：全剧原文（可拖拽调宽，§3.2） */}
+    <div className={s.page} ref={containerRef}>
+      {/* 左：全剧原文（可拖拽调宽，§3.2；初始各占一半，§四） */}
       <div className={s.scriptCol} style={{ width: scriptW }}>
         <div className={s.scriptHead}>
           全剧原文
@@ -171,14 +170,13 @@ export function AssetConfirm() {
         <div className={[s.scriptBody, hoverAssetTerm ? s.hovering : ''].join(' ')}>
           {project.episodes.map((ep) => (
             <div key={ep.id} className={s.sceneBlock}>
-              <div className={s.sceneTitle}>第 {ep.no} 集 · {ep.title}</div>
-              {toBeats(ep.rawText).map((line, i) =>
-                line.startsWith('§ ') ? (
-                  <div key={i} className={s.epSceneHead}>{line.slice(2)}</div>
-                ) : (
-                  <p key={i} className={s.beat}>{highlight(line, terms, hotSet)}</p>
-                ),
-              )}
+              <div className={s.epMast}>
+                <div className={s.epEyebrow}>EPISODE {String(ep.no).padStart(2, '0')}</div>
+                <div className={s.epTitle}>第 {ep.no} 集 · {ep.title}</div>
+              </div>
+              {toBeats(ep.rawText).map((line, i) => (
+                <p key={i} className={s.beat}>{highlight(line, terms, hotSet)}</p>
+              ))}
             </div>
           ))}
         </div>
@@ -288,33 +286,28 @@ export function AssetConfirm() {
           )}
         </div>
 
-        {/* 页脚（v2.4 §4.2）：左退回整理剧本（非销毁），右一个主动作。
-            首次不带价——钱在下一页选完节奏才知道；已入库时本次就要拆，所以带价。 */}
+        {/* 页脚（v2.5 §6.1 / v2.7 §3.3）：只剩右对齐的一个主按钮。
+            左边那串「N 项待入库 · 角色 3 / 服装 3…」删了——四个 tab 上各自的计数已经在说同一件事。
+            没有「← 返回整理剧本」—— 要回去点步骤条 ①，那才是导航该待的地方。
+            主按钮不带价：价在节奏弹窗里选完档位才是确定值。 */}
         <div className={s.foot}>
-          <button className={ui.btn} onClick={() => setAnalysisStep('episodes')}>
-            ← 返回整理剧本
-          </button>
           <span className={s.footSpacer} />
-          {committed ? (
-            <button
-              className={[ui.btn, ui.btnPrimary].join(' ')}
-              onClick={() => confirmIncremental(decisions)}
-            >
-              确认新增资产并拆分第 {draftEpisodes.map((e) => e.no).join(' / ') || '新'} 集 ·{' '}
-              {fmtCost(splitCost)}
-            </button>
-          ) : (
-            <button
-              className={[ui.btn, ui.btnPrimary].join(' ')}
-              onClick={() => { commitLibrary(); setAnalysisStep('storyboard') }}
-            >
-              确认资产，进入拆分 →
-            </button>
-          )}
+          <button
+            className={[ui.btn, ui.btnPrimary].join(' ')}
+            onClick={() => setDensityOpen(true)}
+          >
+            {committed ? '确认新增资产并开始拆分' : '确认资产并开始拆分'}
+          </button>
         </div>
       </div>
 
       {newOpen && <NewAssetDialog kind={kind} onClose={() => setNewOpen(false)} />}
+      {densityOpen && (
+        <SplitDensityDialog
+          decisions={committed ? decisions : undefined}
+          onClose={() => setDensityOpen(false)}
+        />
+      )}
     </div>
   )
 }
@@ -459,48 +452,18 @@ function CandidateMainPrompt({ cand, committed }: { cand: CandidateAsset; commit
   )
 }
 
-// 角色候选的造型开关：`N 套造型 ⌄` + `＋ 服装`。
+// 角色候选的造型开关（v2.7 §3.4）：只剩 `N 套造型 ⌄`。
+// 原来旁边还有个「＋ 服装」，它的下拉能输名字新建——用户分不清那是在建服装还是在建造型。
+// 新增造型改到展开后的子行末尾（那里上下文明确：这一条就是「这个角色的一套造型」）。
 function CandidateLooksToggle({
   cand, open, setOpen,
 }: { cand: CandidateAsset; open: boolean; setOpen: (v: boolean) => void }) {
   const count = (cand.costumeIds ?? []).length
-  const project = useStore((st) => st.project)
-  const attachCandidateCostume = useStore((st) => st.attachCandidateCostume)
-  const createCandidateCostume = useStore((st) => st.createCandidateCostume)
-  const candidates = useStore((st) => st.candidates)
-  const [picking, setPicking] = useState(false)
-
-  // 服装池：本批 costume 候选 + 已入库 costume，去掉已挂的。
-  const attached = new Set(cand.costumeIds ?? [])
-  const pool = [
-    ...candidates.filter((c) => c.kind === 'costume').map((c) => ({ id: c.tempId, name: c.name })),
-    ...Object.values(project.assets).filter((a) => a.kind === 'costume').map((a) => ({ id: a.id, name: a.name })),
-  ].filter((c) => !attached.has(c.id))
-
   return (
     <span className={s.looksToggleWrap}>
-      {count > 0 && (
-        <button className={s.looksToggle} onClick={() => setOpen(!open)}>
-          {count} 套造型 <span className={s.caret}>{open ? '⌃' : '⌄'}</span>
-        </button>
-      )}
-      <span className={s.addLookWrap}>
-        <button className={s.addLook} onClick={() => { setPicking((p) => !p); setOpen(true) }}>
-          ＋ 服装
-        </button>
-        {picking && (
-          <CostumePicker
-            pool={pool}
-            onPick={(id) => { attachCandidateCostume(cand.tempId, id); setPicking(false) }}
-            onCreate={(name) => {
-              const id = createCandidateCostume(name)
-              if (id) attachCandidateCostume(cand.tempId, id)
-              setPicking(false)
-            }}
-            onClose={() => setPicking(false)}
-          />
-        )}
-      </span>
+      <button className={s.looksToggle} onClick={() => setOpen(!open)}>
+        {count} 套造型 <span className={s.caret}>{open ? '⌃' : '⌄'}</span>
+      </button>
     </span>
   )
 }
@@ -517,32 +480,32 @@ function CandidateLookRows({
 }) {
   const project = useStore((st) => st.project)
   const candidates = useStore((st) => st.candidates)
+  const attachCandidateCostume = useStore((st) => st.attachCandidateCostume)
   const detachCandidateCostume = useStore((st) => st.detachCandidateCostume)
-  const swapCandidateCostume = useStore((st) => st.swapCandidateCostume)
   const setCandidateLookPrompt = useStore((st) => st.setCandidateLookPrompt)
   const completeCandidateLookPrompt = useStore((st) => st.completeCandidateLookPrompt)
+  const [picking, setPicking] = useState(false)
   const ids = cand.costumeIds ?? []
-  if (ids.length === 0) return null
 
   const costumeName = (id: string) =>
     candidates.find((c) => c.tempId === id)?.name ?? project.assets[id]?.name ?? id
+
+  // 可选服装：本批 costume 候选 + 已入库 costume，去掉本角色已挂的（v2.7 §3.4：只选，不建）。
   const attached = new Set(ids)
-  const swapPool = [
+  const pool = [
     ...candidates.filter((c) => c.kind === 'costume').map((c) => ({ id: c.tempId, name: c.name })),
     ...Object.values(project.assets).filter((a) => a.kind === 'costume').map((a) => ({ id: a.id, name: a.name })),
-  ]
+  ].filter((c) => !attached.has(c.id))
 
   return (
     <>
-      {ids.map((cid, i) => {
-        const last = i === ids.length - 1
+      {ids.map((cid) => {
         const cName = costumeName(cid)
-        const others = swapPool.filter((c) => c.id === cid || !attached.has(c.id)).filter((c) => c.id !== cid)
         return (
           <div key={cid} className={[s.row, s.lookRow].join(' ')} onMouseEnter={onEnter} onMouseLeave={onLeave}>
             <span />
             <div className={s.lookNameCell}>
-              <span className={[s.rail, last ? s.railLast : ''].join(' ')} />
+              <span className={s.rail} />
               <span className={s.lookName}>{cand.name} · {cName}</span>
             </div>
             <PromptCell
@@ -554,46 +517,58 @@ function CandidateLookRows({
             />
             <span className={s.stPending}>待入库</span>
             <div className={s.ops}>
+              {/* 没有 ⇄ 换服装（v2.7 §3.4）：换 = 解除 + 再挂一套，两步都在这条子行上。 */}
               {!committed && (
-                <>
-                  <select
-                    className={s.lookSwap}
-                    value=""
-                    title="换服装"
-                    onChange={(e) => { if (e.target.value) swapCandidateCostume(cand.tempId, cid, e.target.value) }}
-                  >
-                    <option value="" disabled>⇄</option>
-                    {others.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                  <button
-                    className={s.iconBtn}
-                    title="解除这套造型"
-                    onClick={() => detachCandidateCostume(cand.tempId, cid)}
-                  >
-                    🗑
-                  </button>
-                </>
+                <button
+                  className={s.iconBtn}
+                  title="解除这套造型"
+                  onClick={() => detachCandidateCostume(cand.tempId, cid)}
+                >
+                  🗑
+                </button>
               )}
             </div>
           </div>
         )
       })}
+      {!committed && (
+        <div className={[s.row, s.lookRow].join(' ')}>
+          <span />
+          <div className={s.lookNameCell}>
+            <span className={[s.rail, s.railLast].join(' ')} />
+            <span className={s.addLookWrap}>
+              <button className={s.addLook} onClick={() => setPicking((v) => !v)}>
+                ＋ 增加一套造型
+              </button>
+              {picking && (
+                <CostumePicker
+                  pool={pool}
+                  onPick={(id) => { attachCandidateCostume(cand.tempId, id); setPicking(false) }}
+                  onClose={() => setPicking(false)}
+                />
+              )}
+            </span>
+          </div>
+          <span />
+          <span />
+          <span />
+        </div>
+      )}
     </>
   )
 }
 
-// ＋服装的下拉：选一件已有服装，或输入新名字新建（新建的服装同时出现在服装 tab）。
+// 「＋ 增加一套造型」的下拉（v2.7 §3.4）：**只列服装 tab 里已有的服装**，不在这里新建。
+// 造型 = 角色 × 服装，所以这里唯一的选择是「挑哪件服装」；真要新服装，去服装 tab 建，
+// 那才是服装这条资产该被创建的地方。底部那行灰链接就是这个出口。
 function CostumePicker({
-  pool, onPick, onCreate, onClose,
+  pool, onPick, onClose,
 }: {
   pool: { id: string; name: string }[]
   onPick: (id: string) => void
-  onCreate: (name: string) => void
   onClose: () => void
 }) {
-  const [name, setName] = useState('')
+  const setTab = useStore((st) => st.setTab)
   return (
     <div className={s.pickerPop} onMouseLeave={onClose}>
       {pool.length > 0 && (
@@ -603,16 +578,9 @@ function CostumePicker({
           ))}
         </div>
       )}
-      <div className={s.pickerNew}>
-        <input
-          className={s.pickerInput}
-          placeholder="新建服装…"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && name.trim()) onCreate(name.trim()) }}
-        />
-        <button className={s.pickerAdd} disabled={!name.trim()} onClick={() => onCreate(name.trim())}>新建</button>
-      </div>
+      <button className={s.pickerGo} onClick={() => { setTab('costume'); onClose() }}>
+        没有合适的服装？去「服装」新增 →
+      </button>
     </div>
   )
 }
@@ -679,10 +647,8 @@ function NewAssetDialog({ kind, onClose }: { kind: AssetKind; onClose: () => voi
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') submit() }}
         />
-        {dup ? (
+        {dup && (
           <div className={s.newWarn}>已存在同名{KIND_LABEL[kind]}「{trimmed}」，名称不能重复。</div>
-        ) : (
-          <div className={s.newHint}>先只填名字，加进来之后点「✦ AI 结合剧本补全」生成提示词。</div>
         )}
         <div className={s.newActions}>
           <button className={ui.btn} onClick={onClose}>取消</button>

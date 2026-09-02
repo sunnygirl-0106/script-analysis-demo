@@ -1,22 +1,24 @@
 import { Fragment, useMemo } from 'react'
 import { useStore } from '../store/useStore'
 import { relatedAssetIds, splitMentions } from '../services/mentions'
+import { KIND_DOT } from './entity'
 import s from './EntityText.module.css'
 
 /**
- * 文本里的实体词。两种用法由 variant 决定：
+ * 文本里的实体词。一句话口径（v2.6 §5.2）：**@ 得进来的东西，看得出来是什么**。
  *
- * variant='link'（默认，「主要内容」用）—— 三条刻意的约束：
- *   1. **静态零色**。分镜表是灰阶区，颜色留给状态（琥珀＝待更新）；实体身份由旁边
- *      「出场的人和物」那一列承担。在散文里再按类目上一遍色，一格就又紫又绿又黄了。
- *   2. **高亮只往「出场的人和物」去**，不往左边「本场剧本」去 —— 原文面板是彩色区，
- *      它自己已经在标实体了，再叠一层联动高亮就是噪音。
- *   3. **单向**：hover 散文里的名字 → 点亮对应挂载项。反方向（hover chip → 点亮正文）
+ * 两种用法都静态上类目色（KIND_DOT，与左侧「本场剧本」原文面板同一口径）+ 一条同色淡下划线；
+ * 从前 link 变体的「静态零色、hover 才亮」那条决策已推翻——用户自己 @ 插进去的资产名，
+ * 显示时就该看得出它是资产，而不是要 hover 一遍才知道哪几个词是实体。
+ *
+ * variant='link'（默认，「主要内容」用）—— 另外两条约束不变：
+ *   1. **高亮只往「出场的人和物」去**，不往左边「本场剧本」去 —— 原文面板自己已经在标实体了，
+ *      再叠一层联动高亮就是噪音。
+ *   2. **单向**：hover 散文里的名字 → 点亮对应挂载项。反方向（hover chip → 点亮正文）
  *      故意没做，避免高亮在两个区域来回跳。
  *
- * variant='mark'（「查看提示词」用）—— 纯静态、**统一一个色**（交互色天青 --acc）：
- *   提示词一段话里角色/场景/道具全上类目色会又紫又黄又粉太花，这里只需「一眼认出这是资产名」，
- *   不需要再区分类目（类目由「出场的人和物」那一列承担）。不订阅 store、不接 hover 联动。
+ * variant='mark'（「查看提示词」用）—— 纯静态，不订阅 hover 联动：它垫在 textarea 底下当背板，
+ * 只负责上色，不改字重 / 字距（背板要和上层透明 textarea 像素对齐）。
  */
 export function EntityText({
   text,
@@ -29,16 +31,26 @@ export function EntityText({
 }) {
   const assets = useStore((st) => st.project.assets)
   const parts = useMemo(() => splitMentions(text, assets), [text, assets])
+  const colorOf = (assetId: string) => {
+    const kind = assets[assetId]?.kind
+    return kind ? KIND_DOT[kind] : undefined
+  }
   return (
     <>
       {parts.map((p, i) =>
         p.assetId ? (
           variant === 'mark' ? (
-            <span key={i} className={s.markColor}>
+            <span key={i} className={s.markColor} style={{ color: colorOf(p.assetId) }}>
               {p.text}
             </span>
           ) : (
-            <Mention key={i} assetId={p.assetId} shotId={shotId ?? ''} text={p.text} />
+            <Mention
+              key={i}
+              assetId={p.assetId}
+              shotId={shotId ?? ''}
+              text={p.text}
+              color={colorOf(p.assetId)}
+            />
           )
         ) : (
           <Fragment key={i}>{p.text}</Fragment>
@@ -48,11 +60,14 @@ export function EntityText({
   )
 }
 
-function Mention({ assetId, shotId, text }: { assetId: string; shotId: string; text: string }) {
+function Mention({
+  assetId, shotId, text, color,
+}: { assetId: string; shotId: string; text: string; color?: string }) {
   const setHover = useStore((st) => st.setHoverMention)
   return (
     <span
       className={s.ment}
+      style={{ color }}
       onMouseEnter={() => setHover({ assetId, shotId })}
       onMouseLeave={() => setHover(null)}
     >

@@ -71,11 +71,12 @@
   );
 }
 
-/* ── 表头（吸顶）── */
+/* ── 表头（吸顶）──
+   z 值高于列宽把手层（30），否则把手会压在吸顶行与场区块头的按钮上，点不着。 */
 .header {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 34;
   border-bottom: 1px solid var(--line);
   background: var(--panel);
   font-size: 10.5px;
@@ -99,7 +100,7 @@
 .hCellPrompt {
   position: sticky;
   right: 46px;
-  z-index: 21;
+  z-index: 35;
   background: var(--panel);
   box-shadow: -8px 0 12px -8px rgb(0 0 0 / 0.55);
 }
@@ -107,7 +108,7 @@
 .hCellDel {
   position: sticky;
   right: 0;
-  z-index: 21;
+  z-index: 35;
   border-right: none;
   background: var(--panel);
 }
@@ -581,6 +582,69 @@
     transform: rotate(360deg);
   }
 }
+/* ── 场区块头（v2.7 §5.4）──
+   全剧 / 本集视图下一屏里有好几场，每场靠这条横杠分开并自报家门：
+   哪一集哪一场、多少镜多少秒，右侧两个顺手的口（场级设定 / 重拆本场）。
+   sticky 在列头下面：滚到第 3 场时，头顶那条杠说的必须还是第 3 场。 */
+.sceneBar {
+  position: sticky;
+  top: 30px;
+  z-index: 31;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  background: var(--bg2);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line2);
+}
+.sceneBarMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.sceneBarTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.14s;
+}
+.sceneBarMain:hover .sceneBarTitle {
+  color: var(--acc);
+}
+.sceneBarMeta {
+  flex: none;
+  font-size: 10.5px;
+  color: var(--t4);
+  font-variant-numeric: tabular-nums;
+}
+.sceneBarBtn {
+  flex: none;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: var(--rpill);
+  border: 1px solid var(--line);
+  background: var(--bg3);
+  color: var(--t3);
+  font-size: 11px;
+  cursor: pointer;
+  transition: 0.14s;
+}
+.sceneBarBtn:hover {
+  border-color: var(--acc-line);
+  color: var(--acc);
+  background: var(--acc-bg);
+}
+
 /* 收尾行 */
 .tail {
   position: relative;
@@ -692,4 +756,12 @@
   border-color: var(--acc-line) !important;
   background: var(--acc-bg) !important;
   box-shadow: 0 0 0 1px rgb(var(--acc-rgb) / 0.06);
+}
+
+/* 空场（手动新建的集拆分后就是这样，v2.5 §5.3）：一行灰字，插镜入口仍在表尾热区。 */
+.emptyScene {
+  padding: 26px 16px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--t4);
 }

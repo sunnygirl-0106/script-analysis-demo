@@ -2,14 +2,18 @@ import { useStore } from '../store/useStore'
 import type { Project } from '../data/types'
 import s from './StepBar.module.css'
 
-// 剧本分析的四步流程条（v2.4 §七）。既是进度指示，也是演示用的跳转入口。
+// 剧本分析的三步流程条（v2.5 §7.2）。既是进度指示，也是演示用的跳转入口。
 //
 // ① 整理剧本      —— 独立的 EpisodeOrganize 页：上传 / 拆集 / 校对都收在这里。
 // ② 确认资产清单  —— AssetConfirm 页。
-// ③ 生成分镜脚本  —— 还没拆是 SplitStart 起点页（选节奏），拆完是分镜表。
-// ④ 生成提示词    —— 不是独立页面：分镜表页脚的「生成提示词」动作，点④ = 跳分镜表并滚到页脚 CTA。
+// ③ 生成分镜脚本  —— 分镜表。
 //
-// 「去项目资产库生图」是下一模块的出口，不占步骤——只由分镜表页脚那个主按钮进入。
+// 「生成提示词」**不是一步**（v2.5 §2.1）：它不换页、没有整页动效，
+// 就是分镜表页脚右下角那一个主按钮；全剧就绪后同一个位置变成「去资产库生图 →」。
+// 「去项目资产库生图」也不占步骤——它是下一模块的出口。
+//
+// 三个「中」相位各属于它要跨到的那一步：organizing→①、extracting→②、splitting→③。
+// 这就是修「拆完之后步骤条默认跳到生成提示词」那个问题的地方：拆完就是第③步本身。
 //
 // STEPS 是单一真相源：本组件与 EmptyScriptState 的进站指引共用同一份。
 const fmtWords = (p: Project) =>
@@ -22,8 +26,7 @@ export const STEPS: { n: number; label: string; sub: (p: Project) => string }[] 
     sub: (p) => (p.episodes.length ? `${p.episodes.length} 集 · ${fmtWords(p)}` : '上传 / 拆集 / 校对'),
   },
   { n: 2, label: '确认资产清单', sub: () => '角色 / 服装 / 场景 / 道具' },
-  { n: 3, label: '生成分镜脚本', sub: () => '拆场 / 拆镜' },
-  { n: 4, label: '生成提示词', sub: () => '逐镜画面 / 视频' },
+  { n: 3, label: '生成分镜脚本', sub: () => '拆场 / 拆镜 / 提示词' },
 ]
 
 type Look = 'current' | 'done' | 'jumpable' | 'disabled'
@@ -35,7 +38,6 @@ export function StepBar() {
   const activePage = useStore((st) => st.activePage)
   const candidates = useStore((st) => st.candidates)
   const promptStates = useStore((st) => st.promptStates)
-  const selectedSceneId = useStore((st) => st.selectedSceneId)
   const setAnalysisStep = useStore((st) => st.setAnalysisStep)
   const setAnalysisPhase = useStore((st) => st.setAnalysisPhase)
   const setPage = useStore((st) => st.setPage)
@@ -48,47 +50,37 @@ export function StepBar() {
   const busy = shotIds.some((id) => stateOf(id) === 'generating')
   const needCount = shotIds.filter((id) => stateOf(id) === 'pending' || stateOf(id) === 'stale').length
   const allReady = shotsExist && needCount === 0 && !busy
-  const settled = analysisPhase === 'done' // 空态 / 整理中 / 提取中一律算在第①步，不认 analysisStep
-  const onStoryboard = settled && analysisStep === 'storyboard' && activePage === 'analysis'
-  // 还没提取过资产的草稿集：有它在，③ 就不该能跳（该先把它提了）。
-  const hasDraft = project.episodes.some((e) => !e.extractedAt)
+  const settled = analysisPhase === 'done'
   const extracted = project.episodes.some((e) => e.extractedAt)
 
-  // 当前步（恰有一个）：在资产库(visual) → 0（四步都走完，全部显示 ✓）。
-  // 分镜已生成 ⇒ ③ 的活干完了，当前步是 ④「生成提示词」——哪怕一条提示词都还没生成。
-  // （§七 的规则表写的是「有 shots 且有 ready 才 4」，但 §十.8 的验收要的是「拆完 ①②③ 全 ✓、④ 当前」：
-  //   面对一张已经拆好的分镜表还把 ③ 标成「进行中」，用户找不到下一步。取后者。）
+  // 当前步（恰有一个）：在资产库(visual) → 0（三步都走完，全部显示 ✓）。
+  // 相位优先于 analysisStep —— 虽然两者在 v2.5 里被刻意保持同步（点下一步的瞬间两个一起切），
+  // 相位先判一遍能让「动效属于目标步骤」这条规则在代码里显式可读。
   const current =
     activePage === 'visual' ? 0
-    : !settled || analysisStep === 'episodes' ? 1
+    : analysisPhase === 'organizing' || analysisPhase === 'empty' ? 1
+    : analysisPhase === 'extracting' ? 2
+    : analysisPhase === 'splitting' ? 3
+    : analysisStep === 'episodes' ? 1
     : analysisStep === 'assetConfirm' ? 2
-    : shotsExist ? 4
     : 3
 
-  // 完成态：走过且其工作已达成。
+  // 完成态：走过且其工作已达成。**按顺序累积**（v2.6 §1.2）——
+  // 后一步的 ✓ 必须蕴含前面每一步都干完了，否则会出现「① 还没做，② 已 ✓」这种不可能的状态。
   const done: Record<number, boolean> = {
-    1: extracted,        // 任一集提取过资产 = 整理这一步的产出已交付
-    2: committed,        // 已入库
-    3: shotsExist,       // 分镜已生成
-    4: allReady,         // 全剧提示词就绪
+    1: extracted,                            // 任一集提取过资产 = 整理这一步的产出已交付
+    2: extracted && committed,               // 已入库
+    3: extracted && committed && allReady,   // 全剧提示词就绪（拆完还没生成提示词，③ 就还没干完）
   }
-  // 可跳态：由数据决定的跳转上限（不能跳到自相矛盾的状态）。
+  // 可跳态：由数据决定的跳转上限。动效跑着的时候三步都不可点。
   const jumpable: Record<number, boolean> = {
-    1: settled,                        // 整理剧本页永远可回，跳转非销毁
-    2: committed || candidates.length > 0,
-    3: committed && !hasDraft,         // 有草稿集没提取，不该能进拆分
-    4: shotsExist,
-  }
-
-  const scrollToFooter = () => {
-    // ④ = 分镜页动作，跳过去后把页脚「生成提示词」CTA 滚进视野。
-    window.setTimeout(() => {
-      document.getElementById('genPromptsFooter')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }, 80)
+    1: settled,                                   // 整理剧本页永远可回，跳转非销毁
+    2: settled && (committed || candidates.length > 0),
+    3: settled && shotsExist,
   }
 
   const jump = (n: number) => {
-    // 四步都落在 analysis 页；App.tsx 的子页分派被 analysisPhase 卡着，
+    // 三步都落在 analysis 页；App.tsx 的子页分派被 analysisPhase 卡着，
     // 所以跳转必须把相位推到 done 才能真正翻页。
     setAnalysisPhase('done')
     setPage('analysis')
@@ -96,7 +88,6 @@ export function StepBar() {
       case 1: setAnalysisStep('episodes'); break
       case 2: setAnalysisStep('assetConfirm'); setTab('character'); break
       case 3: setAnalysisStep('storyboard'); setTab('shot'); break
-      case 4: setAnalysisStep('storyboard'); setTab('shot'); scrollToFooter(); break
     }
   }
 
@@ -107,15 +98,9 @@ export function StepBar() {
     return 'disabled'
   }
 
-  // 作用域标签：步骤①② 只有集，明说场 / 镜还没产生；步骤③ 之后才报集场。
-  const scene = project.scenes[selectedSceneId]
-  const epNo = scene ? project.episodes.find((e) => e.sceneIds.includes(scene.id))?.no : undefined
-  const scopeText =
-    analysisStep === 'episodes' || analysisStep === 'assetConfirm'
-      ? '整本剧本 · 场 / 镜在第 ③ 步产生'
-      : onStoryboard && scene
-        ? `第 ${epNo ?? scene.episodeId} 集 · 第 ${scene.no} 场`
-        : null
+  // 整理跑完之前一集都还没有 —— 第①步的副文案不许提前报出「N 集 · X 字」（§九.3）。
+  const subProject =
+    analysisPhase === 'empty' || analysisPhase === 'organizing' ? { ...project, episodes: [] } : project
 
   return (
     <div className={s.bar}>
@@ -133,7 +118,7 @@ export function StepBar() {
                 onClick={() => clickable && jump(st.n)}
                 title={
                   look === 'disabled'
-                    ? '需要先完成前一步'
+                    ? settled ? '需要先完成前一步' : '正在处理中'
                     : look === 'current'
                       ? '当前步骤'
                       : `跳到「${st.label}」`
@@ -142,20 +127,13 @@ export function StepBar() {
                 <span className={s.badge}>{look === 'done' ? '✓' : st.n}</span>
                 <span className={s.txt}>
                   <span className={s.label}>{st.label}</span>
-                  <span className={s.sub}>{st.sub(project)}</span>
+                  <span className={s.sub}>{st.sub(subProject)}</span>
                 </span>
               </button>
             </div>
           )
         })}
       </div>
-
-      {scopeText && (
-        <div className={s.scope}>
-          <span className={s.scopeLabel}>当前作用域</span>
-          <span className={s.scopeVal}>{scopeText}</span>
-        </div>
-      )}
     </div>
   )
 }
