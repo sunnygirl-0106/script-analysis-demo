@@ -53,7 +53,11 @@ const navItems: { key: NavKey; label: string; page?: Stage }[] = [
 ]
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const project = useStore((st) => st.project)
+  // 只订阅真正用到的三个原始值。订阅整个 project 会让「改一个镜头的一个字符」
+  // 冒泡成整棵 App 树重渲染——AppShell 是所有页面的父节点。
+  const title = useStore((st) => st.project.title)
+  const aspect = useStore((st) => st.project.aspect)
+  const style = useStore((st) => st.project.style)
   const activePage = useStore((st) => st.activePage)
   const setPage = useStore((st) => st.setPage)
   const navCollapsed = useStore((st) => st.navCollapsed)
@@ -84,8 +88,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       )
     ) : null
 
-  const aspectLabel = project.aspect === '16:9' ? '16:9 横屏' : '9:16 竖屏'
-  const styleLabel = project.style === 'realistic' ? '写实' : '电影感'
+  const aspectLabel = aspect === '16:9' ? '16:9 横屏' : '9:16 竖屏'
+  const styleLabel = style === 'realistic' ? '写实' : '电影感'
 
   return (
     <div className={s.wrap}>
@@ -113,7 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className={s.proj}>
               <div className={s.projTitle}>
                 <span className={s.back}>‹</span>
-                {project.title}
+                {title}
               </div>
               <div className={s.chips}>
                 <span className={s.chip}>{aspectLabel}</span>

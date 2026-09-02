@@ -1,4 +1,4 @@
-import { useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useStore } from '../store/useStore'
 import {
   CAMERA_MOVES,
@@ -126,10 +126,14 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
   // 删除：点删除键先弹二次确认；确认后播放折叠动画，动画结束再真正从 store 移除。
   const [removing, setRemoving] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  // 折叠动画的计时器要能被卸载打断：视图作用域一切、步骤一跳，这一行就不在了，
+  // 定时器却还会在 240ms 后照删不误——那删掉的是用户没打算删的东西。
+  const delTimer = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(delTimer.current), [])
   const runDelete = () => {
     if (removing || !onDelete) return
     setRemoving(true)
-    window.setTimeout(onDelete, 240)
+    delTimer.current = window.setTimeout(onDelete, 240)
   }
 
   // 挂载指向的资产可能已在项目资产库删除（v2.0 单向：资产库不回写分镜）→ 兜底显示「已失效」。

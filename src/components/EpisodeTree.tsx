@@ -321,7 +321,7 @@ export function EpisodeTree() {
           <div className={di.dialog} onClick={(e) => e.stopPropagation()}>
             <div className={di.title}>删除第 {delEp.no} 集？</div>
             <div className={di.danger}>
-              将同时删除本集的 {delStat.scenes} 场 {delStat.shots} 个镜头。本集独有的 {delStat.onlyInEp} 项角色、服装、场景和道具也会被删除；其他剧集仍在使用的内容会保留。此操作不可撤销。
+              将同时删除本集的 {delStat.scenes} 场 {delStat.shots} 个镜头。本集独有的 {delStat.onlyInEp} 项角色、服装、场景和道具会变为「未引用」，但仍保留在项目资产库中——删除资产的唯一入口是资产库本身。此操作不可撤销。
             </div>
             <div className={di.actions}>
               <button className={ui.btn} onClick={() => setDialog(null)}>
