@@ -1,13 +1,4 @@
-/* 「现在去生图？」软提醒（v2.6 §6.2）。窄弹窗、无标题栏关闭键——两个按钮就是全部出口。 */
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-dialog);
-  background: var(--scrim);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+
 .dialog {
   width: 420px;
   max-width: calc(100vw - 40px);

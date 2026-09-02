@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Dialog } from './Dialog'
 import { useStore } from '../store/useStore'
 import type { ShotDensity } from '../data/types'
 import { sceneDuration } from '../services/timeline'
@@ -47,68 +48,70 @@ export function ResplitEpisodeDialog({ episodeId, onClose }: { episodeId: string
   }
 
   return (
-    <div className={d.overlay} onClick={running ? undefined : onClose}>
-      <div className={d.dialog} onClick={(e) => e.stopPropagation()}>
-        <div className={d.title}>重新拆分第 {ep.no} 集 · {ep.title}</div>
+    <Dialog
+      onClose={onClose}
+      dismissible={!running}
+      className={d.dialog}
+    >
+      <div className={d.title}>重新拆分第 {ep.no} 集 · {ep.title}</div>
 
-        {running ? (
-          <div style={{ marginTop: 8 }}>
-            <TaskProgress phases={PHASES.resplitEp} durationMs={taskDuration(cost)} onDone={runDone} />
+      {running ? (
+        <div style={{ marginTop: 8 }}>
+          <TaskProgress phases={PHASES.resplitEp} durationMs={taskDuration(cost)} onDone={runDone} />
+        </div>
+      ) : (
+        <>
+          <div className={s.sub}>当前：{stats.scenes} 场 · {stats.shots} 镜 · 约 {stats.dur} 秒</div>
+
+          <div className={s.groupTitle}>场景划分</div>
+          <div className={s.sceneOpts}>
+            <label className={[s.opt, sceneMode === 'auto' ? s.optOn : ''].join(' ')}>
+              <input type="radio" checked={sceneMode === 'auto'} onChange={() => setSceneMode('auto')} />
+              由 AI 自动划分（当前 {stats.scenes} 场）
+            </label>
+            <label className={[s.opt, sceneMode === 'custom' ? s.optOn : ''].join(' ')}>
+              <input type="radio" checked={sceneMode === 'custom'} onChange={() => setSceneMode('custom')} />
+              指定
+              <input
+                className={s.countInput}
+                type="number"
+                min={1}
+                max={30}
+                value={customScenes}
+                disabled={sceneMode !== 'custom'}
+                onChange={(e) => setCustomScenes(Math.max(1, Math.min(30, Number(e.target.value) || 1)))}
+              />
+              场
+            </label>
+            {sceneMode === 'custom' && <div className={s.sceneNote}>当前版本暂不支持调整场景数量。</div>}
           </div>
-        ) : (
-          <>
-            <div className={s.sub}>当前：{stats.scenes} 场 · {stats.shots} 镜 · 约 {stats.dur} 秒</div>
 
-            <div className={s.groupTitle}>场景划分</div>
-            <div className={s.sceneOpts}>
-              <label className={[s.opt, sceneMode === 'auto' ? s.optOn : ''].join(' ')}>
-                <input type="radio" checked={sceneMode === 'auto'} onChange={() => setSceneMode('auto')} />
-                由 AI 自动划分（当前 {stats.scenes} 场）
-              </label>
-              <label className={[s.opt, sceneMode === 'custom' ? s.optOn : ''].join(' ')}>
-                <input type="radio" checked={sceneMode === 'custom'} onChange={() => setSceneMode('custom')} />
-                指定
-                <input
-                  className={s.countInput}
-                  type="number"
-                  min={1}
-                  max={30}
-                  value={customScenes}
-                  disabled={sceneMode !== 'custom'}
-                  onChange={(e) => setCustomScenes(Math.max(1, Math.min(30, Number(e.target.value) || 1)))}
-                />
-                场
-              </label>
-              {sceneMode === 'custom' && <div className={s.sceneNote}>当前版本暂不支持调整场景数量。</div>}
-            </div>
-
-            <div className={s.groupTitle}>默认镜头节奏</div>
-            <div className={s.seg}>
-              {DENSITY.map((o) => (
-                <button key={o.key} className={o.key === density ? s.segOn : ''} onClick={() => setDensity(o.key)}>
-                  {o.label}
-                </button>
-              ))}
-            </div>
-
-            <div className={s.assetNote}>
-              ✓ 本次将使用项目资产库中的现有资产，不新增。如需补充请到项目资产库添加。
-            </div>
-
-            <div className={s.impact}>
-              <div className={s.impactTitle}>预计消耗</div>
-              预计生成约 {cost} 个镜头 · 预计消耗 {fmtCost(cost)}。本集原有分镜、人工修改和镜头提示词将被新结果替换；此操作不可撤销。
-            </div>
-
-            <div className={d.actions}>
-              <button className={ui.btn} onClick={onClose}>取消</button>
-              <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={confirm}>
-                确认并重新拆分本集 · {fmtCost(cost)}
+          <div className={s.groupTitle}>默认镜头节奏</div>
+          <div className={s.seg}>
+            {DENSITY.map((o) => (
+              <button key={o.key} className={o.key === density ? s.segOn : ''} onClick={() => setDensity(o.key)}>
+                {o.label}
               </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+            ))}
+          </div>
+
+          <div className={s.assetNote}>
+            ✓ 本次将使用项目资产库中的现有资产，不新增。如需补充请到项目资产库添加。
+          </div>
+
+          <div className={s.impact}>
+            <div className={s.impactTitle}>预计消耗</div>
+            预计生成约 {cost} 个镜头 · 预计消耗 {fmtCost(cost)}。本集原有分镜、人工修改和镜头提示词将被新结果替换；此操作不可撤销。
+          </div>
+
+          <div className={d.actions}>
+            <button className={ui.btn} onClick={onClose}>取消</button>
+            <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={confirm}>
+              确认并重新拆分本集 · {fmtCost(cost)}
+            </button>
+          </div>
+        </>
+      )}
+    </Dialog>
   )
 }

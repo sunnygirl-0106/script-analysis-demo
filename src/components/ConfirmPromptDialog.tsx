@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Dialog } from './Dialog'
 import { useStore } from '../store/useStore'
 import type { Project, Shot } from '../data/types'
 import {
@@ -11,7 +12,6 @@ import { PencilIcon } from './PencilIcon'
 import { costShotPrompts, fmtCost } from '../services/cost'
 import { PHASES, taskDuration } from '../services/taskRun'
 import { TaskProgress } from './TaskProgress'
-import d from '../styles/dialog.module.css'
 import c from './ConfirmPromptDialog.module.css'
 
 // 「生成镜头提示词」前置确认。范围由组件自己按 scope 求解（本场 / 本集 / 全剧），
@@ -156,201 +156,202 @@ export function ConfirmPromptDialog({
     })
 
   return (
-    <div className={d.overlay} onClick={onClose}>
-      <div className={c.dialog} onClick={(e) => e.stopPropagation()}>
-        <div className={c.head}>
-          <div className={c.headLeft}>
-            <span className={c.bar} />
-            <span className={c.title}>生成镜头提示词</span>
-            <span
-              className={c.help}
-              title="仅对下方勾选的镜头生成提示词。已生成的镜头默认不重复生成，可手动勾选以覆盖。"
-            >
-              ?
-            </span>
-          </div>
-          <div className={c.headRight}>
-            <div className={c.headMetaRow}>
-              <span className={c.headMeta}>
-                已选 <b>{selCount}</b> / {total} 镜
-              </span>
-              <button className={c.close} onClick={onClose} title="关闭">
-                ×
-              </button>
-            </div>
-            <span className={c.progress}>
-              <span
-                className={c.progressFill}
-                style={{ width: `${total ? (selCount / total) * 100 : 0}%` }}
-              />
-            </span>
-          </div>
+    <Dialog
+      onClose={onClose}
+      className={c.dialog}
+    >
+      <div className={c.head}>
+        <div className={c.headLeft}>
+          <span className={c.bar} />
+          <span className={c.title}>生成镜头提示词</span>
+          <span
+            className={c.help}
+            title="仅对下方勾选的镜头生成提示词。已生成的镜头默认不重复生成，可手动勾选以覆盖。"
+          >
+            ?
+          </span>
         </div>
+        <div className={c.headRight}>
+          <div className={c.headMetaRow}>
+            <span className={c.headMeta}>
+              已选 <b>{selCount}</b> / {total} 镜
+            </span>
+            <button className={c.close} onClick={onClose} title="关闭">
+              ×
+            </button>
+          </div>
+          <span className={c.progress}>
+            <span
+              className={c.progressFill}
+              style={{ width: `${total ? (selCount / total) * 100 : 0}%` }}
+            />
+          </span>
+        </div>
+      </div>
 
-        {/* 顶部：范围快速选择 + 汇总 + 状态过滤 */}
-        <div className={c.scopeBar}>
-          <div className={c.scopeSeg}>
-            {SCOPES.map((sc) => (
+      {/* 顶部：范围快速选择 + 汇总 + 状态过滤 */}
+      <div className={c.scopeBar}>
+        <div className={c.scopeSeg}>
+          {SCOPES.map((sc) => (
+            <button
+              key={sc}
+              className={[c.segBtn, scope === sc ? c.segOn : ''].join(' ')}
+              onClick={() => onScopeChange(sc)}
+            >
+              {SCOPE_LABEL[sc]}
+            </button>
+          ))}
+        </div>
+        <div className={c.scopeRight}>
+          <span className={c.summary}>
+            共 {total} 镜 · 约 {fmtDur(totalDur)}
+          </span>
+          <span className={c.filterSep} />
+          <div className={c.filters}>
+            {FILTERS.map((f) => (
               <button
-                key={sc}
-                className={[c.segBtn, scope === sc ? c.segOn : ''].join(' ')}
-                onClick={() => onScopeChange(sc)}
+                key={f.key}
+                className={[c.filterBtn, filter === f.key ? c.filterOn : ''].join(' ')}
+                onClick={() => setFilter(f.key)}
               >
-                {SCOPE_LABEL[sc]}
+                {f.label}
               </button>
             ))}
           </div>
-          <div className={c.scopeRight}>
-            <span className={c.summary}>
-              共 {total} 镜 · 约 {fmtDur(totalDur)}
-            </span>
-            <span className={c.filterSep} />
-            <div className={c.filters}>
-              {FILTERS.map((f) => (
-                <button
-                  key={f.key}
-                  className={[c.filterBtn, filter === f.key ? c.filterOn : ''].join(' ')}
-                  onClick={() => setFilter(f.key)}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className={c.list}>
-          {groups.map((g) => {
-            const shownIds = g.shotIds.filter(passFilter)
-            if (shownIds.length === 0) return null
-            const isOpen = open.has(g.sceneId)
-            const sel = g.shotIds.filter(selectable)
-            const gOn = sel.length > 0 && sel.every((id) => selected.has(id))
-            const gSome = g.shotIds.some((id) => selected.has(id)) && !gOn
-            const gSelCount = g.shotIds.filter((id) => selected.has(id)).length
-            return (
-              <div className={c.group} key={g.sceneId}>
-                <div className={c.groupHead} onClick={() => toggleOpen(g.sceneId)}>
-                  <input
-                    type="checkbox"
-                    className={c.check}
-                    checked={gOn}
-                    ref={(el) => {
-                      if (el) el.indeterminate = gSome
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={() => toggleGroup(g.shotIds)}
-                  />
-                  <span className={c.groupTitle}>
-                    第 {g.episodeNo} 集 · 第 {g.sceneNo} 场 {g.sceneName}
-                  </span>
-                  <span className={c.groupCount}>
-                    已选 {gSelCount}/{g.shotIds.length}
-                  </span>
-                  <span className={[c.caret, isOpen ? c.caretOpen : ''].join(' ')} title={isOpen ? '折叠' : '展开'}>
-                    ›
-                  </span>
-                </div>
-
-                {isOpen &&
-                  shownIds.map((id) => {
-                    const shot = project.shots[id]
-                    if (!shot) return null
-                    const isEdited = !!edited[id]
-                    const checked = selected.has(id)
-                    const isExpanded = expanded.has(id)
-                    const preview = composePreview(shot, project)
-                    return (
-                      <div
-                        className={[
-                          c.shotRow,
-                          checked ? c.shotChecked : '',
-                          isExpanded ? c.shotExpanded : '',
-                        ].join(' ')}
-                        key={id}
-                      >
-                        <div
-                          className={c.shotTop}
-                          onClick={() => toggleExpand(id)}
-                          title={isExpanded ? '收起' : '展开完整提示词'}
-                        >
-                          <input
-                            type="checkbox"
-                            className={c.check}
-                            checked={checked}
-                            disabled={!selectable(id)}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={() => toggle(id)}
-                          />
-                          <span className={c.mno}>镜 {shot.no}</span>
-                          <span className={c.mdur}>{fmtDur(shot.duration)}</span>
-                          <span className={[c.mprev, isExpanded ? c.mprevOpen : ''].join(' ')}>
-                            {preview}
-                          </span>
-                          {isEdited && (
-                            <span className={c.editTag} title="提示词经过手动编辑">
-                              <PencilIcon /> 手动
-                            </span>
-                          )}
-                          <span className={[c.rowCaret, isExpanded ? c.caretOpen : ''].join(' ')}>
-                            ›
-                          </span>
-                        </div>
-                        {isEdited && checked && (
-                          <div className={c.warnRow}>
-                            该镜头的提示词经过手动编辑，重新生成将覆盖当前内容。
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-              </div>
-            )
-          })}
-        </div>
-
-        <div className={c.foot}>
-          <label className={c.all}>
-            <input ref={allRef} type="checkbox" className={c.check} checked={allOn} onChange={toggleAll} />
-            全选镜头
-          </label>
-          <span className={c.model}>GVLM 3.1 ⌄</span>
-          <span className={c.hint}>内容修改后自动保存为最新版本</span>
-
-          <div className={c.footRight}>
-            {running ? (
-              <span style={{ flex: 1, minWidth: 220 }}>
-                <TaskProgress
-                  phases={PHASES.shotPrompt}
-                  durationMs={taskDuration(cost)}
-                  onDone={() => onConfirm([...selected])}
-                />
-              </span>
-            ) : (
-              <>
-                <div className={c.modes}>
-                  <label className={mode === 'smart' ? c.modeOn : ''}>
-                    <input type="radio" checked={mode === 'smart'} onChange={() => setMode('smart')} />
-                    智能合成
-                  </label>
-                  <label className={mode === 'concat' ? c.modeOn : ''}>
-                    <input type="radio" checked={mode === 'concat'} onChange={() => setMode('concat')} />
-                    自动拼接
-                  </label>
-                </div>
-                <span className={c.cost}>{fmtCost(cost)}</span>
-                <button
-                  className={c.cta}
-                  disabled={selCount === 0}
-                  onClick={() => setRunning(true)}
-                >
-                  确认并生成 · {fmtCost(cost)}
-                </button>
-              </>
-            )}
-          </div>
         </div>
       </div>
-    </div>
+
+      <div className={c.list}>
+        {groups.map((g) => {
+          const shownIds = g.shotIds.filter(passFilter)
+          if (shownIds.length === 0) return null
+          const isOpen = open.has(g.sceneId)
+          const sel = g.shotIds.filter(selectable)
+          const gOn = sel.length > 0 && sel.every((id) => selected.has(id))
+          const gSome = g.shotIds.some((id) => selected.has(id)) && !gOn
+          const gSelCount = g.shotIds.filter((id) => selected.has(id)).length
+          return (
+            <div className={c.group} key={g.sceneId}>
+              <div className={c.groupHead} onClick={() => toggleOpen(g.sceneId)}>
+                <input
+                  type="checkbox"
+                  className={c.check}
+                  checked={gOn}
+                  ref={(el) => {
+                    if (el) el.indeterminate = gSome
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={() => toggleGroup(g.shotIds)}
+                />
+                <span className={c.groupTitle}>
+                  第 {g.episodeNo} 集 · 第 {g.sceneNo} 场 {g.sceneName}
+                </span>
+                <span className={c.groupCount}>
+                  已选 {gSelCount}/{g.shotIds.length}
+                </span>
+                <span className={[c.caret, isOpen ? c.caretOpen : ''].join(' ')} title={isOpen ? '折叠' : '展开'}>
+                  ›
+                </span>
+              </div>
+
+              {isOpen &&
+                shownIds.map((id) => {
+                  const shot = project.shots[id]
+                  if (!shot) return null
+                  const isEdited = !!edited[id]
+                  const checked = selected.has(id)
+                  const isExpanded = expanded.has(id)
+                  const preview = composePreview(shot, project)
+                  return (
+                    <div
+                      className={[
+                        c.shotRow,
+                        checked ? c.shotChecked : '',
+                        isExpanded ? c.shotExpanded : '',
+                      ].join(' ')}
+                      key={id}
+                    >
+                      <div
+                        className={c.shotTop}
+                        onClick={() => toggleExpand(id)}
+                        title={isExpanded ? '收起' : '展开完整提示词'}
+                      >
+                        <input
+                          type="checkbox"
+                          className={c.check}
+                          checked={checked}
+                          disabled={!selectable(id)}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={() => toggle(id)}
+                        />
+                        <span className={c.mno}>镜 {shot.no}</span>
+                        <span className={c.mdur}>{fmtDur(shot.duration)}</span>
+                        <span className={[c.mprev, isExpanded ? c.mprevOpen : ''].join(' ')}>
+                          {preview}
+                        </span>
+                        {isEdited && (
+                          <span className={c.editTag} title="提示词经过手动编辑">
+                            <PencilIcon /> 手动
+                          </span>
+                        )}
+                        <span className={[c.rowCaret, isExpanded ? c.caretOpen : ''].join(' ')}>
+                          ›
+                        </span>
+                      </div>
+                      {isEdited && checked && (
+                        <div className={c.warnRow}>
+                          该镜头的提示词经过手动编辑，重新生成将覆盖当前内容。
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+            </div>
+          )
+        })}
+      </div>
+
+      <div className={c.foot}>
+        <label className={c.all}>
+          <input ref={allRef} type="checkbox" className={c.check} checked={allOn} onChange={toggleAll} />
+          全选镜头
+        </label>
+        <span className={c.model}>GVLM 3.1 ⌄</span>
+        <span className={c.hint}>内容修改后自动保存为最新版本</span>
+
+        <div className={c.footRight}>
+          {running ? (
+            <span style={{ flex: 1, minWidth: 220 }}>
+              <TaskProgress
+                phases={PHASES.shotPrompt}
+                durationMs={taskDuration(cost)}
+                onDone={() => onConfirm([...selected])}
+              />
+            </span>
+          ) : (
+            <>
+              <div className={c.modes}>
+                <label className={mode === 'smart' ? c.modeOn : ''}>
+                  <input type="radio" checked={mode === 'smart'} onChange={() => setMode('smart')} />
+                  智能合成
+                </label>
+                <label className={mode === 'concat' ? c.modeOn : ''}>
+                  <input type="radio" checked={mode === 'concat'} onChange={() => setMode('concat')} />
+                  自动拼接
+                </label>
+              </div>
+              <span className={c.cost}>{fmtCost(cost)}</span>
+              <button
+                className={c.cta}
+                disabled={selCount === 0}
+                onClick={() => setRunning(true)}
+              >
+                确认并生成 · {fmtCost(cost)}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </Dialog>
   )
 }

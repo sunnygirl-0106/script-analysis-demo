@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode, type MouseEvent as ReactMouseEvent } from 'react'
+import { Dialog } from './Dialog'
 import { useStore } from '../store/useStore'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { can } from '../services/capability'
@@ -317,28 +318,26 @@ export function EpisodeTree() {
       )}
 
       {dialog?.type === 'delete' && delEp && delStat && (
-        <div className={di.overlay} onClick={() => setDialog(null)}>
-          <div className={di.dialog} onClick={(e) => e.stopPropagation()}>
-            <div className={di.title}>删除第 {delEp.no} 集？</div>
-            <div className={di.danger}>
-              将同时删除本集的 {delStat.scenes} 场 {delStat.shots} 个镜头。本集独有的 {delStat.onlyInEp} 项角色、服装、场景和道具会变为「未引用」，但仍保留在项目资产库中——删除资产的唯一入口是资产库本身。此操作不可撤销。
-            </div>
-            <div className={di.actions}>
-              <button className={ui.btn} onClick={() => setDialog(null)}>
-                取消
-              </button>
-              <button
-                className={[ui.btn, ui.btnDanger].join(' ')}
-                onClick={() => {
-                  deleteEpisode(delEp.id)
-                  setDialog(null)
-                }}
-              >
-                删除
-              </button>
-            </div>
+        <Dialog onClose={() => setDialog(null)} className={di.dialog}>
+          <div className={di.title}>删除第 {delEp.no} 集？</div>
+          <div className={di.danger}>
+            将同时删除本集的 {delStat.scenes} 场 {delStat.shots} 个镜头。本集独有的 {delStat.onlyInEp} 项角色、服装、场景和道具会变为「未引用」，但仍保留在项目资产库中——删除资产的唯一入口是资产库本身。此操作不可撤销。
           </div>
-        </div>
+          <div className={di.actions}>
+            <button className={ui.btn} onClick={() => setDialog(null)}>
+              取消
+            </button>
+            <button
+              className={[ui.btn, ui.btnDanger].join(' ')}
+              onClick={() => {
+                deleteEpisode(delEp.id)
+                setDialog(null)
+              }}
+            >
+              删除
+            </button>
+          </div>
+        </Dialog>
       )}
 
       {/* 场级弹窗 */}
@@ -347,32 +346,30 @@ export function EpisodeTree() {
       )}
 
       {dialog?.type === 'deleteScene' && delSc && delScStat && (
-        <div className={di.overlay} onClick={() => setDialog(null)}>
-          <div className={di.dialog} onClick={(e) => e.stopPropagation()}>
-            <div className={di.title}>删除第 {delSc.no} 场「{delSc.name}」？</div>
-            <div className={di.danger}>
-              将同时删除本场的 {delScStat.shots} 个镜头
-              {delScStat.onlyInScene > 0
-                ? `，以及仅在本场出现的 ${delScStat.onlyInScene} 项独有资产。其他场仍在使用的内容会保留`
-                : ''}
-              。此操作不可撤销。
-            </div>
-            <div className={di.actions}>
-              <button className={ui.btn} onClick={() => setDialog(null)}>
-                取消
-              </button>
-              <button
-                className={[ui.btn, ui.btnDanger].join(' ')}
-                onClick={() => {
-                  deleteScene(delSc.id)
-                  setDialog(null)
-                }}
-              >
-                删除
-              </button>
-            </div>
+        <Dialog onClose={() => setDialog(null)} className={di.dialog}>
+          <div className={di.title}>删除第 {delSc.no} 场「{delSc.name}」？</div>
+          <div className={di.danger}>
+            将同时删除本场的 {delScStat.shots} 个镜头
+            {delScStat.onlyInScene > 0
+              ? `，以及仅在本场出现的 ${delScStat.onlyInScene} 项独有资产。其他场仍在使用的内容会保留`
+              : ''}
+            。此操作不可撤销。
           </div>
-        </div>
+          <div className={di.actions}>
+            <button className={ui.btn} onClick={() => setDialog(null)}>
+              取消
+            </button>
+            <button
+              className={[ui.btn, ui.btnDanger].join(' ')}
+              onClick={() => {
+                deleteScene(delSc.id)
+                setDialog(null)
+              }}
+            >
+              删除
+            </button>
+          </div>
+        </Dialog>
       )}
     </div>
   )

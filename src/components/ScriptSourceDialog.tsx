@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Dialog } from './Dialog'
 import { useStore } from '../store/useStore'
 import { PHASES } from '../services/taskRun'
 import { TaskProgress } from './TaskProgress'
@@ -69,72 +70,74 @@ export function ScriptSourceDialog({ mode, onClose }: { mode: Mode; onClose: () 
   }
 
   return (
-    <div className={d.overlay} onClick={running ? undefined : onClose}>
-      <div className={rs.dialog} onClick={(e) => e.stopPropagation()}>
-        {running ? (
-          <>
-            <div className={d.title}>正在整理新集</div>
-            <div style={{ marginTop: 8 }}>
-              <TaskProgress phases={PHASES.appendParse} durationMs={ORGANIZE_MS} onDone={supplementDone} />
-            </div>
-          </>
-        ) : (
-          <>
-            <div className={d.title}>{c.title}</div>
-            <div className={rs.tabs}>
-              <button
-                className={[rs.tab, srcTab === 'upload' ? rs.tabOn : ''].join(' ')}
-                onClick={() => setSrcTab('upload')}
-              >
-                上传文件
-              </button>
-              <button
-                className={[rs.tab, srcTab === 'paste' ? rs.tabOn : ''].join(' ')}
-                onClick={() => setSrcTab('paste')}
-              >
-                粘贴文本
-              </button>
-            </div>
-            {srcTab === 'upload' ? (
-              <button
-                className={[rs.drop, fileName ? rs.dropOn : ''].join(' ')}
-                onClick={() => setFileName(c.file)}
-              >
-                {fileName ? (
-                  <>
-                    <div className={rs.dropName}>已选择：{fileName}</div>
-                    <div className={rs.dropHint}>点击可重新选择</div>
-                  </>
-                ) : (
-                  <>
-                    <div className={rs.dropName}>拖拽剧本文件到此处，或点击选择文件</div>
-                    <div className={rs.dropHint}>支持 txt / docx / fdx</div>
-                  </>
-                )}
-              </button>
-            ) : (
-              <textarea
-                className={rs.paste}
-                value={pasted}
-                spellCheck={false}
-                placeholder={c.paste}
-                onChange={(e) => setPasted(e.target.value)}
-              />
-            )}
-            {c.foot && <div className={rs.foot}>{c.foot}</div>}
-            <div className={d.actions}>
-              <button className={ui.btn} onClick={onClose}>取消</button>
-              <button
-                className={[ui.btn, ui.btnPrimary].join(' ')}
-                disabled={!hasSrc}
-                onClick={start}
-              >
-                {c.cta}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+    <Dialog
+      onClose={onClose}
+      dismissible={!running}
+      className={rs.dialog}
+    >
+      {running ? (
+        <>
+          <div className={d.title}>正在整理新集</div>
+          <div style={{ marginTop: 8 }}>
+            <TaskProgress phases={PHASES.appendParse} durationMs={ORGANIZE_MS} onDone={supplementDone} />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className={d.title}>{c.title}</div>
+          <div className={rs.tabs}>
+            <button
+              className={[rs.tab, srcTab === 'upload' ? rs.tabOn : ''].join(' ')}
+              onClick={() => setSrcTab('upload')}
+            >
+              上传文件
+            </button>
+            <button
+              className={[rs.tab, srcTab === 'paste' ? rs.tabOn : ''].join(' ')}
+              onClick={() => setSrcTab('paste')}
+            >
+              粘贴文本
+            </button>
+          </div>
+          {srcTab === 'upload' ? (
+            <button
+              className={[rs.drop, fileName ? rs.dropOn : ''].join(' ')}
+              onClick={() => setFileName(c.file)}
+            >
+              {fileName ? (
+                <>
+                  <div className={rs.dropName}>已选择：{fileName}</div>
+                  <div className={rs.dropHint}>点击可重新选择</div>
+                </>
+              ) : (
+                <>
+                  <div className={rs.dropName}>拖拽剧本文件到此处，或点击选择文件</div>
+                  <div className={rs.dropHint}>支持 txt / docx / fdx</div>
+                </>
+              )}
+            </button>
+          ) : (
+            <textarea
+              className={rs.paste}
+              value={pasted}
+              spellCheck={false}
+              placeholder={c.paste}
+              onChange={(e) => setPasted(e.target.value)}
+            />
+          )}
+          {c.foot && <div className={rs.foot}>{c.foot}</div>}
+          <div className={d.actions}>
+            <button className={ui.btn} onClick={onClose}>取消</button>
+            <button
+              className={[ui.btn, ui.btnPrimary].join(' ')}
+              disabled={!hasSrc}
+              onClick={start}
+            >
+              {c.cta}
+            </button>
+          </div>
+        </>
+      )}
+    </Dialog>
   )
 }

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Dialog } from './Dialog'
 import { useStore } from '../store/useStore'
 import type { ShotDensity } from '../data/types'
 import { densityShots, hasDensityPresets } from '../services/density'
@@ -65,78 +66,80 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
   }
 
   return (
-    <div className={d.overlay} onClick={running ? undefined : onClose}>
-      <div className={d.dialog} onClick={(e) => e.stopPropagation()}>
-        <div className={d.title}>重新拆分第 {scene.no} 场 · {scene.name}</div>
+    <Dialog
+      onClose={onClose}
+      dismissible={!running}
+      className={d.dialog}
+    >
+      <div className={d.title}>重新拆分第 {scene.no} 场 · {scene.name}</div>
 
-        {running ? (
-          <div style={{ marginTop: 8 }}>
-            <TaskProgress phases={PHASES.resplitScene} durationMs={taskDuration(cost)} onDone={runDone} />
+      {running ? (
+        <div style={{ marginTop: 8 }}>
+          <TaskProgress phases={PHASES.resplitScene} durationMs={taskDuration(cost)} onDone={runDone} />
+        </div>
+      ) : (
+        <>
+          <div className={s.sub}>当前为 {curCount} 个镜头，共 {total} 秒</div>
+
+          <div className={s.groupTitle}>镜头节奏</div>
+          <div className={s.opts}>
+            {DENSITY_META.map((m) => {
+              const on = choice === m.key
+              const isCurrent = scene.density === m.key
+              const disabled = !hasPresets && !isCurrent
+              return (
+                <label key={m.key} className={[s.opt, on ? s.optOn : '', disabled ? s.optDisabled : ''].join(' ')}>
+                  <input type="radio" checked={on} disabled={disabled} onChange={() => setChoice(m.key)} />
+                  <span className={s.optLabel}>{m.label}</span>
+                  <span className={s.optCount}>{countOf(m.key)} 镜</span>
+                  <span className={s.optHint}>
+                    {isCurrent ? '当前方案' : m.hint}
+                    {isCurrent && <span className={s.badge}>当前</span>}
+                  </span>
+                </label>
+              )
+            })}
+
+            <label className={[s.opt, choice === 'custom' ? s.optOn : '', !hasPresets ? s.optDisabled : ''].join(' ')}>
+              <input type="radio" checked={choice === 'custom'} disabled={!hasPresets} onChange={() => setChoice('custom')} />
+              <span className={s.optLabel}>期望镜头数</span>
+              <span className={s.optCount}>
+                <input
+                  className={s.countInput}
+                  type="number"
+                  min={3}
+                  max={20}
+                  value={customN}
+                  disabled={choice !== 'custom'}
+                  onChange={(e) => setCustomN(Math.max(3, Math.min(20, Number(e.target.value) || 3)))}
+                />
+                镜
+              </span>
+              <span className={s.optHint}>系统会尽量接近这个数量</span>
+            </label>
           </div>
-        ) : (
-          <>
-            <div className={s.sub}>当前为 {curCount} 个镜头，共 {total} 秒</div>
 
-            <div className={s.groupTitle}>镜头节奏</div>
-            <div className={s.opts}>
-              {DENSITY_META.map((m) => {
-                const on = choice === m.key
-                const isCurrent = scene.density === m.key
-                const disabled = !hasPresets && !isCurrent
-                return (
-                  <label key={m.key} className={[s.opt, on ? s.optOn : '', disabled ? s.optDisabled : ''].join(' ')}>
-                    <input type="radio" checked={on} disabled={disabled} onChange={() => setChoice(m.key)} />
-                    <span className={s.optLabel}>{m.label}</span>
-                    <span className={s.optCount}>{countOf(m.key)} 镜</span>
-                    <span className={s.optHint}>
-                      {isCurrent ? '当前方案' : m.hint}
-                      {isCurrent && <span className={s.badge}>当前</span>}
-                    </span>
-                  </label>
-                )
-              })}
+          {longCount > 0 && (
+            <div className={s.warn}>⚠ 其中 {longCount} 个镜头时长较长，生成视频时可能需要拆成多段。</div>
+          )}
 
-              <label className={[s.opt, choice === 'custom' ? s.optOn : '', !hasPresets ? s.optDisabled : ''].join(' ')}>
-                <input type="radio" checked={choice === 'custom'} disabled={!hasPresets} onChange={() => setChoice('custom')} />
-                <span className={s.optLabel}>期望镜头数</span>
-                <span className={s.optCount}>
-                  <input
-                    className={s.countInput}
-                    type="number"
-                    min={3}
-                    max={20}
-                    value={customN}
-                    disabled={choice !== 'custom'}
-                    onChange={(e) => setCustomN(Math.max(3, Math.min(20, Number(e.target.value) || 3)))}
-                  />
-                  镜
-                </span>
-                <span className={s.optHint}>系统会尽量接近这个数量</span>
-              </label>
-            </div>
+          <div className={s.assetNote}>
+            ✓ 本次将使用项目资产库中的现有资产，不新增。如需补充请到项目资产库添加。
+          </div>
 
-            {longCount > 0 && (
-              <div className={s.warn}>⚠ 其中 {longCount} 个镜头时长较长，生成视频时可能需要拆成多段。</div>
-            )}
+          <div className={s.impact}>
+            <div className={s.impactTitle}>预计消耗</div>
+            预计生成 {estShots} 个镜头 · 预计消耗 {fmtCost(cost)}。本场原有分镜、人工修改和镜头提示词将被新结果替换；此操作不可撤销。
+          </div>
 
-            <div className={s.assetNote}>
-              ✓ 本次将使用项目资产库中的现有资产，不新增。如需补充请到项目资产库添加。
-            </div>
-
-            <div className={s.impact}>
-              <div className={s.impactTitle}>预计消耗</div>
-              预计生成 {estShots} 个镜头 · 预计消耗 {fmtCost(cost)}。本场原有分镜、人工修改和镜头提示词将被新结果替换；此操作不可撤销。
-            </div>
-
-            <div className={d.actions}>
-              <button className={ui.btn} onClick={onClose}>取消</button>
-              <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={confirm}>
-                确认并重新拆分 · {fmtCost(cost)}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+          <div className={d.actions}>
+            <button className={ui.btn} onClick={onClose}>取消</button>
+            <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={confirm}>
+              确认并重新拆分 · {fmtCost(cost)}
+            </button>
+          </div>
+        </>
+      )}
+    </Dialog>
   )
 }

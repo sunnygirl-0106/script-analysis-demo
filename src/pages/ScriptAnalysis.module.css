@@ -27,11 +27,6 @@
   font-size: 11.5px;
   color: var(--t4);
 }
-.seg button.on {
-  background: var(--bg1);
-  color: var(--acc);
-  font-weight: 600;
-}
 
 .paneScroll {
   overflow: auto;

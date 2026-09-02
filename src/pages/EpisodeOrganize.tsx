@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Dialog } from '../components/Dialog'
 import { useStore } from '../store/useStore'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { RATE, costExtract, fmtCost } from '../services/cost'
@@ -304,24 +305,22 @@ export function EpisodeOrganize() {
 
       {/* 删除本集：不可逆，走一次确认。 */}
       {del && (
-        <div className={d.overlay} onClick={() => setConfirmDelete(null)}>
-          <div className={d.dialog} onClick={(e) => e.stopPropagation()}>
-            <div className={d.title}>删除第 {del.no} 集「{del.title}」？</div>
-            <div className={d.danger}>
-              这一集的 {del.wordCount.toLocaleString()} 字原文将从项目中移除，后续集号顺延。
-              本集还没提取过资产，删除不影响项目资产库。此操作不可撤销。
-            </div>
-            <div className={d.actions}>
-              <button className={ui.btn} onClick={() => setConfirmDelete(null)}>取消</button>
-              <button
-                className={[ui.btn, ui.btnDanger].join(' ')}
-                onClick={() => { deleteDraftEpisode(del.id); setConfirmDelete(null) }}
-              >
-                删除
-              </button>
-            </div>
+        <Dialog onClose={() => setConfirmDelete(null)} className={d.dialog}>
+          <div className={d.title}>删除第 {del.no} 集「{del.title}」？</div>
+          <div className={d.danger}>
+            这一集的 {del.wordCount.toLocaleString()} 字原文将从项目中移除，后续集号顺延。
+            本集还没提取过资产，删除不影响项目资产库。此操作不可撤销。
           </div>
-        </div>
+          <div className={d.actions}>
+            <button className={ui.btn} onClick={() => setConfirmDelete(null)}>取消</button>
+            <button
+              className={[ui.btn, ui.btnDanger].join(' ')}
+              onClick={() => { deleteDraftEpisode(del.id); setConfirmDelete(null) }}
+            >
+              删除
+            </button>
+          </div>
+        </Dialog>
       )}
     </div>
   )

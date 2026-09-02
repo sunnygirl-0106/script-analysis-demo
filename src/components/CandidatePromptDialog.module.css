@@ -7,18 +7,6 @@
   from { opacity: 0; transform: translateY(-6px) scale(0.985); }
   to { opacity: 1; transform: none; }
 }
-
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-dialog);
-  background: var(--scrim);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  animation: cpFade 0.16s ease;
-}
 .pop {
   width: 560px;
   max-width: 100%;

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Dialog } from './Dialog'
 import { useStore } from '../store/useStore'
 import type { ShotDensity } from '../data/types'
 import type { Decision } from './decision'
@@ -40,66 +41,67 @@ export function SplitDensityDialog({
     : `全剧 ${targets.length} 集`
 
   return (
-    <div className={d.overlay} onClick={onClose}>
-      <div className={s.dialog} onClick={(e) => e.stopPropagation()}>
-        <div className={s.head}>
-          <div className={d.title}>{incremental ? '确认新增资产并开始拆分' : '确认资产并开始拆分'}</div>
-          <button className={s.close} onClick={onClose} title="关闭" aria-label="关闭">×</button>
-        </div>
-        <div className={s.sub}>
-          {scope} · 预计约 {scenes} 场。
-        </div>
+    <Dialog
+      onClose={onClose}
+      className={s.dialog}
+    >
+      <div className={s.head}>
+        <div className={d.title}>{incremental ? '确认新增资产并开始拆分' : '确认资产并开始拆分'}</div>
+        <button className={s.close} onClick={onClose} title="关闭" aria-label="关闭">×</button>
+      </div>
+      <div className={s.sub}>
+        {scope} · 预计约 {scenes} 场。
+      </div>
 
-        <div className={s.secTitle}>选择全剧默认镜头节奏</div>
-        <div className={s.cards}>
-          {DENSITY_META.map((m) => {
-            const on = density === m.key
-            const [l, h] = rangeOf(m.key)
-            return (
-              <button
-                key={m.key}
-                className={[s.card, on ? s.cardOn : ''].join(' ')}
-                onClick={() => setDensity(m.key)}
-              >
-                <div className={s.cardHead}>
-                  <span className={s.cardName}>{m.label}</span>
-                  {m.key === 'standard' && <span className={s.rec}>推荐</span>}
-                </div>
-                <div className={s.cardDesc}>{m.desc}</div>
-                <div className={s.bars}>
-                  <span className={s.barsLabel}>
-                    镜头量{m.bars === 3 ? '较多' : m.bars === 2 ? '适中' : '较少'}
-                  </span>
-                  {[0, 1, 2].map((i) => (
-                    <span key={i} className={[s.bar, i < m.bars ? s.barOn : ''].join(' ')} />
-                  ))}
-                </div>
-                <div className={s.cardSec}>约 {EST.secPerShot[m.key]} 秒 / 镜</div>
-                <div className={s.cardEst}>
-                  预计约 {l}–{h} 镜 · <b>{fmtCost(costOf(m.key))}</b>
-                </div>
-              </button>
-            )
-          })}
-        </div>
+      <div className={s.secTitle}>选择全剧默认镜头节奏</div>
+      <div className={s.cards}>
+        {DENSITY_META.map((m) => {
+          const on = density === m.key
+          const [l, h] = rangeOf(m.key)
+          return (
+            <button
+              key={m.key}
+              className={[s.card, on ? s.cardOn : ''].join(' ')}
+              onClick={() => setDensity(m.key)}
+            >
+              <div className={s.cardHead}>
+                <span className={s.cardName}>{m.label}</span>
+                {m.key === 'standard' && <span className={s.rec}>推荐</span>}
+              </div>
+              <div className={s.cardDesc}>{m.desc}</div>
+              <div className={s.bars}>
+                <span className={s.barsLabel}>
+                  镜头量{m.bars === 3 ? '较多' : m.bars === 2 ? '适中' : '较少'}
+                </span>
+                {[0, 1, 2].map((i) => (
+                  <span key={i} className={[s.bar, i < m.bars ? s.barOn : ''].join(' ')} />
+                ))}
+              </div>
+              <div className={s.cardSec}>约 {EST.secPerShot[m.key]} 秒 / 镜</div>
+              <div className={s.cardEst}>
+                预计约 {l}–{h} 镜 · <b>{fmtCost(costOf(m.key))}</b>
+              </div>
+            </button>
+          )
+        })}
+      </div>
 
-        <div className={s.summary}>
-          <div className={s.summaryTop}>
-            <span className={s.summaryTitle}>已选{label}节奏</span>
-            <span className={s.summaryVal}>预计 {lo}–{hi} 镜 · {fmtCost(cost)}</span>
-          </div>
-        </div>
-
-        <div className={d.actions}>
-          <button className={ui.btn} onClick={onClose}>取消</button>
-          <button
-            className={[ui.btn, ui.btnPrimary].join(' ')}
-            onClick={() => { onClose(); beginSplit(density, decisions) }}
-          >
-            确认并开始拆分 · {fmtCost(cost)}
-          </button>
+      <div className={s.summary}>
+        <div className={s.summaryTop}>
+          <span className={s.summaryTitle}>已选{label}节奏</span>
+          <span className={s.summaryVal}>预计 {lo}–{hi} 镜 · {fmtCost(cost)}</span>
         </div>
       </div>
-    </div>
+
+      <div className={d.actions}>
+        <button className={ui.btn} onClick={onClose}>取消</button>
+        <button
+          className={[ui.btn, ui.btnPrimary].join(' ')}
+          onClick={() => { onClose(); beginSplit(density, decisions) }}
+        >
+          确认并开始拆分 · {fmtCost(cost)}
+        </button>
+      </div>
+    </Dialog>
   )
 }

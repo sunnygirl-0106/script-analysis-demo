@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Dialog } from './Dialog'
 import { TaskProgress } from './TaskProgress'
 import { PHASES, taskDuration } from '../services/taskRun'
 import { costAssetPrompt, fmtCost } from '../services/cost'
@@ -34,13 +35,6 @@ export function CandidatePromptDialog({
     }
   }, [text, draft])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   const dirty = draft !== text
   const save = () => {
@@ -50,56 +44,57 @@ export function CandidatePromptDialog({
   const showComplete = editable && !!onComplete && !draft.trim()
 
   return (
-    <div className={s.overlay} onClick={onClose}>
-      <div className={s.pop} onClick={(e) => e.stopPropagation()}>
-        <div className={s.head}>
-          <span className={s.headName}>{title} · 生成提示词</span>
-          <button className={s.close} onClick={onClose} title="关闭">✕</button>
-        </div>
-
-        <textarea
-          className={s.textarea}
-          value={draft}
-          autoFocus
-          readOnly={!editable}
-          spellCheck={false}
-          placeholder={editable ? '在此填入详细提示词' : ''}
-          onChange={(e) => setDraft(e.target.value)}
-        />
-
-        <div className={s.foot}>
-          <span className={s.footLeft}>
-            {showComplete &&
-              (running ? (
-                <TaskProgress
-                  compact
-                  phases={PHASES.assetPrompt}
-                  durationMs={taskDuration(costAssetPrompt())}
-                  onDone={() => {
-                    onComplete?.()
-                    setRunning(false)
-                  }}
-                />
-              ) : (
-                <button className={s.completeBtn} onClick={() => setRunning(true)}>
-                  ✦ AI 结合剧本补全 · {fmtCost(costAssetPrompt())}
-                </button>
-              ))}
-          </span>
-          <span className={s.footRight}>
-            <button className={ui.btn} onClick={onClose}>取消</button>
-            {editable && (
-              <button
-                className={[ui.btn, ui.btnPrimary].join(' ')}
-                disabled={!dirty}
-                onClick={save}
-              >
-                保存
-              </button>
-            )}
-          </span>
-        </div>
+    <Dialog
+      onClose={onClose}
+      className={s.pop}
+    >
+      <div className={s.head}>
+        <span className={s.headName}>{title} · 生成提示词</span>
+        <button className={s.close} onClick={onClose} title="关闭">✕</button>
       </div>
-    </div>
+
+      <textarea
+        className={s.textarea}
+        value={draft}
+        autoFocus
+        readOnly={!editable}
+        spellCheck={false}
+        placeholder={editable ? '在此填入详细提示词' : ''}
+        onChange={(e) => setDraft(e.target.value)}
+      />
+
+      <div className={s.foot}>
+        <span className={s.footLeft}>
+          {showComplete &&
+            (running ? (
+              <TaskProgress
+                compact
+                phases={PHASES.assetPrompt}
+                durationMs={taskDuration(costAssetPrompt())}
+                onDone={() => {
+                  onComplete?.()
+                  setRunning(false)
+                }}
+              />
+            ) : (
+              <button className={s.completeBtn} onClick={() => setRunning(true)}>
+                ✦ AI 结合剧本补全 · {fmtCost(costAssetPrompt())}
+              </button>
+            ))}
+        </span>
+        <span className={s.footRight}>
+          <button className={ui.btn} onClick={onClose}>取消</button>
+          {editable && (
+            <button
+              className={[ui.btn, ui.btnPrimary].join(' ')}
+              disabled={!dirty}
+              onClick={save}
+            >
+              保存
+            </button>
+          )}
+        </span>
+      </div>
+    </Dialog>
   )
 }

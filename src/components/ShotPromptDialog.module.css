@@ -1,13 +1,4 @@
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--scrim);
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
+
 .dialog {
   width: 1000px;
   max-width: 94vw;

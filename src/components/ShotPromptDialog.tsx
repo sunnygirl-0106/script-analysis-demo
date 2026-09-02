@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Dialog } from './Dialog'
 import { useStore } from '../store/useStore'
 import type { Shot } from '../data/types'
 import { EntityText } from './EntityText'
@@ -76,14 +77,6 @@ export function ShotPromptDialog({
     onClose()
   }
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [img, vid, imgDirty, vidDirty, promptState])
 
   const copy = (label: string, text: string) => async () => {
     if (!text.trim()) {
@@ -126,106 +119,107 @@ export function ShotPromptDialog({
   ]
 
   return (
-    <div className={s.overlay} onClick={close}>
-      <div className={s.dialog} onClick={(e) => e.stopPropagation()}>
-        <div className={s.titleRow}>
-          <div className={s.title}>
-            第 {shot.no} 镜 · {shot.title}
-          </div>
-          <button className={s.close} onClick={close} title="关闭">
-            ✕
-          </button>
+    <Dialog
+      onClose={close}
+      className={s.dialog}
+    >
+      <div className={s.titleRow}>
+        <div className={s.title}>
+          第 {shot.no} 镜 · {shot.title}
         </div>
-
-        <div className={s.cols}>
-          {fields.map((f) => (
-            <section className={s.box} key={f.key}>
-              <header className={s.h}>
-                <b>{f.label}</b>
-                <em>{f.value.length} 字</em>
-                <button className={s.copy} onClick={copy(f.label, f.value)} title="复制整段">
-                  复制
-                </button>
-              </header>
-              {/* 彩色背板（按类目上色）+ 透明文字 textarea 叠在一起：查看与编辑都保持颜色。 */}
-              <div className={s.editWrap}>
-                <div className={s.backdrop} aria-hidden>
-                  {f.value ? (
-                    <EntityText text={f.value} variant="mark" />
-                  ) : (
-                    <span className={s.ph}>{f.placeholder}</span>
-                  )}
-                  {/* 末尾换行时补一个占位，保证背板与 textarea 行高一致 */}
-                  {f.value.endsWith('\n') && '​'}
-                </div>
-                <textarea
-                  ref={f.ref}
-                  className={s.textarea}
-                  value={f.value}
-                  readOnly={readOnly}
-                  autoFocus={f.key === focus}
-                  spellCheck={false}
-                  onChange={(e) => f.set(e.target.value)}
-                  onScroll={(e) => {
-                    const b = (e.currentTarget.previousElementSibling as HTMLElement) ?? null
-                    if (b) {
-                      b.scrollTop = e.currentTarget.scrollTop
-                      b.scrollLeft = e.currentTarget.scrollLeft
-                    }
-                  }}
-                />
-                {!readOnly && (
-                  <AtMentionPicker textareaRef={f.ref} value={f.value} onChange={f.set} shotId={shot.id} />
-                )}
-              </div>
-            </section>
-          ))}
-        </div>
-
-        {!readOnly && <div className={s.foot}>输入 @ 选择资产 · 自动保存</div>}
-
-        <div className={s.actions}>
-          <label className={s.modelPick}>
-            生成模型
-            <select
-              className={s.modelSelect}
-              value={model}
-              disabled={readOnly}
-              onChange={(e) => setModel(e.target.value)}
-            >
-              {MODELS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </label>
-          <span className={s.spacer} />
-          {readOnly ? (
-            <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={close}>
-              关闭
-            </button>
-          ) : running ? (
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <TaskProgress
-                compact
-                phases={PHASES.shotPrompt}
-                durationMs={taskDuration(GEN_COST)}
-                onDone={() => { generatePrompts([shot.id]); setRunning(false) }}
-              />
-            </span>
-          ) : (
-            <button
-              className={[ui.btn, ui.btnPrimary].join(' ')}
-              disabled={generating}
-              onClick={() => setRunning(true)}
-            >
-              {generating && <span className={s.spin} />}
-              {revealed ? `确认并重新生成 · ${fmtCost(GEN_COST)}` : `生成 · ${fmtCost(GEN_COST)}`}
-            </button>
-          )}
-        </div>
+        <button className={s.close} onClick={close} title="关闭">
+          ✕
+        </button>
       </div>
-    </div>
+
+      <div className={s.cols}>
+        {fields.map((f) => (
+          <section className={s.box} key={f.key}>
+            <header className={s.h}>
+              <b>{f.label}</b>
+              <em>{f.value.length} 字</em>
+              <button className={s.copy} onClick={copy(f.label, f.value)} title="复制整段">
+                复制
+              </button>
+            </header>
+            {/* 彩色背板（按类目上色）+ 透明文字 textarea 叠在一起：查看与编辑都保持颜色。 */}
+            <div className={s.editWrap}>
+              <div className={s.backdrop} aria-hidden>
+                {f.value ? (
+                  <EntityText text={f.value} variant="mark" />
+                ) : (
+                  <span className={s.ph}>{f.placeholder}</span>
+                )}
+                {/* 末尾换行时补一个占位，保证背板与 textarea 行高一致 */}
+                {f.value.endsWith('\n') && '​'}
+              </div>
+              <textarea
+                ref={f.ref}
+                className={s.textarea}
+                value={f.value}
+                readOnly={readOnly}
+                autoFocus={f.key === focus}
+                spellCheck={false}
+                onChange={(e) => f.set(e.target.value)}
+                onScroll={(e) => {
+                  const b = (e.currentTarget.previousElementSibling as HTMLElement) ?? null
+                  if (b) {
+                    b.scrollTop = e.currentTarget.scrollTop
+                    b.scrollLeft = e.currentTarget.scrollLeft
+                  }
+                }}
+              />
+              {!readOnly && (
+                <AtMentionPicker textareaRef={f.ref} value={f.value} onChange={f.set} shotId={shot.id} />
+              )}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      {!readOnly && <div className={s.foot}>输入 @ 选择资产 · 自动保存</div>}
+
+      <div className={s.actions}>
+        <label className={s.modelPick}>
+          生成模型
+          <select
+            className={s.modelSelect}
+            value={model}
+            disabled={readOnly}
+            onChange={(e) => setModel(e.target.value)}
+          >
+            {MODELS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </label>
+        <span className={s.spacer} />
+        {readOnly ? (
+          <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={close}>
+            关闭
+          </button>
+        ) : running ? (
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <TaskProgress
+              compact
+              phases={PHASES.shotPrompt}
+              durationMs={taskDuration(GEN_COST)}
+              onDone={() => { generatePrompts([shot.id]); setRunning(false) }}
+            />
+          </span>
+        ) : (
+          <button
+            className={[ui.btn, ui.btnPrimary].join(' ')}
+            disabled={generating}
+            onClick={() => setRunning(true)}
+          >
+            {generating && <span className={s.spin} />}
+            {revealed ? `确认并重新生成 · ${fmtCost(GEN_COST)}` : `生成 · ${fmtCost(GEN_COST)}`}
+          </button>
+        )}
+      </div>
+    </Dialog>
   )
 }

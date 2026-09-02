@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Dialog } from '../components/Dialog'
 import { useStore } from '../store/useStore'
 import { FIRST_BATCH_KINDS, type Asset } from '../data/types'
 import { KIND_LABEL } from '../components/entity'
@@ -78,26 +79,24 @@ export function VisualPrep() {
       </div>
 
       {confirm && (
-        <div className={di.overlay} onClick={() => setConfirm(null)}>
-          <div className={di.dialog} onClick={(e) => e.stopPropagation()}>
-            <div className={di.title}>从项目资产库删除「{confirm.name}」？</div>
-            <div className={di.danger}>
-              {notDraft
-                ? '该资产已进入出图队列 / 已出图，删除不退还星钻。'
-                : '删除后不可恢复。'}
-              {refShots > 0 && `当前剧本有 ${refShots} 个镜头引用它，删除后这些镜头的挂载会失效并标记待更新（镜头文字保留，不会被清理）。`}
-            </div>
-            <div className={di.actions}>
-              <button className={ui.btn} onClick={() => setConfirm(null)}>取消</button>
-              <button
-                className={[ui.btn, ui.btnDanger].join(' ')}
-                onClick={() => { deleteAsset(confirm.id); setConfirm(null) }}
-              >
-                {notDraft ? '仍然删除' : '删除'}
-              </button>
-            </div>
+        <Dialog onClose={() => setConfirm(null)} className={di.dialog}>
+          <div className={di.title}>从项目资产库删除「{confirm.name}」？</div>
+          <div className={di.danger}>
+            {notDraft
+              ? '该资产已进入出图队列 / 已出图，删除不退还星钻。'
+              : '删除后不可恢复。'}
+            {refShots > 0 && `当前剧本有 ${refShots} 个镜头引用它，删除后这些镜头的挂载会失效并标记待更新（镜头文字保留，不会被清理）。`}
           </div>
-        </div>
+          <div className={di.actions}>
+            <button className={ui.btn} onClick={() => setConfirm(null)}>取消</button>
+            <button
+              className={[ui.btn, ui.btnDanger].join(' ')}
+              onClick={() => { deleteAsset(confirm.id); setConfirm(null) }}
+            >
+              {notDraft ? '仍然删除' : '删除'}
+            </button>
+          </div>
+        </Dialog>
       )}
     </div>
   )
