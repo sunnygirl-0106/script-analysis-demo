@@ -36,9 +36,9 @@ function usageIndexOf(project: Project): Record<string, AssetUsage> {
 
 export type Tab = 'character' | 'costume' | 'location' | 'prop' | 'shot'
 
-/** 演示相位机：进站空态 → 模拟上传 → 解析中（内容分区错峰显现）→ 完成。
+/** 演示相位机（v2.3 §二 上传四拍）：空态 → 预估中(3–5s) → 确认花费弹窗 → 解析中 → 完成。
  *  纯 UI 态，不进领域模型。seed 始终完整加载，动画只做呈现层揭示。 */
-export type AnalysisPhase = 'empty' | 'uploading' | 'analyzing' | 'done'
+export type AnalysisPhase = 'empty' | 'estimating' | 'confirm' | 'analyzing' | 'done'
 
 export interface ToastAction {
   label: string
@@ -140,7 +140,7 @@ export interface StoreState extends UIState {
   dismissToast: () => void
 
   // ── 拆解过程演示动作 ──
-  // 空态点「导入剧本」：进 uploading（模拟上传），控制器随后转 analyzing。
+  // 空态点「上传剧本」：进 estimating（预估中，3–5s），随后由页面转 confirm → analyzing。
   startUpload: () => void
   setAnalysisPhase: (phase: AnalysisPhase) => void
   /** 流程条跳转用：切阶段② / 阶段③ 相位（其余相位切换各有专用入口，不走这里）。 */
@@ -517,8 +517,8 @@ export const useStore = create<StoreState>((set, get) => {
   },
   dismissToast: () => set({ toast: null }),
 
-  // 空态点「导入剧本」→ 模拟上传态。真正的时间线推进由 App 里的揭示控制器接管。
-  startUpload: () => set({ analysisPhase: 'uploading', revealStage: 0 }),
+  // 空态点「上传剧本」→ 进预估态（EmptyScriptState 里的 TaskProgress 跑完转 confirm）。
+  startUpload: () => set({ analysisPhase: 'estimating', revealStage: 0 }),
   setAnalysisPhase: (analysisPhase) => set({ analysisPhase }),
   setAnalysisStep: (analysisStep) => set({ analysisStep }),
   setRevealStage: (revealStage) => set({ revealStage }),

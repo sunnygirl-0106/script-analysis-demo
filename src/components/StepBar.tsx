@@ -29,6 +29,7 @@ export function StepBar() {
   const replayDemo = useStore((st) => st.replayDemo)
   const setAnalysisStep = useStore((st) => st.setAnalysisStep)
   const setPage = useStore((st) => st.setPage)
+  const setStage = useStore((st) => st.setStage)
   const setTab = useStore((st) => st.setTab)
 
   const committed = project.libraryCommittedAt != null
@@ -81,7 +82,9 @@ export function StepBar() {
       case 2: setAnalysisStep('assetConfirm'); setTab('character'); setPage('analysis'); break
       case 3: setAnalysisStep('storyboard'); setTab('shot'); setPage('analysis'); break
       case 4: setAnalysisStep('storyboard'); setTab('shot'); setPage('analysis'); scrollToFooter(); break
-      case 5: setPage('visual'); break
+      // ⑤ 资产库生图：只有全部提示词就绪才可跳（jumpable[5] = allReady）。
+      // 走 setStage 而非 setPage —— 进资产库这一刻交付第一批资产（deliverFirstBatch）。
+      case 5: setStage('visual'); break
     }
   }
 

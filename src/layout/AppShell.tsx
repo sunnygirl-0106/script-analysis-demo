@@ -63,10 +63,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const setAnalysisPhase = useStore((st) => st.setAnalysisPhase)
   const finishFirstImport = useStore((st) => st.finishFirstImport)
 
-  // 演示控制器 pill：解析中可「跳过」直达完整页；完整页可「重新演示」复位重播。空态不显示（空态自带 CTA）。
-  const running = analysisPhase === 'uploading' || analysisPhase === 'analyzing'
+  // 演示控制器 pill：解析中可「跳过」直达完整页；完整页可「重新演示」复位重播。
+  // 空态 / 预估中 / 确认弹窗都算「还没真正开跑」，不显示 pill（空态自带 CTA）。
+  const running = analysisPhase === 'analyzing'
   const demoPill =
-    activePage === 'analysis' && analysisPhase !== 'empty' ? (
+    activePage === 'analysis' && (analysisPhase === 'analyzing' || analysisPhase === 'done') ? (
       running ? (
         <button
           className={s.demoPill}

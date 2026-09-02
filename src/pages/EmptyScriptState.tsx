@@ -1,29 +1,35 @@
 import { useStore } from '../store/useStore'
 import { STEPS } from '../components/StepBar'
-import { seedProject } from '../data/seed'
-import { RATE, costParse, fmtCost } from '../services/cost'
+import { TaskProgress } from '../components/TaskProgress'
+import { UploadConfirmDialog } from '../components/UploadConfirmDialog'
 import s from './EmptyScriptState.module.css'
 
-// 首次导入 = 解析全剧原文，按字数计价。演示的 seed 原文是逐场梗概（很短），
-// 给一个代表性字数（每场约 2400 字），让价签相对「25 镜 · ✦25」量级合理。
-const SCRIPT_TEXT = Object.values(seedProject.scenes).map((sc) => sc.rawText).join('\n')
-const SCRIPT_SCENES = Object.keys(seedProject.scenes).length
-const PARSE_COST = Math.max(costParse(SCRIPT_TEXT), Math.round((SCRIPT_SCENES * 2400) / 1000) * RATE.parsePerKChar)
-
-// 空态（源自 空剧本.html 的 2a）：进站第一屏。点「导入剧本」= 模拟上传，随后由 App 控制器接管开拆。
-// 进站指引直接复用五步流程条的 STEPS（单一真相源，见 StepBar.tsx），避免与主流程漂移。
+// 空态（源自 空剧本.html 的 2a）：进站第一屏。上传四拍见 v2.3 §二。
+// 第一拍上传（按钮不带价签）→ 第二拍预估中(3–5s，复用 TaskProgress) → 第三拍确认花费弹窗
+// → 第四拍点确认进 analyzing。取消回空态、什么都没发生。
+const ESTIMATE_MS = 3600
 
 export function EmptyScriptState() {
   const phase = useStore((st) => st.analysisPhase)
   const project = useStore((st) => st.project)
   const startUpload = useStore((st) => st.startUpload)
-  const uploading = phase === 'uploading'
+  const setAnalysisPhase = useStore((st) => st.setAnalysisPhase)
+
+  const estimating = phase === 'estimating'
+  const confirming = phase === 'confirm'
+  const busy = estimating || confirming
+
+  // 第二拍文案：先读剧本、再估消耗（让用户看见系统在读他的剧本，不是纯等待）。
+  const estimatePhases = [
+    { label: `正在读取《${project.title}》`, weight: 1 },
+    { label: '正在预估拆解与资产提取的消耗', weight: 1 },
+  ]
 
   return (
     <div className={s.wrap}>
       <div className={s.toolbar}>
-        <button className={s.ghost} disabled={uploading} onClick={startUpload}>
-          导入剧本
+        <button className={s.ghost} disabled={busy} onClick={startUpload}>
+          上传剧本
         </button>
       </div>
 
@@ -53,19 +59,20 @@ export function EmptyScriptState() {
           导入剧本后，自动拆出集、场与镜头，并整理角色、服装、场景、道具四类资产。
         </div>
 
-        <button className={s.cta} disabled={uploading} onClick={startUpload}>
-          {uploading ? (
-            <>
-              <span className={s.ctaSpin} />
-              正在上传《最后的尊严》…
-            </>
-          ) : (
-            <>
-              <span className={s.ctaPlus}>＋</span>解析剧本 · {fmtCost(PARSE_COST)}
-            </>
-          )}
-        </button>
-        <div className={s.hint}>支持 txt / docx / fdx · 按字数计费</div>
+        {estimating ? (
+          <div className={s.estimateBox}>
+            <TaskProgress
+              phases={estimatePhases}
+              durationMs={ESTIMATE_MS}
+              onDone={() => setAnalysisPhase('confirm')}
+            />
+          </div>
+        ) : (
+          <button className={s.cta} disabled={busy} onClick={startUpload}>
+            <span className={s.ctaPlus}>＋</span>上传剧本
+          </button>
+        )}
+        <div className={s.hint}>支持 txt / docx / fdx</div>
 
         <div className={s.steps}>
           <span className={s.stepLine} />
@@ -80,6 +87,14 @@ export function EmptyScriptState() {
           </div>
         </div>
       </div>
+
+      {/* 第三拍：确认花费弹窗。取消回空态；确认进 analyzing。 */}
+      {confirming && (
+        <UploadConfirmDialog
+          onCancel={() => setAnalysisPhase('empty')}
+          onConfirm={() => setAnalysisPhase('analyzing')}
+        />
+      )}
     </div>
   )
 }

@@ -25,7 +25,6 @@ export function ScriptAnalysis() {
   const sceneId = useStore((st) => st.selectedSceneId)
   const activeTab = useStore((st) => st.activeTab)
   const showToast = useStore((st) => st.showToast)
-  const setStage = useStore((st) => st.setStage)
   const scriptOpen = useStore((st) => st.scriptOpen)
   const usageIndex = useStore((st) => st.usageIndex())
   const episodeW = useStore((st) => st.episodeW)
@@ -48,14 +47,13 @@ export function ScriptAnalysis() {
   // 未引用资产计数（删场/删集不删资产的可视化出口，§4.2）。
   const unrefTotal = unreferencedCount(usageIndex)
 
-  // 两步式 CTA：「生成提示词」（次要，恒可点）与「进入资产库生图」（主，全就绪才可点）共存。
+  // 分镜页页脚只留一个动作：「生成提示词」。去资产库生图是下一步——全部就绪后走流程条⑤「资产库生图」。
   // 口径为全剧：need = 全部待生成 + 待更新的镜头。数量统计只进完成度提示行，不进按钮文案。
   const allShotIds = Object.keys(project.shots)
   const stateOf = (id: string) => promptStates[id] ?? 'pending'
   const needIds = allShotIds.filter((id) => stateOf(id) === 'pending' || stateOf(id) === 'stale')
   const staleCount = allShotIds.filter((id) => stateOf(id) === 'stale').length
   const busy = allShotIds.some((id) => stateOf(id) === 'generating')
-  const allReady = needIds.length === 0 && !busy && allShotIds.length > 0
   // 含至少一个待生成镜头的场数。
   const needSceneCount = new Set(needIds.map((id) => project.shots[id]?.sceneId)).size
 
@@ -130,19 +128,11 @@ export function ScriptAnalysis() {
             )
           )}
           <button
-            className={ui.btn}
+            className={[ui.btn, ui.btnPrimary].join(' ')}
             disabled={busy}
             onClick={() => setPromptScope('scene')}
           >
             {busy ? '生成中…' : '生成提示词'}
-          </button>
-          <button
-            className={[ui.btn, ui.btnPrimary].join(' ')}
-            disabled={!allReady}
-            title={allReady ? undefined : `还有 ${needIds.length} 个镜头的提示词未生成`}
-            onClick={() => setStage('visual')}
-          >
-            进入资产库生图 →
           </button>
         </div>
       </div>

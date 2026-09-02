@@ -6,6 +6,12 @@ export interface Phase {
 }
 
 export const PHASES = {
+  // 首次上传后的解析（v2.3 §二 第四拍）：只提取资产、不拆镜头。
+  parse: [
+    { label: '正在划分集与场', weight: 2 },
+    { label: '正在提取角色 · 服装 · 场景 · 道具', weight: 3 },
+    { label: '正在生成资产提示词', weight: 2 },
+  ],
   split: [
     { label: '正在保存资产到项目资产库', weight: 1 },
     { label: '正在划分集与场', weight: 2 },

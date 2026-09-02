@@ -1,0 +1,118 @@
+/* 提示词浮层（v2.3 §3.4）：居中盖在数据区上方，固定尺寸不随内容变。 */
+@keyframes cpFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes cpIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog);
+  background: var(--scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: cpFade 0.16s ease;
+}
+.pop {
+  width: 560px;
+  max-width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--edge);
+  border-radius: var(--rlg);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.5);
+  display: flex;
+  flex-direction: column;
+  animation: cpIn 0.18s ease;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--line2);
+}
+.headName {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--t1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.close {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--t4);
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.close:hover {
+  color: var(--t1);
+  background: var(--raise);
+}
+
+.textarea {
+  margin: 14px 16px 4px;
+  height: 200px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--t1);
+  background: var(--bg1);
+  border: 1px solid var(--line2);
+  border-radius: var(--rsm);
+  padding: 12px 14px;
+  resize: none;
+  outline: none;
+}
+.textarea:focus {
+  border-color: var(--acc-line);
+}
+.textarea[readonly] {
+  color: var(--t2);
+  cursor: default;
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px 14px;
+}
+.footLeft {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+}
+.footRight {
+  display: inline-flex;
+  gap: 8px;
+}
+.completeBtn {
+  appearance: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--acc);
+  background: var(--acc-bg);
+  border: 1px solid var(--acc-line);
+  border-radius: var(--rpill);
+  padding: 4px 12px;
+  transition: 0.16s;
+}
+.completeBtn:hover {
+  color: var(--acc-hi);
+  border-color: var(--acc);
+}
