@@ -168,9 +168,7 @@ export function AssetConfirm() {
       <div className={s.scriptCol} style={{ width: scriptW }}>
         <div className={s.scriptHead}>
           全剧原文
-          <span className={s.scriptMeta}>
-            共 {project.episodes.length} 集 · 场与镜头在第 ③ 步产生
-          </span>
+          <span className={s.scriptMeta}>共 {project.episodes.length} 集</span>
         </div>
         <div className={[s.scriptBody, hoverAssetTerm ? s.hovering : ''].join(' ')}>
           {project.episodes.map((ep) => (

@@ -359,18 +359,6 @@
 }
 /* 该类目的「+」始终占位（透明），鼠标移到本组这一行（或键盘聚焦）时才显形。
    用透明度而非 display 切换：避免 hover 时元素进出布局导致 chip 抖动 / 串行。 */
-.addSlot {
-  display: inline-flex;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-}
-.assetGroup:hover .addSlot,
-.assetGroup:focus-within .addSlot {
-  opacity: 1;
-  pointer-events: auto;
-}
-
 /* 角色卡：头像 + 角色名 + 着装，装进一颗胶囊。标签宽度不含删除叉（叉是 hover 时的角标浮层）。 */
 .castPill {
   position: relative;
@@ -626,23 +614,6 @@
   font-size: 10.5px;
   color: var(--t4);
   font-variant-numeric: tabular-nums;
-}
-.sceneBarBtn {
-  flex: none;
-  height: 22px;
-  padding: 0 9px;
-  border-radius: var(--rpill);
-  border: 1px solid var(--line);
-  background: var(--bg3);
-  color: var(--t3);
-  font-size: 11px;
-  cursor: pointer;
-  transition: 0.14s;
-}
-.sceneBarBtn:hover {
-  border-color: var(--acc-line);
-  color: var(--acc);
-  background: var(--acc-bg);
 }
 
 /* 收尾行 */

@@ -1,15 +1,25 @@
-/* 步骤① 整理剧本页（v2.6 §三）。一张居中大卡 + 悬浮胶囊页脚。色调只用 theme 变量。 */
+/* 步骤① 整理剧本页（v2.6 §三 / v2.8 §2）。head + 可滚动卡片区 + 底部横条，三段。 */
 /* ⚠ AppShell 的 .contentBody 是横向 flex 容器：本页作为它的 flex 子项必须自己声明
    flex:1 + min-width:0，否则按内容宽度收缩，右边空掉一半（v2.5 §一）。 */
-/* 滚动的是整页（不再是「列表区自己滚」）：读剧本就该像读一份文档，
-   页脚跟着一起走、靠 sticky 停在视口底部。 */
+/* 滚的只有中间那段：head 与 foot 都钉住，foot 与步骤② ③ 的底栏是同一根条。 */
 .page {
   flex: 1;
   min-width: 0;
   height: 100%;
   min-height: 0;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   background: var(--bg0);
+}
+.head {
+  flex: none;
+  padding: 32px 0 16px;
+}
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 28px;
 }
 
 /* 头 / 异常条 / 卡片共用同一条 1080 的边界。 */
@@ -17,7 +27,7 @@
   width: 100%;
   max-width: 1080px;
   margin: 0 auto;
-  padding: 32px 24px 0;
+  padding: 0 24px;
 }
 
 /* ── 标题行：共 N 集 + ⋯，其下一行灰副文案 ── */
@@ -115,7 +125,7 @@
 
 /* ── 异常提示条（没有异常就整条不渲染）：卡片上方、同宽 ── */
 .anomaly {
-  margin: 20px 0 0;
+  margin: 4px 0 0;
   padding: 10px 14px;
   border: 1px solid var(--amber-line);
   background: var(--amber-bg);
@@ -129,11 +139,14 @@
 
 /* ── 集列表：一张 1080 宽的大卡 ── */
 .card {
-  margin-top: 20px;
+  margin-top: 16px;
   padding: 40px 56px;
   border: 1px solid var(--line);
   border-radius: var(--rlg);
   background: var(--bg1);
+}
+.anomaly + .card {
+  margin-top: 20px;
 }
 .epBlock + .epBlock {
   margin-top: 28px;
@@ -257,40 +270,21 @@
   margin-bottom: 0;
 }
 
-/* ── 悬浮胶囊页脚（v2.6 §3.2 / v2.7 §2.2）：sticky 在视口底部，贴 1080 卡片右缘 ── */
-.capsuleRow {
-  width: 100%;
-  max-width: 1080px;
-  margin: 0 auto;
-}
-.capsule {
-  position: sticky;
-  bottom: 24px;
-  z-index: 4;
-  width: fit-content;
-  min-width: 520px;
-  max-width: calc(100% - 48px);
-  margin: 28px 24px 24px auto;
+/* ── 底部横条（v2.8 §2）：和步骤② ③ 的底栏同一套 —— 左灰字、右主按钮，不随滚动 ── */
+.foot {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px 10px 20px;
-  background: var(--panel);
-  border: 1px solid var(--edge);
-  border-radius: 999px;
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--bg1);
 }
-.liveDot {
-  flex: none;
-  color: var(--acc);
-  font-size: 10px;
-}
-.capsuleText {
+.footText {
   flex: 1;
   min-width: 0;
-  font-size: 12.5px;
-  color: var(--t2);
-  white-space: nowrap;
+  font-size: 12px;
+  color: var(--t4);
 }
 
 /* ── 手动新建集的正文录入（v2.5 §5.3）──

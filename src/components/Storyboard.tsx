@@ -6,7 +6,6 @@ import type { Scene } from '../data/types'
 import { computeTimeline, sceneDuration } from '../services/timeline'
 import { SceneTimeline } from './SceneTimeline'
 import { SceneSettingsDrawer } from './SceneSettingsDrawer'
-import { ResplitSceneDialog } from './ResplitSceneDialog'
 import { ShotRow } from './ShotRow'
 import s from './Storyboard.module.css'
 
@@ -41,9 +40,6 @@ export function Storyboard({
 
   // 高亮完全由悬停驱动：不悬停就没有任何镜被高亮。跨场按 shotId 走，互不干扰。
   const [hoverId, setHoverId] = useState<string | null>(null)
-  // 「重拆本场」弹窗：区块头上那个顺手的口，与场 ⋯ 菜单里那个是同一个弹窗。
-  const [resplitId, setResplitId] = useState<string | null>(null)
-
   // ── 列宽（可拖拽）：一份，所有场区块共用 ──
   const [widths, setWidths] = useState<number[]>(DEFAULT_WIDTHS)
   const [dragCol, setDragCol] = useState<number | null>(null)
@@ -163,7 +159,6 @@ export function Storyboard({
               readOnly={readOnly}
               hoverId={hoverId}
               onHover={setHoverId}
-              onResplit={() => setResplitId(sc.id)}
             />
           ))}
 
@@ -187,8 +182,6 @@ export function Storyboard({
           </div>
         </div>
       </div>
-
-      {resplitId && <ResplitSceneDialog sceneId={resplitId} onClose={() => setResplitId(null)} />}
     </div>
   )
 }
@@ -196,18 +189,21 @@ export function Storyboard({
 /**
  * 一场 = 一个区块：区块头 + 若干镜头行 + 收尾行。
  *
+ * 区块头只剩标题（点了 = 只看这一场）+ `N 镜 · N 秒`（v2.8 §8）。「场级设定」「重拆本场」
+ * 两个按钮撤了：一场一份、每场重复一遍的按钮，扫全剧时就是几十个重复的口。
+ * 场级设定归单场视图时间轴上的「⚙ 情绪与配乐」，重拆本场归左侧目录场行的 ⋯ 菜单，各一个入口。
+ *
  * 返回 Fragment 而不是包一层 div —— 每一行都得是 `.grid` 的直接子节点，
  * 列宽变量 `--cols` 才管得到它们，包一层就散了。
  * 镜号仍是场内编号（1、2、3…）：区块头已经交代了这是哪一集哪一场。
  */
 function SceneBlock({
-  scene, readOnly, hoverId, onHover, onResplit,
+  scene, readOnly, hoverId, onHover,
 }: {
   scene: Scene
   readOnly: boolean
   hoverId: string | null
   onHover: (id: string | null) => void
-  onResplit: () => void
 }) {
   const shots = useStore((st) => st.project.shots)
   const episodes = useStore((st) => st.project.episodes)
@@ -218,8 +214,6 @@ function SceneBlock({
   const handleInsertAbove = useCallback((i: number) => insertShot(scene.id, i), [insertShot, scene.id])
   const handleDelete = useCallback((id: string) => deleteShot(id), [deleteShot])
   const flashShotIds = useStore((st) => st.flashShotIds)
-  const selectScene = useStore((st) => st.selectScene)
-  const openSceneSettings = useStore((st) => st.openSceneSettings)
   const setViewScope = useStore((st) => st.setViewScope)
   // 表尾「在末尾插入一镜」热区：悬停显形、停住几秒自动隐藏。每个区块各一套。
   const appendIns = useAutoHideHover()
@@ -241,17 +235,6 @@ function SceneBlock({
           </span>
           <span className={s.sceneBarMeta}>{scene.shotIds.length} 镜 · {total} 秒</span>
         </button>
-        {!readOnly && (
-          <>
-            <button
-              className={s.sceneBarBtn}
-              onClick={() => { selectScene(scene.id); openSceneSettings() }}
-            >
-              场级设定
-            </button>
-            <button className={s.sceneBarBtn} onClick={onResplit}>重拆本场</button>
-          </>
-        )}
       </div>
 
       {timeline.map((entry, i) => {

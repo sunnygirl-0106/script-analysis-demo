@@ -116,7 +116,8 @@ export function EpisodeOrganize() {
 
   return (
     <div className={s.page}>
-      <div className={s.wrap}>
+      <div className={s.head}>
+        <div className={s.wrap}>
         <div className={s.headInner}>
           <div className={s.headTitle}>共 {episodes.length} 集</div>
           <div className={s.menuWrap} ref={pageMenuRef}>
@@ -154,7 +155,12 @@ export function EpisodeOrganize() {
         <div className={s.headSub}>
           当前已整理 {episodes.length} 集 · {totalWords.toLocaleString()} 字
         </div>
+        </div>
+      </div>
 
+      {/* 卡片区自己滚，head 与 foot 都钉住不动（v2.8 §2）。 */}
+      <div className={s.scroll}>
+        <div className={s.wrap}>
         {anomalies.length > 0 && (
           <div className={s.anomaly}>
             {anomalies.map((a, i) => (
@@ -248,18 +254,18 @@ export function EpisodeOrganize() {
             )
           })}
         </div>
+        </div>
       </div>
 
-      {/* 悬浮胶囊页脚（v2.6 §3.2）：只在「有草稿集等着提取」时出现。
-          没有草稿就整条不渲染——这一页看完了点步骤条就行，不需要一个按钮催。 */}
+      {/* 底部横条（v2.8 §2）：和步骤② ③ 同一根条，不再是悬浮胶囊。
+          只在「有草稿集等着提取」时出现——没有草稿就整条不渲染，
+          这一页看完了点步骤条就行，不需要一个按钮催。 */}
       {drafts.length > 0 && (
-        <div className={s.capsuleRow}>
-        <div className={s.capsule}>
-          <span className={s.liveDot}>●</span>
-          <span className={s.capsuleText}>
+        <div className={s.foot}>
+          <span className={s.footText}>
             {committed
               ? `新增 ${drafts.length} 集，将只对新集提取资产`
-              : '剧本内容整理完毕，将进行剧本资产拆解'}
+              : `剧本内容整理完毕 · 共 ${episodes.length} 集 · ${totalWords.toLocaleString()} 字`}
           </span>
           <button
             className={[ui.btn, ui.btnPrimary].join(' ')}
@@ -268,7 +274,6 @@ export function EpisodeOrganize() {
           >
             资产提取 · {fmtCost(extractCost)}
           </button>
-        </div>
         </div>
       )}
 

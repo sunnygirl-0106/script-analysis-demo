@@ -16,7 +16,6 @@ import { useEntityLit } from './EntityText'
 import { mountIssues } from '../services/completeness'
 import { isLongShot } from '../services/duration'
 import { useAutoHideHover } from '../hooks/useAutoHideHover'
-import { MountPicker } from './MountPicker'
 import { ShotFieldCell } from './ShotFieldCell'
 import { DialogueCell } from './DialogueCell'
 import { ShotPromptDialog } from './ShotPromptDialog'
@@ -330,28 +329,20 @@ export const ShotRow = memo(function ShotRow({ shot, startAt, endAt, active, alt
         presets={CAMERA_MOVES}
       />
 
-      {/* ④ 出场的人和物：固定三组，各组内 chip + 该类目虚线「+」 */}
+      {/* ④ 出场的人和物：固定三组。这一列不再有手动挂载的口（v2.8 §6）——
+          它展示的是 AI 解析出来的结果，加人加物走「主要内容」里 @ 一下，
+          写进正文的同时自动挂载；chip 上的 × 保留，解析错了还是能摘掉。 */}
       <div className={s.cAsset}>
         <div className={s.assetGroups}>
-          {/* 角色（着装角色 + 角色兜底）：每行一个角色，「+」跟在最后一行右边，长角色不换行 */}
+          {/* 角色（着装角色 + 角色兜底）：每行一个角色，长角色不换行 */}
           <div className={s.assetGroup}>
             <div className={s.groupTitle}>{KIND_LABEL.character}</div>
             <div className={[s.groupItems, s.groupItemsRole].join(' ')}>
-              {roleEntries.map((m, idx) => (
+              {roleEntries.map((m) => (
                 <div className={s.roleRow} key={m.assetId}>
                   {roleCard(m)}
-                  {!readOnly && idx === roleEntries.length - 1 && (
-                    <span className={s.addSlot}>
-                      <MountPicker shotId={shot.id} mounts={shot.mounts} kinds={['look']} variant="add" />
-                    </span>
-                  )}
                 </div>
               ))}
-              {!readOnly && roleEntries.length === 0 && (
-                <span className={s.addSlot}>
-                  <MountPicker shotId={shot.id} mounts={shot.mounts} kinds={['look']} variant="add" />
-                </span>
-              )}
             </div>
           </div>
 
@@ -375,11 +366,6 @@ export const ShotRow = memo(function ShotRow({ shot, startAt, endAt, active, alt
                     onRemove={remove(m.assetId)}
                   />
                 ))}
-                {!readOnly && (
-                  <span className={s.addSlot}>
-                    <MountPicker shotId={shot.id} mounts={shot.mounts} kinds={[g.kind]} variant="add" />
-                  </span>
-                )}
               </div>
             </div>
           ))}

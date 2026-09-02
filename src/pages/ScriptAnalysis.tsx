@@ -10,13 +10,15 @@ import { can } from '../services/capability'
 import { costShotPrompts, fmtCost } from '../services/cost'
 import { sceneDuration } from '../services/timeline'
 import { scopeScenes } from '../services/viewScope'
+import { ic } from '../components/icons'
 import ui from '../styles/ui.module.css'
 import s from './ScriptAnalysis.module.css'
 
 // 步骤③ 的主战场：分镜表。
 // 顶部那排「分镜脚本 / 角色 / 服装 / 场景 / 道具」tab 整个撤掉——这一页就是一张大表。
 // 四类资产在步骤② 已经确认过一遍，之后的归宿是项目资产库那一页，不需要在分镜页再开一个入口。
-// 工具栏因此只剩「导出分镜脚本」。
+// 工具栏最后只剩「导出分镜脚本」一个按钮——为一个按钮留 52px 一整行不值当，
+// 它缩成页脚最左边的一个图标（v2.8 §4），右侧从上到下只剩表格 + 页脚。
 //
 // 表格铺什么由左侧目录的视图作用域决定——默认全剧，点集看一集，点场看一场。
 //
@@ -73,19 +75,18 @@ export function ScriptAnalysis() {
       )}
 
       <div className={s.rcol}>
-        <div className={s.toolbar}>
-          <div className={s.tbr}>
-            <button className={ui.btn} onClick={() => showToast('已导出分镜脚本（示例，不落盘）')}>
-              导出分镜脚本
-            </button>
-          </div>
-        </div>
-
         <div className={s.paneScroll}>
           <Storyboard scenes={scenes} readOnly={readOnly} showTimeline={viewScope.kind === 'scene'} />
         </div>
 
         <div className={s.foot} id="genPromptsFooter">
+          <button
+            className={[ui.btn, s.iconBtn].join(' ')}
+            title="导出分镜脚本"
+            onClick={() => showToast('已导出分镜脚本（示例，不落盘）')}
+          >
+            {ic.download}
+          </button>
           <div className={s.info}>
             全剧 <b>{project.episodes.length} 集</b> · <b>{Object.keys(project.scenes).length} 场</b> ·{' '}
             <b>{shotTotal} 镜</b> · 约 {durTotal} 秒

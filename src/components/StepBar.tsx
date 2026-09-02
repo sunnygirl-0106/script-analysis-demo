@@ -17,18 +17,19 @@ import s from './StepBar.module.css'
 // 这就是修「拆完之后步骤条默认跳到生成提示词」那个问题的地方：拆完就是第③步本身。
 //
 // STEPS 是单一真相源：本组件与 EmptyScriptState 的进站指引共用同一份。
-const fmtWords = (p: Project) =>
-  `${p.episodes.reduce((n, e) => n + e.wordCount, 0).toLocaleString()} 字`
-
-export const STEPS: { n: number; label: string; sub: (p: Project) => string }[] = [
-  {
-    n: 1,
-    label: '整理剧本',
-    sub: (p) => (p.episodes.length ? `${p.episodes.length} 集 · ${fmtWords(p)}` : '上传 / 拆集 / 校对'),
-  },
-  { n: 2, label: '确认资产清单', sub: () => '角色 / 服装 / 场景 / 道具' },
-  { n: 3, label: '生成分镜脚本', sub: () => '拆场 / 拆镜 / 提示词' },
+// 三步都只有标题——② ③ 那两行小字（「角色 / 服装 / 场景 / 道具」之类）说的是步骤名已经说过的事，
+// 撤掉。① 唯一要报的是已经整理出来的量，它是同一行后面的灰尾巴，不是第二行。
+export const STEPS: { n: number; label: string }[] = [
+  { n: 1, label: '整理剧本' },
+  { n: 2, label: '确认资产清单' },
+  { n: 3, label: '生成分镜脚本' },
 ]
+
+/** ① 的灰尾巴：`整理剧本 · 1 集 · 4,800 字`。一集都还没有就什么都不显示。 */
+const epTail = (p: Project) =>
+  p.episodes.length
+    ? `· ${p.episodes.length} 集 · ${p.episodes.reduce((n, e) => n + e.wordCount, 0).toLocaleString()} 字`
+    : ''
 
 type Look = 'current' | 'done' | 'jumpable' | 'disabled'
 
@@ -88,9 +89,9 @@ export function StepBar() {
     return 'disabled'
   }
 
-  // 整理跑完之前一集都还没有 —— 第①步的副文案不许提前报出「N 集 · X 字」（§九.3）。
-  const subProject =
-    analysisView === 'empty' || analysisView === 'organizing' ? { ...project, episodes: [] } : project
+  // 整理跑完之前一集都还没有 —— 第①步的尾巴不许提前报出「N 集 · X 字」（§九.3）。
+  const tail =
+    analysisView === 'empty' || analysisView === 'organizing' ? '' : epTail(project)
 
   return (
     <div className={s.bar}>
@@ -117,7 +118,7 @@ export function StepBar() {
                 <span className={s.badge}>{look === 'done' ? '✓' : st.n}</span>
                 <span className={s.txt}>
                   <span className={s.label}>{st.label}</span>
-                  <span className={s.sub}>{st.sub(subProject)}</span>
+                  {st.n === 1 && tail && <span className={s.tail}>{tail}</span>}
                 </span>
               </button>
             </div>

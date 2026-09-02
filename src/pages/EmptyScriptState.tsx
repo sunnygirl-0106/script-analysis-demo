@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useStore } from '../store/useStore'
 import { STEPS } from '../components/StepBar'
 import { ScriptIllustration } from '../components/ScriptIllustration'
 import { ScriptSourceDialog } from '../components/ScriptSourceDialog'
@@ -10,11 +9,7 @@ import s from './EmptyScriptState.module.css'
 // 点「开始整理」才关窗跑整页动效——上传必须是一个真的动作，不能一点就自己开始。
 // 没有确认花费弹窗：上传 / 研读 / 拆集免费，整理剧本页本身就是预估结果页。
 export function EmptyScriptState() {
-  const project = useStore((st) => st.project)
   const [dialogOpen, setDialogOpen] = useState(false)
-
-  // 进站指引里的第①步还没有任何产出，所以按「空剧本」渲染副文案（STEPS 仍是单一真相源）。
-  const emptyProject = { ...project, episodes: [] }
 
   return (
     <div className={s.wrap}>
@@ -43,7 +38,6 @@ export function EmptyScriptState() {
               <div className={s.step} key={step.n}>
                 <span className={[s.stepDot, i === 0 ? s.stepDotOn : ''].join(' ')}>{step.n}</span>
                 <span className={[s.stepTitle, i === 0 ? s.stepTitleOn : ''].join(' ')}>{step.label}</span>
-                <span className={s.stepSub}>{step.sub(emptyProject)}</span>
               </div>
             ))}
           </div>

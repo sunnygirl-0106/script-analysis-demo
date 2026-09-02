@@ -11,6 +11,7 @@ import s from './ShotFieldCell.module.css'
 // 分镜表里的行内可编辑字段格。点击就地弹出小弹窗（对齐设计稿）：
 //  - variant 'pill'：枚举字段（景别 / 镜头设计），input + 「→」+ 预设，均按光标位置插入，失焦自动保存。
 //  - variant 'text'：文本字段（主要内容 / 光影 / 音效），就地覆盖单元格的 textarea，失焦自动保存。
+//    主要内容（entities）编辑时也保留实体色：底下垫一层 EntityText 背板，上面盖透明文字的 textarea。
 type FieldKey = Extract<keyof Shot, 'shotSize' | 'cameraMove' | 'sourceQuote' | 'lighting' | 'dialogue' | 'sfx'>
 
 interface Props {
@@ -247,19 +248,48 @@ export function ShotFieldCell({
               </>
             ) : (
               <>
-                <textarea
-                  className={s.textarea}
-                  ref={(el) => {
-                    inputEl.current = el
-                  }}
-                  rows={rows}
-                  value={draft}
-                  spellCheck={false}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') setOpen(false)
-                  }}
-                />
+                {/* 主要内容：彩色背板 + 透明文字 textarea 叠层（与「查看提示词」同一套做法）——
+                    一点进编辑态实体名就褪成灰字，等于告诉用户「编辑时高亮没了」，
+                    而 @ 进来的资产恰恰是编辑时最需要看得见的东西。光影 / 音效没有实体，仍是纯 textarea。 */}
+                {entities ? (
+                  <div className={s.editWrap}>
+                    <div className={s.backdrop} aria-hidden>
+                      <EntityText text={draft} variant="mark" />
+                      {/* 末尾换行时补一个占位，保证背板与 textarea 行高一致 */}
+                      {draft.endsWith('\n') && '\u200b'}
+                    </div>
+                    <textarea
+                      className={[s.textarea, s.textareaOverlay].join(' ')}
+                      ref={(el) => {
+                        inputEl.current = el
+                      }}
+                      value={draft}
+                      spellCheck={false}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onScroll={(e) => {
+                        const b = e.currentTarget.previousElementSibling as HTMLElement | null
+                        if (b) b.scrollTop = e.currentTarget.scrollTop
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') setOpen(false)
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <textarea
+                    className={s.textarea}
+                    ref={(el) => {
+                      inputEl.current = el
+                    }}
+                    rows={rows}
+                    value={draft}
+                    spellCheck={false}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') setOpen(false)
+                    }}
+                  />
+                )}
                 {entities && (
                   <AtMentionPicker textareaRef={inputEl} value={draft} onChange={setDraft} shotId={shotId} />
                 )}

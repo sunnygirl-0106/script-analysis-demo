@@ -7,54 +7,37 @@
   flex-direction: column;
   min-height: 0;
 }
-.head {
-  height: 44px;
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
-  font-size: 11px;
-  color: var(--t4);
-  letter-spacing: 0.6px;
-  border-bottom: 1px solid var(--line2);
-  flex: none;
-}
-.head .rt {
-  margin-left: auto;
-}
 .tree {
   padding: 10px;
   overflow: auto;
   flex: 1;
 }
-/* 顶行「全部镜头」（v2.7 §5.3）：粗体，选中态与场行同一套 .on。 */
+/* 顶行「全剧」（v2.8 §5）：与集行同一套样式（.ep），只多一个右侧镜数。 */
 .allRow {
   width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 11px;
-  margin-bottom: 6px;
-  border-radius: var(--rsm);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--t2);
   background: transparent;
   cursor: pointer;
   text-align: left;
-  transition: background 0.16s, color 0.16s;
 }
 .allRow:hover:not(.on) {
   background: var(--bg3);
-  color: var(--t1);
 }
 .allMeta {
   margin-left: auto;
+  padding-left: 8px;
   font-size: 10px;
   font-weight: 400;
   color: var(--t4);
 }
+.allRow.on .epTitle,
 .allRow.on .allMeta {
   color: var(--acc);
+}
+/* 全剧与集之间：8px 间距 + 一条分隔线。 */
+.topSep {
+  height: 1px;
+  margin: 8px 0;
+  background: var(--line2);
 }
 
 .ep {
@@ -87,10 +70,6 @@
 }
 .ep.on .epTitle {
   color: var(--acc);
-}
-.ep.on .epSub {
-  color: var(--acc);
-  opacity: 0.75;
 }
 /* ⋯ 菜单：hover 集行时显现 */
 .menuWrap {
@@ -195,19 +174,13 @@
 .menuDanger:hover:not(:disabled) .mIcon {
   color: var(--prop);
 }
-.epSub {
-  display: block;
-  font-size: 10.5px;
-  color: var(--t4);
-  margin-top: 1px;
-}
 /* 场行外壳：承载「悬停两场之间插入一场」的浮层 */
 .scWrap {
   position: relative;
 }
 
 .sc {
-  margin: 2px 0 2px 8px;
+  margin: 2px 0 2px 18px;
   padding: 7px 11px;
   border-radius: var(--rpill);
   font-size: 11.5px;

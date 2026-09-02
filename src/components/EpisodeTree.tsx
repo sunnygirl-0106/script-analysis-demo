@@ -4,7 +4,6 @@ import { useStore } from '../store/useStore'
 import { clampToViewport } from '../services/popover'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { can } from '../services/capability'
-import { sceneDuration } from '../services/timeline'
 import { ResplitEpisodeDialog } from './ResplitEpisodeDialog'
 import { ResplitSceneDialog } from './ResplitSceneDialog'
 import { ic } from './icons'
@@ -64,13 +63,10 @@ export function EpisodeTree() {
   const menuSceneRef = useRef<HTMLDivElement>(null)
   useClickOutside(menuSceneRef, () => setMenuScene(null), menuScene !== null)
 
-  const episodeCount = project.episodes.length
-  const sceneCount = Object.keys(project.scenes).length
-  const onlyOne = episodeCount <= 1
-  // 顶行「全部镜头」的总量：目录里三种行都报 `N 镜 · Ns`，口径一致才好横向比。
-  const allScenes = Object.values(project.scenes)
-  const allShots = allScenes.reduce((n, sc) => n + sc.shotIds.length, 0)
-  const allDur = allScenes.reduce((n, sc) => n + sceneDuration(sc, project.shots), 0)
+  const onlyOne = project.episodes.length <= 1
+  // 目录三层（全剧 / 集 / 场）只报一个单位：镜。顶行报全剧总镜数，场行报本场镜数，
+  // 集行一个数都不报——名字底下再挂一行「N 场 · N 镜 · Ns」就成了第三处报数（v2.8 §5）。
+  const allShots = Object.values(project.scenes).reduce((n, sc) => n + sc.shotIds.length, 0)
 
   const delEp = dialog?.type === 'delete' ? project.episodes.find((e) => e.id === dialog.epId) : undefined
   const delStat = delEp
@@ -101,25 +97,19 @@ export function EpisodeTree() {
 
   return (
     <div className={s.side} style={{ width: episodeW }}>
-      <div className={s.head}>
-        集 · 场
-        <span className={s.rt}>
-          {episodeCount} 集 · {sceneCount} 场
-        </span>
-      </div>
       <div className={s.tree}>
-        {/* 顶行「全部镜头」= 全剧视图（v2.7 §5.3）。目录里恰有一行是选中态，由 viewScope 判。 */}
+        {/* 顶行「全剧」= 全剧视图，同时替代原来那条标题栏（v2.8 §5）。
+            目录里恰有一行是选中态，由 viewScope 判。 */}
         <button
-          className={[s.allRow, viewScope.kind === 'project' ? s.on : ''].join(' ')}
+          className={[s.ep, s.allRow, viewScope.kind === 'project' ? s.on : ''].join(' ')}
           onClick={() => setViewScope({ kind: 'project' })}
         >
-          全部镜头
-          <span className={s.allMeta}>{allShots} 镜 · {allDur}s</span>
+          <span className={s.epTitle}>全剧</span>
+          <span className={s.allMeta}>{allShots} 镜</span>
         </button>
+        <div className={s.topSep} />
         {project.episodes.map((ep, ei) => {
           const scenes = ep.sceneIds.map((id) => project.scenes[id]!).filter(Boolean)
-          const shotTotal = scenes.reduce((n, sc) => n + sc.shotIds.length, 0)
-          const durTotal = scenes.reduce((n, sc) => n + sceneDuration(sc, project.shots), 0)
           return (
             <div key={ep.id}>
               {ei > 0 && <div className={s.epgap} />}
@@ -128,9 +118,6 @@ export function EpisodeTree() {
                 <button className={s.epMain} onClick={() => setViewScope({ kind: 'episode', episodeId: ep.id })}>
                   <span className={s.epTitle}>
                     第 {ep.no} 集 · {ep.title}
-                  </span>
-                  <span className={s.epSub}>
-                    {scenes.length} 场 · {shotTotal} 镜 · {durTotal}s
                   </span>
                 </button>
                 {!readOnly && (
@@ -210,9 +197,7 @@ export function EpisodeTree() {
                     ) : (
                       sc.name
                     )}
-                    <span className={s.d}>
-                      {sc.shotIds.length} 镜 · {sceneDuration(sc, project.shots)}s
-                    </span>
+                    <span className={s.d}>{sc.shotIds.length} 镜</span>
                   </div>
                   {!readOnly && (
                     <div className={s.scMenuWrap} ref={menuScene === sc.id ? menuSceneRef : undefined}>
