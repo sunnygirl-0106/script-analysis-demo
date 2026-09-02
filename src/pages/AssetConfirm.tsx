@@ -3,6 +3,7 @@ import { useStore, type Tab } from '../store/useStore'
 import type { Asset, AssetKind, CandidateAsset, CandidateDecision } from '../data/types'
 import { KIND_DOT, KIND_LABEL } from '../components/entity'
 import { DECISION_META, type Decision } from '../components/decision'
+import { compileTerms, type Matcher } from '../services/mentions'
 import { refState } from '../services/reference'
 import { PanelResizer } from '../components/PanelResizer'
 import { CandidatePromptDialog } from '../components/CandidatePromptDialog'
@@ -39,23 +40,20 @@ const SCRIPT_MAX = 820
 // 所以联动就是答案，不是噪音。hover 整行点亮左侧名字这个联动要保留（§3.3）。
 function highlight(
   text: string,
-  terms: { term: string; kind: AssetKind }[],
+  matcher: Matcher<AssetKind> | null,
   hotSet: Set<string>,
 ): ReactNode {
-  const sorted = terms.filter((t) => t.term.length >= 2).sort((a, b) => b.term.length - a.term.length)
-  if (!sorted.length) return text
-  const escaped = sorted.map((t) => t.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  const re = new RegExp(`(${escaped.join('|')})`, 'g')
-  return text.split(re).map((part, i) => {
-    const hit = sorted.find((t) => t.term === part)
-    if (!hit) return <Fragment key={i}>{part}</Fragment>
+  if (!matcher) return text
+  return text.split(matcher.re).map((part, i) => {
+    const kind = matcher.byTerm.get(part)
+    if (!kind) return <Fragment key={i}>{part}</Fragment>
     const on = hotSet.has(normalize(part))
     return (
       <span
         key={i}
         className={[s.hl, on ? s.on : ''].join(' ')}
         data-term={normalize(part)}
-        style={{ color: KIND_DOT[hit.kind] }}
+        style={{ color: KIND_DOT[kind] }}
       >
         {part}
       </span>
@@ -99,11 +97,18 @@ export function AssetConfirm() {
   const candOf = (k: AssetKind) => candidates.filter((c) => c.kind === k)
   const committedOf = (k: AssetKind) => Object.values(project.assets).filter((a) => a.kind === k)
 
-  // 高亮词表：候选名 + 已入库资产名（都参与原文标注）。
-  const terms = [
-    ...candidates.map((c) => ({ term: c.name, kind: c.kind, aliases: c.aliases })),
-    ...Object.values(project.assets).map((a) => ({ term: a.name, kind: a.kind, aliases: a.aliases })),
-  ].flatMap((t) => [{ term: t.term, kind: t.kind }, ...((t.aliases ?? []).map((al) => ({ term: al, kind: t.kind })))])
+  // 高亮词表：候选名 + 已入库资产名（连同别名，都参与原文标注）。
+  // 编译一次给全剧几十上百段共用——以前是每段各建一次正则。
+  const matcher = useMemo(
+    () =>
+      compileTerms<AssetKind>(
+        [
+          ...candidates.map((c) => ({ name: c.name, kind: c.kind, aliases: c.aliases })),
+          ...Object.values(project.assets).map((a) => ({ name: a.name, kind: a.kind, aliases: a.aliases })),
+        ].flatMap((t) => [t.name, ...(t.aliases ?? [])].map((term) => [term, t.kind] as const)),
+      ),
+    [candidates, project.assets],
+  )
 
   // 当前 hover 的资产要点亮的名字集合（归一化）。
   const hotSet = useMemo(
@@ -175,7 +180,7 @@ export function AssetConfirm() {
                 <div className={s.epTitle}>第 {ep.no} 集 · {ep.title}</div>
               </div>
               {toBeats(ep.rawText).map((line, i) => (
-                <p key={i} className={s.beat}>{highlight(line, terms, hotSet)}</p>
+                <p key={i} className={s.beat}>{highlight(line, matcher, hotSet)}</p>
               ))}
             </div>
           ))}

@@ -7,6 +7,7 @@
 import type { Asset, Look, MountableKind, Shot } from '../data/types'
 import { looksOfCharacter } from './looks'
 import { parsePromptSections } from './promptFormat'
+import { compileTerms, type Matcher } from './mentions'
 
 /**
  * 规则 1 只在「描述画面里有什么」的段里找人名。
@@ -35,24 +36,40 @@ interface MountIssue {
 }
 
 /**
- * 从镜头文本里挑出「被点名但没挂」的资产名。
- * 匹配方式与 ScriptPanel 的高亮一致：只取 name 长度 ≥ 2 的资产，长名优先，
- * 用正则 split 后收集命中集（避免「苏可」吃掉「苏可可」）。
+ * 从镜头文本里挑出「被点名但没挂」的资产。
+ *
+ * 口径**刻意窄于**剧本原文高亮：只认角色 / 道具的**编目名**，不认别名。
+ * 别名（「手机」之于「智能手机」）在正文里指代宽松，拿来判「漏挂载」会误报，
+ * 而这条提示是要用户去点的，宁可漏报不误报。
+ * 词表按 assets 引用记忆化，不再每个镜头行各建一次正则。
  */
-function mentionedAssetIds(text: string, assets: Asset[]): Set<string> {
-  const named = assets
-    .filter((a) => a.name.length >= 2)
-    .sort((a, b) => b.name.length - a.name.length)
-  if (named.length === 0) return new Set()
-  const escaped = named.map((a) => a.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  const re = new RegExp(`(${escaped.join('|')})`, 'g')
-  const hitNames = new Set(text.match(re) ?? [])
-  return new Set(named.filter((a) => hitNames.has(a.name)).map((a) => a.id))
+const nameableCache = new WeakMap<object, Matcher<Asset> | null>()
+
+function nameableMatcher(assets: Record<string, Asset>): Matcher<Asset> | null {
+  const cached = nameableCache.get(assets)
+  if (cached !== undefined) return cached
+  const m = compileTerms<Asset>(
+    Object.values(assets)
+      .filter((a) => a.kind === 'character' || a.kind === 'prop')
+      .map((a) => [a.name, a] as const),
+  )
+  nameableCache.set(assets, m)
+  return m
+}
+
+function mentionedAssetIds(text: string, assets: Record<string, Asset>): Set<string> {
+  const m = nameableMatcher(assets)
+  if (!m) return new Set()
+  const out = new Set<string>()
+  for (const hit of text.match(m.re) ?? []) {
+    const a = m.byTerm.get(hit)
+    if (a) out.add(a.id)
+  }
+  return out
 }
 
 /** 只在三种情况提示，其余一律返回空。 */
 export function mountIssues(shot: Shot, assets: Record<string, Asset>): MountIssue[] {
-  const list = Object.values(assets)
   const issues: MountIssue[] = []
 
   // 已被本镜覆盖的角色 = 直接挂的 character（兜底）∪ 已挂 look 的 characterId。
@@ -74,8 +91,7 @@ export function mountIssues(shot: Shot, assets: Record<string, Asset>): MountIss
     visibleText(shot.videoPrompt),
     shot.sourceQuote,
   ].join(' ')
-  const nameable = list.filter((a) => a.kind === 'character' || a.kind === 'prop')
-  const mentioned = mentionedAssetIds(text, nameable)
+  const mentioned = mentionedAssetIds(text, assets)
   for (const id of mentioned) {
     const asset = assets[id]!
     if (asset.kind === 'prop') {

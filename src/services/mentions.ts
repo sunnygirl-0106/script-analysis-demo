@@ -14,27 +14,59 @@
 // 好处是真相只有一处，不会「两个真相打架」；坏处是改名后正文不会自动跟着变。
 import type { Asset } from '../data/types'
 
-// ── 词表 ────────────────────────────────────────────────────────────────
+// ── 词表编译（共享原语）────────────────────────────────────────────────
+//
+// 全仓库有四处要做同一件事：把一组「词」编译成正则、把文本切成「命中 / 未命中」交替段。
+// 以前是四份各自 for-flatMap-sort-escape-new RegExp 的复制品，且都在渲染路径上，
+// 每个 EntityText 实例、每个剧本自然段各建一次。这里收成一份，并按词表来源记忆化。
 
-interface Term {
-  term: string
-  assetId: string
+export interface Matcher<T> {
+  /** 带捕获组的 alternation 正则，可直接 text.split(re)。 */
+  re: RegExp
+  /** 词 → 载荷。取代此前 terms.find(t => t.term === part) 的线性扫描。 */
+  byTerm: Map<string, T>
 }
 
 /**
- * 匹配词表：编目名 + 剧本别名，长词优先，只取长度 ≥ 2 的词。
- * 口径与 ScriptPanel 的原文高亮一致 —— 编目名（智能手机）常与正文口语（手机）对不上，
- * 所以两者都要参与匹配，否则「手机」连不到「智能手机」这张 chip。
- *
- * look（角色造型）不进词表：它的名字是从「角色 · 服装」派生出来的，正文里不会这么写。
- * 正文里写的是角色名，由 relatedAssetIds() 把角色 → 造型接上。
+ * 把 [词, 载荷] 编译成「长词优先」的匹配器。只收长度 ≥ 2 的词。
+ * 长词优先由排序 + 正则最左优先共同保证：「外卖员」排在「外卖」前面，
+ * 所以不会被切成「外卖」+「员」；「苏可可」也不会被「苏可」吃掉。
+ * 一个词都没有时返回 null，调用方据此走「原样返回、不高亮」的快路。
  */
-function buildTerms(assets: Record<string, Asset>): Term[] {
-  return Object.values(assets)
-    .filter((a) => a.kind !== 'look')
-    .flatMap((a) => [a.name, ...(a.aliases ?? [])].map((term) => ({ term, assetId: a.id })))
-    .filter((t) => t.term && t.term.length >= 2)
-    .sort((a, b) => b.term.length - a.term.length)
+export function compileTerms<T>(entries: Iterable<readonly [string, T]>): Matcher<T> | null {
+  const byTerm = new Map<string, T>()
+  for (const [term, payload] of entries) {
+    if (term && term.length >= 2 && !byTerm.has(term)) byTerm.set(term, payload)
+  }
+  if (byTerm.size === 0) return null
+  const escaped = [...byTerm.keys()]
+    .sort((a, b) => b.length - a.length)
+    .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  return { re: new RegExp(`(${escaped.join('|')})`, 'g'), byTerm }
+}
+
+/**
+ * 资产词表：编目名 + 剧本别名，长词优先。**按 assets 的对象引用记忆化**，
+ * 所以一次编辑只编译一次，而不是每个订阅者各编译一次。
+ *
+ * 编目名（智能手机）常与正文口语（手机）对不上，所以两者都要参与匹配，
+ * 否则「手机」连不到「智能手机」那张 chip。
+ *
+ * look（角色造型）不进词表：它的名字是「角色 · 服装」派生出来的，正文里不会这么写。
+ * 正文写的是角色名，由 relatedAssetIds() 把角色 → 造型接上。
+ */
+const assetMatcherCache = new WeakMap<object, Matcher<Asset> | null>()
+
+export function assetMatcher(assets: Record<string, Asset>): Matcher<Asset> | null {
+  const cached = assetMatcherCache.get(assets)
+  if (cached !== undefined) return cached
+  const m = compileTerms<Asset>(
+    Object.values(assets)
+      .filter((a) => a.kind !== 'look')
+      .flatMap((a) => [a.name, ...(a.aliases ?? [])].map((term) => [term, a] as const)),
+  )
+  assetMatcherCache.set(assets, m)
+  return m
 }
 
 export interface Mention {
@@ -43,23 +75,17 @@ export interface Mention {
   assetId?: string
 }
 
-/**
- * 把一段文本切成「纯文本段 / 实体段」交替的序列，供 EntityText 渲染。
- * 长词优先靠 buildTerms 的排序 + 正则 alternation 的最左优先共同保证
- * （「外卖员」排在「外卖」前面，所以不会被切成「外卖」+「员」）。
- */
+/** 把一段文本切成「纯文本段 / 实体段」交替的序列，供 EntityText 渲染。 */
 export function splitMentions(text: string, assets: Record<string, Asset>): Mention[] {
   if (!text) return []
-  const terms = buildTerms(assets)
-  if (terms.length === 0) return [{ text }]
-  const escaped = terms.map((t) => t.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  const re = new RegExp(`(${escaped.join('|')})`, 'g')
+  const m = assetMatcher(assets)
+  if (!m) return [{ text }]
   return text
-    .split(re)
+    .split(m.re)
     .filter((part) => part !== '')
     .map((part) => {
-      const hit = terms.find((t) => t.term === part)
-      return hit ? { text: part, assetId: hit.assetId } : { text: part }
+      const hit = m.byTerm.get(part)
+      return hit ? { text: part, assetId: hit.id } : { text: part }
     })
 }
 

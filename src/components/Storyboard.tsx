@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react'
 import { useStore } from '../store/useStore'
 import { useAutoHideHover } from '../hooks/useAutoHideHover'
@@ -214,6 +214,9 @@ function SceneBlock({
   const promptStates = useStore((st) => st.promptStates)
   const insertShot = useStore((st) => st.insertShot)
   const deleteShot = useStore((st) => st.deleteShot)
+  // 稳定引用，否则下面 25 行的 memo 每次渲染都会被新箭头函数打穿。
+  const handleInsertAbove = useCallback((i: number) => insertShot(scene.id, i), [insertShot, scene.id])
+  const handleDelete = useCallback((id: string) => deleteShot(id), [deleteShot])
   const flashShotIds = useStore((st) => st.flashShotIds)
   const selectScene = useStore((st) => st.selectScene)
   const openSceneSettings = useStore((st) => st.openSceneSettings)
@@ -221,8 +224,8 @@ function SceneBlock({
   // 表尾「在末尾插入一镜」热区：悬停显形、停住几秒自动隐藏。每个区块各一套。
   const appendIns = useAutoHideHover()
 
-  const timeline = computeTimeline(scene, shots)
-  const total = sceneDuration(scene, shots)
+  const timeline = useMemo(() => computeTimeline(scene, shots), [scene, shots])
+  const total = useMemo(() => sceneDuration(scene, shots), [scene, shots])
   const epNo = episodes.find((e) => e.sceneIds.includes(scene.id))?.no
 
   return (
@@ -266,8 +269,9 @@ function SceneBlock({
             promptState={promptStates[shot.id] ?? 'pending'}
             flash={flashShotIds.includes(shot.id)}
             onHover={onHover}
-            onInsertAbove={readOnly ? undefined : () => insertShot(scene.id, i)}
-            onDelete={readOnly ? undefined : () => deleteShot(shot.id)}
+            index={i}
+            onInsertAbove={readOnly ? undefined : handleInsertAbove}
+            onDelete={readOnly ? undefined : handleDelete}
           />
         )
       })}

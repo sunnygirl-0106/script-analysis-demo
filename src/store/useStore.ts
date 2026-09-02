@@ -261,6 +261,18 @@ export interface StoreState extends UIState {
 }
 
 let toastSeq = 0
+
+// 提示词「逐镜揭示」的计时器。**一个** interval 分批推进，而不是一镜一个 setTimeout：
+// 25 镜曾经是 25 个定时器、25 次 set，每次都触发一遍全表重渲染（连带每行重算挂载提示）。
+// 现在把揭示帧数封顶，镜头再多也只重渲染这么多次；总时长与原来保持一致。
+const REVEAL_MAX_TICKS = 12
+let revealTimer: ReturnType<typeof setInterval> | undefined
+const stopReveal = () => {
+  if (revealTimer !== undefined) {
+    clearInterval(revealTimer)
+    revealTimer = undefined
+  }
+}
 // 插入用的自增序号，保证新场 / 新镜 id 唯一，不与 seed 的 `s1_sh1` 命名撞车。
 let insSeq = 0
 
@@ -647,7 +659,8 @@ export const useStore = create<StoreState>((set, get) => {
     const w = Math.round(Math.min(PANEL_MAX[which], Math.max(PANEL_MIN[which], width)))
     set(which === 'episode' ? { episodeW: w } : { scriptW: w })
   },
-  replayDemo: () =>
+  replayDemo: () => {
+    stopReveal()
     set({
       // 重新演示 = 回到空项目（v2.6 §1.2）：只复位相位不换 project，步骤条会继续拿着旧数据打 ✓。
       project: structuredClone(emptyProject),
@@ -666,7 +679,8 @@ export const useStore = create<StoreState>((set, get) => {
       pendingDensity: null,
       pendingDecisions: null,
       hoverAssetTerm: null,
-    }),
+    })
+  },
 
   // 生成提示词：目标镜置 generating，错峰后置 ready（seed 里已有 image/videoPrompt，生成 = 揭示）。
   generatePrompts: (shotIds) => {
@@ -683,14 +697,25 @@ export const useStore = create<StoreState>((set, get) => {
       })
       return { promptStates: ps, promptEdited: pe }
     })
-    targets.forEach((id, i) => {
-      setTimeout(() => {
-        set((s) => ({ promptStates: { ...s.promptStates, [id]: 'ready' } }))
-        if (i === targets.length - 1) {
-          get().showToast(`已生成 ${targets.length} 镜的画面提示词与视频运动提示词`)
-        }
-      }, 420 + i * 220)
-    })
+    // 总时长沿用原口径（420ms 起步、每镜 220ms），只是把它切成至多 REVEAL_MAX_TICKS 帧。
+    stopReveal()
+    const totalMs = 420 + (targets.length - 1) * 220
+    const ticks = Math.min(targets.length, REVEAL_MAX_TICKS)
+    const per = Math.ceil(targets.length / ticks)
+    let done = 0
+    revealTimer = setInterval(() => {
+      const batch = targets.slice(done, done + per)
+      done += batch.length
+      set((s) => {
+        const ps = { ...s.promptStates }
+        for (const id of batch) ps[id] = 'ready'
+        return { promptStates: ps }
+      })
+      if (done >= targets.length) {
+        stopReveal()
+        get().showToast(`已生成 ${targets.length} 镜的画面提示词与视频运动提示词`)
+      }
+    }, Math.round(totalMs / ticks))
   },
 
   setPromptState: (shotId, state) => {

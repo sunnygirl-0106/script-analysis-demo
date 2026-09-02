@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
 import { useStore } from '../store/useStore'
 import type { Asset, AssetKind, Scene } from '../data/types'
+import { assetMatcher } from '../services/mentions'
 import { scopeLabel, scopeScenes } from '../services/viewScope'
 import s from './ScriptPanel.module.css'
 
@@ -13,28 +14,19 @@ const kindClass: Record<AssetKind, string> = {
 }
 
 // 用每个资产的「编目名 + 剧本别名」把原文里的实体高亮。
-// 编目名（智能手机）常与原文口语（手机）对不上，所以两者都参与匹配。
-// 长词优先，避免短词吃掉长词（「外卖」不抢「外卖员」，「苏可」不抢「苏可可」）。
-function highlight(text: string, assets: Asset[]): ReactNode {
-  const terms = assets
-    .flatMap((a) => [a.name, ...(a.aliases ?? [])].map((term) => ({ term, kind: a.kind })))
-    .filter((t) => t.term.length >= 2)
-    .sort((a, b) => b.term.length - a.term.length)
-  if (terms.length === 0) return text
-
-  const escaped = terms.map((t) => t.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  const re = new RegExp(`(${escaped.join('|')})`, 'g')
-  const parts = text.split(re)
-  return parts.map((part, i) => {
-    const hit = terms.find((t) => t.term === part)
-    if (hit) {
-      return (
-        <span key={i} className={[s.e, kindClass[hit.kind]].join(' ')}>
-          {part}
-        </span>
-      )
-    }
-    return <Fragment key={i}>{part}</Fragment>
+// 词表编译与长词优先的口径统一在 services/mentions 的 assetMatcher 里（按 assets 引用记忆化），
+// 不再各建各的正则。
+function highlight(text: string, assets: Record<string, Asset>): ReactNode {
+  const m = assetMatcher(assets)
+  if (!m) return text
+  return text.split(m.re).map((part, i) => {
+    const hit = m.byTerm.get(part)
+    if (!hit) return <Fragment key={i}>{part}</Fragment>
+    return (
+      <span key={i} className={[s.e, kindClass[hit.kind]].join(' ')}>
+        {part}
+      </span>
+    )
   })
 }
 
@@ -66,7 +58,7 @@ export function ScriptPanel() {
 
   const label = `${scopeLabel(viewScope)}剧本`
   const scenes = scopeScenes(project, viewScope)
-  const assets = Object.values(project.assets)
+  const assets = project.assets
 
   if (!open) {
     return (
@@ -119,7 +111,7 @@ export function ScriptPanel() {
 }
 
 /** 一场原文：报头 + 正文。段号在场内从 01 起，与场区块的镜号同一个道理。 */
-function SceneScript({ scene, assets }: { scene: Scene; assets: Asset[] }) {
+function SceneScript({ scene, assets }: { scene: Scene; assets: Record<string, Asset> }) {
   const beats = toBeats(scene.rawText)
   return (
     <>

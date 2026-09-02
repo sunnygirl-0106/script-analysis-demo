@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import { useStore } from '../store/useStore'
 import {
   CAMERA_MOVES,
@@ -107,13 +107,18 @@ interface Props {
   // 从「出场明细」跳转过来时短暂泛光。
   flash?: boolean
   onHover: (id: string | null) => void
+  // 本镜在本场中的序号（插入位置用）。
+  index: number
   // 悬停本行上沿 → 在本行之前插入一镜。只读时为 undefined，不渲染插入条。
-  onInsertAbove?: () => void
+  // 收参数而不是收闭包：闭包每次渲染都是新引用，memo 会直接失效。
+  onInsertAbove?: (index: number) => void
   // 删除本镜（左侧操作栏的删除键）。只读时为 undefined。
-  onDelete?: () => void
+  onDelete?: (shotId: string) => void
 }
 
-export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptState, flash, onHover, onInsertAbove, onDelete }: Props) {
+// memo：分镜表一屏 25 行，每行都要跑 mountIssues（正则匹配）与若干 EntityText 分词。
+// hover 一行会让 SceneBlock 重渲染，没有 memo 就是 25 行全部重算一遍。
+export const ShotRow = memo(function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptState, flash, onHover, index, onInsertAbove, onDelete }: Props) {
   const assets = useStore((st) => st.project.assets)
   const addMount = useStore((st) => st.addMount)
   const removeMount = useStore((st) => st.removeMount)
@@ -133,7 +138,7 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
   const runDelete = () => {
     if (removing || !onDelete) return
     setRemoving(true)
-    delTimer.current = window.setTimeout(onDelete, 240)
+    delTimer.current = window.setTimeout(() => onDelete(shot.id), 240)
   }
 
   // 挂载指向的资产可能已在项目资产库删除（v2.0 单向：资产库不回写分镜）→ 兜底显示「已失效」。
@@ -190,7 +195,7 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
     )
   }
 
-  const issues = mountIssues(shot, assets)
+  const issues = useMemo(() => mountIssues(shot, assets), [shot, assets])
   const long = isLongShot(shot.duration)
   const longWarn = (
     <div className={s.longWarn} title="该镜时长较长，部分视频模型可能需要分段生成。">
@@ -265,7 +270,7 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
           onMouseLeave={ins.onMouseLeave}
           onClick={(e) => {
             e.stopPropagation()
-            if (ins.isVisible()) onInsertAbove()
+            if (ins.isVisible()) onInsertAbove(index)
           }}
         >
           <span className={s.insRowBar} />
@@ -496,4 +501,4 @@ export function ShotRow({ shot, startAt, endAt, active, alt, readOnly, promptSta
       )}
     </div>
   )
-}
+})
