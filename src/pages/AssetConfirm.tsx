@@ -27,7 +27,7 @@ const SORT_LABEL: Record<SortKey, string> = { occ: '按出现次数', first: '�
 const isManual = (tempId: string) => tempId.startsWith('cand_manual_')
 
 // 左原文栏宽度：可拖拽（§3.2），夹取在这个范围内。
-// v2.7 §3.1：初始左右 3 : 4——原文只是对照，清单才是这一步要动的东西，右边该更宽。
+// 初始左右 3 : 4——原文只是对照，清单才是这一步要动的东西，右边该更宽。
 const SCRIPT_MIN = 380
 const SCRIPT_MAX = 820
 

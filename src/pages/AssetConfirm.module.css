@@ -52,11 +52,6 @@
   border-radius: 2px;
   box-shadow: 0 0 0 3px rgb(var(--acc-rgb) / 0.16);
 }
-/* 点「出场」定位时，目标原文短暂闪一下。 */
-.flash {
-  animation: hlFlash 1.2s ease;
-  border-radius: 2px;
-}
 @keyframes hlFlash {
   0%, 100% { background: transparent; }
   20%, 60% { background: rgb(var(--acc-rgb) / 0.28); }

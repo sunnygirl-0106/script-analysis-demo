@@ -1,5 +1,4 @@
 // 重拆与删集。纯函数。deleteEpisode：只删集的结构与镜头，资产库一条不动（v2.0）。
-// 规则版本：v2.0（2026-09-01）。断言见 tests/rules.test.ts 的 R7。
 // canEdit 已废除（决策 1a）—— 全局阶段锁改为 services/capability.ts 的 can(project, cap)。
 import type { Project, Shot } from '../data/types'
 import { initialSceneShots } from '../data/seed'

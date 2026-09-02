@@ -1,8 +1,8 @@
 // Zustand：一个 project + 所有动作。不做持久化，刷新回到初始状态。
 import { create } from 'zustand'
 import type {
-  AnalysisStep, AssetKind, CandidateAsset, CandidateDecision, Episode, Look, MountRef,
-  PendingTask, Project, PromptState, Scene, Shot, ShotDensity, Stage,
+  AnalysisStep, AssetKind, CandidateAsset, Episode, Look, MountRef,
+  Project, PromptState, Scene, Shot, ShotDensity, Stage,
 } from '../data/types'
 import { seedProject, seedFreshProject, seedCandidates, emptyProject } from '../data/seed'
 import {
@@ -11,8 +11,7 @@ import {
   type ScannedAsset,
 } from '../services/candidates'
 import { episode2Payload, ep2Episode, type EpisodePayload } from '../data/seedEpisode2'
-import { appendEpisode, fillEpisode } from '../services/incremental'
-import { replaceScript as replaceScriptSvc, type ScriptPayload } from '../services/replace'
+import { fillEpisode } from '../services/incremental'
 import { DENSITY_LABEL, densityShots, hasDensityPresets, resplitSceneDensity } from '../services/density'
 import { deleteEpisode as deleteEpisodeSvc, resplitScene } from '../services/lock'
 import { can } from '../services/capability'
@@ -22,7 +21,6 @@ import { deliverFirstBatch, shotsAffectedByAsset } from '../services/staleness'
 import { lookName } from '../services/looks'
 import { sceneDuration } from '../services/timeline'
 import type { ViewScope } from '../services/viewScope'
-import { findDuplicate, PROSE_FIELDS, scanRenameImpact } from '../services/mentions'
 import { applyDecisions, type Decision } from '../components/decision'
 
 // 出场索引：按 project 引用记忆化。project 是不可变替换的，引用变才重算（决策 2.3）。
@@ -90,12 +88,6 @@ function withManualScenes(project: Project): Project {
   return { ...project, episodes, scenes }
 }
 
-// 重拆的「补漏」口径（v3）：只有 seed 预置的首轮漏提项才产生候选、才打断；其余场零候选、不打断。
-// 这里给第 1 场预置一条演示用漏提（客厅茶几，首轮没单独提取成道具）。
-const RESPLIT_MISSED: Record<string, ScannedAsset[]> = {
-  s1: [{ kind: 'prop', name: '茶几', aliases: ['茶几'] }],
-}
-
 interface UIState {
   activePage: Stage
   /** 步骤③ 左侧目录的视图作用域（v2.7 §5.2）：全剧 / 本集 / 本场。纯 UI 态。 */
@@ -113,8 +105,6 @@ interface UIState {
   pendingDensity: ShotDensity | null
   /** 增量确认时同批带过去的候选处理方式；null = 本次是首次拆分，不是增量。 */
   pendingDecisions: Record<string, Decision> | null
-  // 解析中已揭示到第几阶段（0=读取，1=集场，2=剧本，3=分镜，4=资产）。控制器递增。
-  revealStage: number
   // ── 可拖拽面板宽度：集·场目录 / 本场剧本（展开时）。右侧大区吃剩余空间。──
   episodeW: number
   scriptW: number
@@ -150,13 +140,7 @@ export interface StoreState extends UIState {
   analysisStep: AnalysisStep
   /** 待确认候选。空数组 = 没有待处理增量。 */
   candidates: CandidateAsset[]
-  /** 被增量确认打断、等待续跑的任务。null = 没有挂起任务。 */
-  pendingTask: PendingTask | null
-  /** 演练用的观测痕迹（见 §7.3）。只写不读，不驱动任何 UI。 */
-  trace: { sawIncrementalGate: boolean }
 
-  // ── 派生便捷读取 ──
-  currentScene: () => Project['scenes'][string] | undefined
   usageIndex: () => Record<string, AssetUsage>
   countShotsOf: (assetId: string) => number
 
@@ -166,10 +150,7 @@ export interface StoreState extends UIState {
   selectScene: (sceneId: string) => void
   setViewScope: (scope: ViewScope) => void
   setTab: (tab: Tab) => void
-  // 从资产「出场明细」点某集某场：跳到该场的分镜表，并高亮该资产出现的镜头。
-  jumpToAppearance: (assetId: string, episodeNo: number, sceneNo: number) => void
   toggleScript: () => void
-  setScriptOpen: (open: boolean) => void
   openSceneSettings: () => void
   closeSceneSettings: () => void
   showToast: (text: string, action?: ToastAction) => void
@@ -205,7 +186,6 @@ export interface StoreState extends UIState {
   setAnalysisPhase: (phase: AnalysisPhase) => void
   /** 流程条跳转用：切阶段② / 阶段③ 相位（其余相位切换各有专用入口，不走这里）。 */
   setAnalysisStep: (step: AnalysisStep) => void
-  setRevealStage: (stage: number) => void
   // 拖拽调整面板宽度（自动夹取到 PANEL_MIN/MAX）。
   setPanelW: (which: 'episode' | 'script', width: number) => void
   // 「重新演示」：复位到空态，并把工作区视图复位（第 1 场 / 分镜 tab / 收起剧本）。
@@ -235,42 +215,16 @@ export interface StoreState extends UIState {
   removeMount: (shotId: string, assetId: string) => void
   updateSceneTrack: (sceneId: string, patch: Partial<Project['scenes'][string]['track']>) => void
   updateAssetPrompt: (assetId: string, text: string) => void
-  renameAsset: (assetId: string, name: string) => void
-  /**
-   * 改名 + 全链路同步。资产表就地改完名字、回车/失焦后弹「确认」，用户勾完再调这里。
-   *
-   * 两件事性质完全不同，所以分开做：
-   *   · 引用侧（挂载 / 造型名 / 出场统计）—— 只改 assets[id].name 一个字段就自动跟随，不问用户；
-   *   · 文本侧（散文字段 / 提示词）—— 按字面替换，由 opts 决定替不替。
-   *
-   * 关键口径：**改名不是视觉变更**。勾了替换的镜头保持 ready，已出的图不作废；
-   * 只有「不替换」才真的不一致（提示词里的旧名指不到任何资产），那些镜头才标待更新。
-   */
-  renameAssetWithSync: (
-    assetId: string,
-    name: string,
-    opts: { prose: boolean; prompts: boolean },
-  ) => void
   setHoverMention: (m: { assetId: string; shotId: string } | null) => void
   setHoverAssetTerm: (t: { terms: string[] } | null) => void
-  toggleAssetExcluded: (assetId: string) => void
   // ── 造型手动挂载（v2.0，受 editLookBinding 约束）──
   /** 改某着装角色引用的服装集合。挂载的镜头视觉随之变化 → 标待更新。 */
   setLookCostumes: (lookId: string, costumeIds: string[]) => void
   /** 为角色新建一个着装角色（look）。返回新 look 的 id，失败返回空串。 */
   createLook: (characterId: string, costumeIds: string[]) => string
-  appendEpisode2: () => void
-  replaceScript: (payload: ScriptPayload) => void
-  replaceEpisode: (episodeId: string) => void
   deleteEpisode: (episodeId: string) => void
-  resplit: (sceneId: string, opts: { density?: ShotDensity; targetShots?: number }) => void
-  resplitEpisode: (episodeId: string, opts: { density: ShotDensity; sceneCount?: number }) => void
   setStage: (stage: Stage) => void
 
-  // ── 候选与确认闸（v2.0）──
-  /** 打开增量确认。scanned 为空时不开闸，直接跑 task（v3 §6.3 零新增分支）。 */
-  openIncrementalGate: (scanned: ScannedAsset[], task: PendingTask) => void
-  setCandidateDecision: (tempId: string, decision: CandidateDecision, linkTargetId?: string) => void
   renameCandidate: (tempId: string, name: string) => void
   addManualCandidate: (kind: AssetKind, name: string) => void
   removeCandidate: (tempId: string) => void
@@ -278,48 +232,25 @@ export interface StoreState extends UIState {
   setCandidatePrompt: (tempId: string, text: string) => void
   /** 「✦ AI 结合剧本补全」：为提示词为空的候选生成一版草案（演示，纯前端合成）。 */
   completeCandidatePrompt: (tempId: string) => void
-  /** 阶段② 给角色候选手动挂 / 换造型：改它带出的 costumeIds（引用同批服装候选的 tempId）。 */
-  setCandidateCostumes: (tempId: string, costumeIds: string[]) => void
   /** 挂一件服装 = 生成一套造型 + 一条占位融合提示词（阶段② §3.3）。 */
   attachCandidateCostume: (charTempId: string, costumeId: string) => void
   /** 解除某套造型：移除该服装与它的提示词。 */
   detachCandidateCostume: (charTempId: string, costumeId: string) => void
-  /** 换服装：把某套造型引用的服装换成另一件，提示词重置为新造型的占位。 */
-  swapCandidateCostume: (charTempId: string, oldCostumeId: string, newCostumeId: string) => void
   /** 行内编辑某套造型的融合提示词。 */
   setCandidateLookPrompt: (charTempId: string, costumeId: string, text: string) => void
   /** 「✦ AI 结合剧本补全」某套造型的融合提示词（演示：纯前端合成，同步落字）。 */
   completeCandidateLookPrompt: (charTempId: string, costumeId: string) => void
-  /** 新增一条服装候选（同时出现在服装 tab），返回其 tempId。用于「＋服装 · 新建」。 */
-  createCandidateCostume: (name: string) => string
-  /** 结算 + 自动续跑挂起任务（v3 §6.2）。 */
-  commitCandidates: () => void
-  /** 取消整次操作：候选全丢，挂起任务不执行，原有分镜与资产库都不变（v3 §6.4）。 */
-  cancelIncrementalGate: () => void
-  /** 演练前复位观测痕迹。 */
-  resetTrace: () => void
 
   // ── 统一任务弹窗（v2.2 §4）：把「预检查」与「执行」拆开，让每个任务弹窗内联跑，不再另开闸弹窗 ──
   /** 纯函数：给定本次扫到的资产，返回尚未收录的候选（不改 store）。供 <AssetPrecheck> 调用。 */
   previewCandidates: (scanned: ScannedAsset[]) => CandidateAsset[]
   /** 结算一组已定好处理方式的候选到项目资产库（link 写别名）。不挂任务、不发 toast。 */
   commitScanned: (cands: CandidateAsset[]) => void
-  /** 各任务本次范围内 AI 扫到的资产（供弹窗预检查）。 */
-  scannedForResplitScene: (sceneId: string) => ScannedAsset[]
-  scannedForResplitEpisode: (episodeId: string) => ScannedAsset[]
   scannedForEp2: () => ScannedAsset[]
   /** 直接执行任务（不走闸；候选已由弹窗内联结算）。带各自的结果 toast。 */
   runResplitScene: (sceneId: string, opts: { density?: ShotDensity; targetShots?: number }) => void
   runResplitEpisode: (episodeId: string, opts: { density: ShotDensity; sceneCount?: number }) => void
-  runReplaceEpisode: (episodeId: string) => void
-  runAppendEpisode: () => void
-  /** 撤销一条别名（资产只增不减，但误并的别名必须可撤销，§4.3）。 */
-  removeAssetAlias: (assetId: string, alias: string) => void
 
-  // ── 首次流程（v2.0）──
-  /** 未入库时换一份原文重新拆。v2.4 起页面上没有入口（步骤① ⋯ 的「重新上传剧本」= 回空态），
-   *  动作留着不碍事。 */
-  reuploadScript: (payload: ScriptPayload) => void
   /** 「确认并保存到项目资产库」：结算候选 + 写 libraryCommittedAt。 */
   commitLibrary: () => void
   /** 步骤③「开始拆分」：为已提取、还没有场的集**创建场并填镜**，analysisStep → 'storyboard'。 */
@@ -396,16 +327,8 @@ export const useStore = create<StoreState>((set, get) => {
     return { ...episode2Payload, shots }
   }
 
-  const applyAppendEpisode = () => {
-    const s = get()
-    const next = appendEpisode(s.project, ep2PayloadFor(s.project))
-    set({ project: next, ...reconcilePrompts(next, s.promptStates, s.promptEdited) })
-    get().showToast('第 2 集已添加。已有角色资料已自动沿用，新角色资料也已创建。')
-  }
-
-  // v2.4 §2.5：给「已有原文、还没有场镜」的草稿集补上场与镜。
-  // 与 applyAppendEpisode 的区别只在集本身已经在项目里了（补充剧本那一步就落进来了），
-  // 所以走 fillEpisode 的「只补场镜」分支，集的标题 / 原文 / 字数 / 锁一个字节都不动。
+  // 给「已有原文、还没有场镜」的草稿集补上场与镜。
+  // 走 fillEpisode 的「只补场镜」分支，集的标题 / 原文 / 字数 / 锁一个字节都不动。
   const fillDraftEpisodes = () => {
     const s = get()
     const hasEp2Draft = s.project.episodes.some((e) => e.sceneIds.length === 0 && e.id === 'e2')
@@ -427,27 +350,6 @@ export const useStore = create<StoreState>((set, get) => {
       selectedSceneId: first,
       sceneSettingsOpen: false,
     })
-  }
-
-  const applyReplaceEpisode = (episodeId: string) => {
-    const s = get()
-    const proj = s.project
-    const ep = proj.episodes.find((e) => e.id === episodeId)
-    if (!ep) return
-    const deleted = deleteEpisodeSvc(proj, episodeId)
-    const appended = appendEpisode(deleted, ep2PayloadFor(deleted))
-    // 集号顺序整理，避免删中间集后号码跳空。
-    const renum = { ...appended, episodes: appended.episodes.map((e, i) => ({ ...e, no: i + 1 })) }
-    const newEp = renum.episodes.find((e) => e.id === 'e2')
-    const firstScene = newEp?.sceneIds[0] ?? renum.episodes[0]?.sceneIds[0] ?? ''
-    set({
-      project: renum,
-      ...reconcilePrompts(renum, s.promptStates, s.promptEdited),
-      selectedSceneId: firstScene,
-      sceneSettingsOpen: false,
-      activeTab: 'shot',
-    })
-    get().showToast(`第 ${ep.no} 集已替换，其他剧集没有改变。`)
   }
 
   const applyResplitScene = (sceneId: string, opts: { density?: ShotDensity; targetShots?: number }) => {
@@ -519,23 +421,6 @@ export const useStore = create<StoreState>((set, get) => {
     get().showToast(msg)
   }
 
-  /** 按挂起任务的 kind 分派到对应续跑体（v3 §6.2）。 */
-  const runPendingTask = (task: PendingTask) => {
-    const a = task.args
-    switch (task.kind) {
-      case 'appendEpisode': applyAppendEpisode(); break
-      case 'replaceEpisode': applyReplaceEpisode(a.episodeId as string); break
-      case 'resplitScene':
-        applyResplitScene(a.sceneId as string, { density: a.density as ShotDensity | undefined, targetShots: a.targetShots as number | undefined })
-        break
-      case 'resplitEpisode':
-        applyResplitEpisode(a.episodeId as string, { density: a.density as ShotDensity, sceneCount: a.sceneCount as number | undefined })
-        break
-      // firstImport / newScene / replaceScene：走各自的专用入口，不经此分派。
-      default: break
-    }
-  }
-
   return {
   // 进站起点是**空项目**（v2.6 §1.2）：没有集、没有场镜、没有资产、未入库。
   // 从前这里是 seedProject（一个「全做完了」的项目），步骤条据此把 ② ③ 打上 ✓，
@@ -555,7 +440,6 @@ export const useStore = create<StoreState>((set, get) => {
   analysisPhase: 'empty',
   pendingDensity: null,
   pendingDecisions: null,
-  revealStage: 0,
   episodeW: 192,
   scriptW: 308,
   flashShotIds: [],
@@ -564,10 +448,7 @@ export const useStore = create<StoreState>((set, get) => {
   // 候选层：默认从现状起（已入库 + 有分镜），故 storyboard、无候选、无挂起任务。
   analysisStep: 'storyboard',
   candidates: [],
-  pendingTask: null,
-  trace: { sawIncrementalGate: false },
 
-  currentScene: () => get().project.scenes[get().selectedSceneId],
   usageIndex: () => usageIndexOf(get().project),
   // 镜数读派生索引（含 look 向角色 / 服装的向上聚合），不再每次遍历 shots。
   countShotsOf: (assetId) => usageIndexOf(get().project)[assetId]?.shotCount ?? 0,
@@ -596,43 +477,7 @@ export const useStore = create<StoreState>((set, get) => {
     })
   },
   setTab: (activeTab) => set({ activeTab }),
-  jumpToAppearance: (assetId, episodeNo, sceneNo) => {
-    const proj = get().project
-    const ep = proj.episodes.find((e) => e.no === episodeNo)
-    if (!ep) return
-    const sceneId = ep.sceneIds.find((id) => proj.scenes[id]?.no === sceneNo)
-    if (!sceneId) return
-    const scene = proj.scenes[sceneId]
-    if (!scene) return
-    // 本场里「涉及该资产」的镜头：直接挂载，或经着装角色(look)向上聚合到角色/服装（与出场索引同口径）。
-    const involves = (shot: Shot) =>
-      shot.mounts.some((m) => {
-        if (m.assetId === assetId) return true
-        const a = proj.assets[m.assetId]
-        if (a && a.kind === 'look') {
-          const lk = a as Look
-          return lk.characterId === assetId || lk.costumeIds.includes(assetId)
-        }
-        return false
-      })
-    const ids = scene.shotIds.filter((id) => {
-      const sh = proj.shots[id]
-      return sh && involves(sh)
-    })
-    set({
-      selectedSceneId: sceneId,
-      viewScope: { kind: 'scene', sceneId },
-      activeTab: 'shot',
-      sceneSettingsOpen: false,
-      flashShotIds: ids,
-    })
-    // 高亮几秒后自动消退；若期间又发起新的跳转（ids 引用变了）则不误清。
-    setTimeout(() => {
-      if (get().flashShotIds === ids) set({ flashShotIds: [] })
-    }, 2600)
-  },
   toggleScript: () => set((s) => ({ scriptOpen: !s.scriptOpen })),
-  setScriptOpen: (scriptOpen) => set({ scriptOpen }),
   openSceneSettings: () => set({ sceneSettingsOpen: true }),
   closeSceneSettings: () => set({ sceneSettingsOpen: false }),
   showToast: (text, action) => {
@@ -644,12 +489,11 @@ export const useStore = create<StoreState>((set, get) => {
   // ── 步骤① 整理剧本（v2.5 §五）──
   // 上传弹窗点「开始整理」 → 关窗 → 整页动效（FullPageProcess 跑完调 finishOrganize）。
   // 没有确认花费弹窗、没有价格：上传 / 研读 / 拆集都免费，整理剧本页本身就是那份预估结果。
-  beginOrganize: () => set({ analysisPhase: 'organizing', revealStage: 0 }),
+  beginOrganize: () => set({ analysisPhase: 'organizing' }),
 
   finishOrganize: () => set({
     project: structuredClone(seedFreshProject),
     candidates: [],
-    pendingTask: null,
     promptStates: {},
     promptEdited: {},
     analysisStep: 'episodes',
@@ -799,7 +643,6 @@ export const useStore = create<StoreState>((set, get) => {
   },
   setAnalysisPhase: (analysisPhase) => set({ analysisPhase }),
   setAnalysisStep: (analysisStep) => set({ analysisStep }),
-  setRevealStage: (revealStage) => set({ revealStage }),
   setPanelW: (which, width) => {
     const w = Math.round(Math.min(PANEL_MAX[which], Math.max(PANEL_MIN[which], width)))
     set(which === 'episode' ? { episodeW: w } : { scriptW: w })
@@ -811,7 +654,6 @@ export const useStore = create<StoreState>((set, get) => {
       promptStates: {},
       promptEdited: {},
       analysisPhase: 'empty',
-      revealStage: 0,
       viewScope: { kind: 'project' },
       selectedSceneId: 's1',
       activeTab: 'shot',
@@ -821,7 +663,6 @@ export const useStore = create<StoreState>((set, get) => {
       // 复位首次流程相位，否则「重新演示」之后 analysisStep / candidates / pendingTask 是串的。
       analysisStep: 'episodes',
       candidates: [],
-      pendingTask: null,
       pendingDensity: null,
       pendingDecisions: null,
       hoverAssetTerm: null,
@@ -1121,19 +962,6 @@ export const useStore = create<StoreState>((set, get) => {
     for (const sid of shotsAffectedByAsset(get().project, assetId)) touchPrompt(sid, false)
   },
 
-  // 改资产名 / 别名。名称真相源在进入资产库后移交下游，故 editAssetName 仅 analysis 阶段可用。
-  renameAsset: (assetId, name) => {
-    if (!can(get().project, 'editAssetName')) return
-    const trimmed = name.trim()
-    if (!trimmed) return
-    set((s) => {
-      const a = s.project.assets[assetId]
-      if (!a || a.name === trimmed) return s
-      return {
-        project: { ...s.project, assets: { ...s.project.assets, [assetId]: { ...a, name: trimmed } } },
-      }
-    })
-  },
 
   setHoverMention: (m) => {
     const cur = get().hoverMention
@@ -1149,109 +977,7 @@ export const useStore = create<StoreState>((set, get) => {
     set({ hoverAssetTerm: t })
   },
 
-  // 改名 + 全链路同步。声明见接口处的长注释。
-  renameAssetWithSync: (assetId, name, opts) => {
-    const st0 = get()
-    if (!can(st0.project, 'editAssetName')) return
-    const asset = st0.project.assets[assetId]
-    if (!asset) return
-    const next = name.trim()
-    const old = asset.name
-    if (!next || next === old) return
-    // 重名一律拦在这里（本版不做「合并为同一角色」）。
-    if (findDuplicate(st0.project.assets, assetId, next)) {
-      get().showToast(`已存在同名内容「${next}」，名称不能重复`)
-      return
-    }
 
-    // 撤销快照：名字与所有文本替换一起回滚。改名影响面大，撤销比多给几个复选框有用。
-    const snapProject = st0.project
-    const snapStates = st0.promptStates
-    const impact = scanRenameImpact(st0.project, st0.promptStates, assetId, next)
-
-    set((s) => {
-      // ① 引用侧：一个字段。
-      const assets = { ...s.project.assets, [assetId]: { ...s.project.assets[assetId]!, name: next } }
-
-      // 角色造型名跟随。lookName() 只在 Look.name 为空时才从「角色 · 服装」派生，
-      // AI 拆解通常会给一个显式名（「苏可 · 宽松连帽卫衣」），那是一份**存下来的字符串**，
-      // 不会自己跟着角色名变 —— 所以这里要把它里面的旧名换掉。
-      // 放在引用侧（不受勾选项控制）：弹窗的「自动更新」承诺了造型名会跟随，就得真的跟随。
-      for (const id of Object.keys(assets)) {
-        const l = assets[id]!
-        if (l.kind !== 'look') continue
-        const related = l.characterId === assetId || l.costumeIds.includes(assetId)
-        if (!related || !l.name?.includes(old)) continue
-        assets[id] = { ...l, name: l.name.split(old).join(next) }
-      }
-
-      // ② 文本侧。
-      const shots = { ...s.project.shots }
-      const promptStates = { ...s.promptStates }
-      for (const id of Object.keys(shots)) {
-        const shot = shots[id]!
-        const patch: Record<string, string> = {}
-
-        if (opts.prose) {
-          for (const { field } of PROSE_FIELDS) {
-            const text = String(shot[field] ?? '')
-            if (!text.includes(old)) continue
-            patch[field as string] = text.split(old).join(next)
-          }
-        }
-
-        if (opts.prompts) {
-          // 提示词文本对所有镜头都替换（含 pending）—— 否则 pending 镜头一旦生成，
-          // 又会把旧名字带回来。计数只给用户看得见的那些，见 scanRenameImpact。
-          if (shot.imagePrompt?.includes(old)) {
-            patch.imagePrompt = shot.imagePrompt.split(old).join(next)
-          }
-          if (shot.videoPrompt?.includes(old)) {
-            patch.videoPrompt = shot.videoPrompt.split(old).join(next)
-          }
-        } else {
-          // 不替换 = 提示词里的旧名指不到任何资产，这才是真的不一致 → 标待更新。
-          const state = promptStates[id] ?? 'pending'
-          const hit = shot.imagePrompt?.includes(old) || shot.videoPrompt?.includes(old)
-          if (hit && state === 'ready') promptStates[id] = 'stale'
-        }
-
-        if (Object.keys(patch).length) shots[id] = { ...shot, ...patch }
-      }
-
-      // ③ 资产自己的生图提示词。
-      // 注意**不动 promptRevision** —— 名字是标签不是视觉属性，不该让下游已出的图变「已过期」。
-      if (opts.prompts) {
-        for (const id of Object.keys(assets)) {
-          const a = assets[id]!
-          if (!a.imagePrompt?.includes(old)) continue
-          assets[id] = { ...a, imagePrompt: a.imagePrompt.split(old).join(next) }
-        }
-      }
-
-      return { project: { ...s.project, assets, shots }, promptStates }
-    })
-
-    const bits = [`已重命名「${old}」→「${next}」`]
-    if (opts.prose && impact.prose.length) bits.push(`正文替换 ${impact.prose.length} 处`)
-    if (opts.prompts && impact.shotPrompts.length) bits.push(`提示词替换 ${impact.shotPrompts.length} 镜`)
-    get().showToast(bits.join('，'), {
-      label: '撤销',
-      run: () => set({ project: snapProject, promptStates: snapStates }),
-    })
-  },
-
-  // 切换「不出图」。出图队列一旦开跑，排除与否由资产库处理，故 toggleExcluded 仅 analysis 阶段可用。
-  toggleAssetExcluded: (assetId) => {
-    if (!can(get().project, 'toggleExcluded')) return
-    set((s) => {
-      const a = s.project.assets[assetId]
-      if (!a) return s
-      return {
-        project: { ...s.project, assets: { ...s.project.assets, [assetId]: { ...a, excluded: !a.excluded } } },
-      }
-    })
-  },
 
   // 改某着装角色引用的服装集合（v2.0，editLookBinding 放开后）。
   setLookCostumes: (lookId, costumeIds) => {
@@ -1290,58 +1016,8 @@ export const useStore = create<StoreState>((set, get) => {
     return id
   },
 
-  appendEpisode2: () => {
-    if (!can(get().project, 'editScript')) return
-    const s = get()
-    if (s.project.episodes.some((e) => e.id === 'e2')) {
-      get().showToast('第 2 集已在项目中，无需重复添加。')
-      return
-    }
-    // v2.0：先过候选闸。有新候选就停下等确认；零候选直接续跑（applyAppendEpisode）。
-    get().openIncrementalGate(EP2_SCANNED, {
-      kind: 'appendEpisode', label: '追加第 2 集', scopeText: '仅第 2 集原文', args: {},
-    })
-  },
 
-  replaceScript: (payload) => {
-    if (!can(get().project, 'editScript')) return
-    // v2.0：整本替换仅首次入库前可用。已入库后换剧本请新建项目（引导，不静默丢弃）。
-    if (!can(get().project, 'replaceWholeScript')) {
-      get().showToast('已保存到项目资产库，换一部剧本请新建项目')
-      return
-    }
-    const s = get()
-    const next = replaceScriptSvc(s.project, payload)
-    const firstScene = next.episodes[0]?.sceneIds[0] ?? ''
-    // 整本替换：全部镜头都是新 id，reconcile 后自然全回 pending、手动痕迹清空。
-    set({
-      project: next,
-      ...reconcilePrompts(next, s.promptStates, s.promptEdited),
-      selectedSceneId: firstScene,
-      sceneSettingsOpen: false,
-      activeTab: 'shot',
-    })
-    get().showToast(`已导入《${payload.title}》，原剧本内容已替换。`)
-  },
 
-  // 替换本集：语义诚实地实现为「删除本集 + 追加新集」。演示只有一套「新集」内容（第 2 集），
-  // 若它已存在则不替换，如实告知，避免删了却补不上。
-  replaceEpisode: (episodeId) => {
-    if (!can(get().project, 'editScript')) return
-    const proj = get().project
-    const ep = proj.episodes.find((e) => e.id === episodeId)
-    if (!ep) return
-    const remaining = proj.episodes.filter((e) => e.id !== episodeId)
-    if (remaining.some((e) => e.id === 'e2')) {
-      get().showToast('当前演示仅支持一套新剧本内容，且第 2 集已存在，无法替换本集')
-      return
-    }
-    // v2.0：替换本集的新内容也过候选闸；确认后自动续跑 applyReplaceEpisode。
-    get().openIncrementalGate(EP2_SCANNED, {
-      kind: 'replaceEpisode', label: `替换第 ${ep.no} 集`, scopeText: `仅新第 ${ep.no} 集原文`,
-      args: { episodeId },
-    })
-  },
 
   deleteEpisode: (episodeId) => {
     if (!can(get().project, 'editScript')) return
@@ -1372,27 +1048,7 @@ export const useStore = create<StoreState>((set, get) => {
     )
   },
 
-  resplit: (sceneId, opts) => {
-    if (!can(get().project, 'editScript')) return
-    const scene = get().project.scenes[sceneId]
-    if (!scene) return
-    // 补漏口径：只有预置漏提项才产生候选、才停下；否则零候选、不打断，直接续跑。
-    get().openIncrementalGate(RESPLIT_MISSED[sceneId] ?? [], {
-      kind: 'resplitScene', label: '重拆本场', scopeText: `仅第 ${scene.no} 场原文`,
-      args: { sceneId, density: opts.density, targetShots: opts.targetShots },
-    })
-  },
 
-  resplitEpisode: (episodeId, opts) => {
-    if (!can(get().project, 'editScript')) return
-    const ep = get().project.episodes.find((e) => e.id === episodeId)
-    if (!ep) return
-    const missed = ep.sceneIds.flatMap((sid) => RESPLIT_MISSED[sid] ?? [])
-    get().openIncrementalGate(missed, {
-      kind: 'resplitEpisode', label: `重拆第 ${ep.no} 集`, scopeText: `仅第 ${ep.no} 集原文`,
-      args: { episodeId, density: opts.density, sceneCount: opts.sceneCount },
-    })
-  },
 
   setStage: (stage) => {
     set((s) => {
@@ -1403,27 +1059,7 @@ export const useStore = create<StoreState>((set, get) => {
     if (stage === 'visual') get().showToast('已进入项目资产库，第一批资产开始生成。剧本和提示词仍可调整，角色与服装组合保持不变。')
   },
 
-  // ── 候选与确认闸（v2.0）──
-  openIncrementalGate: (scanned, task) => {
-    const cands = extractCandidates(get().project, scanned)
-    // 零候选：不开闸，直接续跑（v3 §6.3 零新增分支）。
-    if (cands.length === 0) {
-      runPendingTask(task)
-      return
-    }
-    set((st) => ({
-      candidates: cands,
-      pendingTask: task,
-      trace: { ...st.trace, sawIncrementalGate: true },
-    }))
-  },
 
-  setCandidateDecision: (tempId, decision, linkTargetId) =>
-    set((st) => ({
-      candidates: st.candidates.map((c) =>
-        c.tempId === tempId ? { ...c, decision, linkTargetId } : c,
-      ),
-    })),
 
   renameCandidate: (tempId, name) => {
     const trimmed = name.trim()
@@ -1466,12 +1102,6 @@ export const useStore = create<StoreState>((set, get) => {
     get().showToast(`已为「${cand.name}」补全一版提示词草案，可点开继续修改。`)
   },
 
-  setCandidateCostumes: (tempId, costumeIds) =>
-    set((st) => ({
-      candidates: st.candidates.map((c) =>
-        c.tempId === tempId ? { ...c, costumeIds: [...costumeIds] } : c,
-      ),
-    })),
 
   attachCandidateCostume: (charTempId, costumeId) =>
     set((st) => ({
@@ -1492,17 +1122,6 @@ export const useStore = create<StoreState>((set, get) => {
       }),
     })),
 
-  swapCandidateCostume: (charTempId, oldCostumeId, newCostumeId) =>
-    set((st) => ({
-      candidates: st.candidates.map((c) => {
-        if (c.tempId !== charTempId) return c
-        const ids = (c.costumeIds ?? [])
-        if (!ids.includes(oldCostumeId) || ids.includes(newCostumeId)) return c
-        const lookPrompts = { ...(c.lookPrompts ?? {}) }
-        delete lookPrompts[oldCostumeId] // 换了服装 = 换了造型，旧融合提示词失去意义，回落待补全
-        return { ...c, costumeIds: ids.map((id) => (id === oldCostumeId ? newCostumeId : id)), lookPrompts }
-      }),
-    })),
 
   setCandidateLookPrompt: (charTempId, costumeId, text) =>
     set((st) => ({
@@ -1532,35 +1151,9 @@ export const useStore = create<StoreState>((set, get) => {
     }))
   },
 
-  createCandidateCostume: (name) => {
-    const trimmed = name.trim()
-    if (!trimmed) return ''
-    const tempId = `cand_manual_costume_${++insSeq}`
-    set((st) => ({
-      candidates: [...st.candidates, { tempId, kind: 'costume', name: trimmed, imagePrompt: '', decision: 'new' }],
-    }))
-    return tempId
-  },
 
-  commitCandidates: () => {
-    const s = get()
-    const { project, added, linked, skipped } = commitCandidatesSvc(s.project, s.candidates)
-    const task = s.pendingTask
-    set({ project, candidates: [], pendingTask: null })
-    // 结算完自动续跑挂起任务（v3 §6.2）。续跑体里的追加/替换会基于「已入库」的库去重。
-    if (task) runPendingTask(task)
-    // 续跑体通常自带 toast；这里只在纯结算（无续跑任务，如手动补录）时给个回执。
-    if (!task) {
-      const bits = [`已入库 ${added.length} 项`]
-      if (linked.length) bits.push(`关联 ${linked.length} 项`)
-      if (skipped.length) bits.push(`忽略 ${skipped.length} 项`)
-      get().showToast(bits.join('，'))
-    }
-  },
 
-  cancelIncrementalGate: () => set({ candidates: [], pendingTask: null }),
 
-  resetTrace: () => set({ trace: { sawIncrementalGate: false } }),
 
   // ── 统一任务弹窗（v2.2 §4）──
   previewCandidates: (scanned) => extractCandidates(get().project, scanned),
@@ -1571,11 +1164,6 @@ export const useStore = create<StoreState>((set, get) => {
     set({ project })
   },
 
-  scannedForResplitScene: (sceneId) => RESPLIT_MISSED[sceneId] ?? [],
-  scannedForResplitEpisode: (episodeId) => {
-    const ep = get().project.episodes.find((e) => e.id === episodeId)
-    return ep ? ep.sceneIds.flatMap((sid) => RESPLIT_MISSED[sid] ?? []) : []
-  },
   scannedForEp2: () => EP2_SCANNED,
 
   runResplitScene: (sceneId, opts) => {
@@ -1586,52 +1174,8 @@ export const useStore = create<StoreState>((set, get) => {
     if (!can(get().project, 'editScript')) return
     applyResplitEpisode(episodeId, opts)
   },
-  runReplaceEpisode: (episodeId) => {
-    if (!can(get().project, 'editScript')) return
-    applyReplaceEpisode(episodeId)
-  },
-  runAppendEpisode: () => {
-    if (!can(get().project, 'editScript')) return
-    if (get().project.episodes.some((e) => e.id === 'e2')) {
-      get().showToast('第 2 集已在项目中，无需重复添加。')
-      return
-    }
-    applyAppendEpisode()
-  },
 
-  removeAssetAlias: (assetId, alias) =>
-    set((st) => {
-      const a = st.project.assets[assetId]
-      if (!a || !a.aliases?.includes(alias)) return st
-      return {
-        project: {
-          ...st.project,
-          assets: { ...st.project.assets, [assetId]: { ...a, aliases: a.aliases.filter((x) => x !== alias) } },
-        },
-      }
-    }),
 
-  // ── 首次流程（v2.0）──
-  reuploadScript: (payload) => {
-    if (get().project.libraryCommittedAt != null) return
-    // 换一份原文重新拆：库仍为空，重新抽候选。阶段②没有分镜，只带场结构（shotIds 清空）。
-    const scenes: Record<string, Scene> = {}
-    for (const [id, sc] of Object.entries(payload.scenes)) scenes[id] = { ...sc, shotIds: [] }
-    const project: Project = {
-      ...get().project,
-      episodes: payload.episodes.map((e) => ({ ...e })),
-      scenes,
-      shots: {},
-      assets: {},
-      libraryCommittedAt: null,
-    }
-    const scanned: ScannedAsset[] = Object.values(payload.assets)
-      .filter((a) => a.kind !== 'look')
-      .map((a) => ({ kind: a.kind, name: a.name, imagePrompt: a.imagePrompt, aliases: a.aliases }))
-    const candidates = extractCandidates(project, scanned)
-    set({ project, candidates, analysisStep: 'assetConfirm', activeTab: 'character', sceneSettingsOpen: false })
-    get().showToast(`已重新上传《${payload.title}》，请确认资产后保存到项目资产库。`)
-  },
 
   commitLibrary: () => {
     const s = get()
@@ -1640,7 +1184,6 @@ export const useStore = create<StoreState>((set, get) => {
     set({
       project: { ...project, libraryCommittedAt: Date.now() },
       candidates: [],
-      pendingTask: null,
     })
     // 不发 Toast（§3.5）：「已保存 → 请开始拆分」是没有新决策的停顿，只在教用户"还有第二步"。
     // 入库与拆分在同一个统一弹窗里一次确认完成，结果 Toast 由拆分那一步统一给。
@@ -1658,7 +1201,7 @@ export const useStore = create<StoreState>((set, get) => {
       if (a?.kind === 'look') return `lk_as_${a.characterId}`
       return `as_${seedId}`
     }
-    // v2.4 §5.3：场在这一刻才被**创建**——步骤①② 只有集，没有场。
+    // 场在这一刻才被**创建**——步骤①② 只有集，没有场。
     // 对每个「已提取资产、还没有场」的集，从 seed 里取属于它的场整套建出来并回写 sceneIds；
     // 已经有场的集跳过（那是重拆的活，走别的路）。
     const scenes = { ...s.project.scenes }

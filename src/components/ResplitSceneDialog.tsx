@@ -8,7 +8,7 @@ import { costSplit, fmtCost } from '../services/cost'
 import { PHASES, taskDuration } from '../services/taskRun'
 import { TaskProgress } from './TaskProgress'
 import ui from '../styles/ui.module.css'
-import d from './ScriptImportDialog.module.css'
+import d from '../styles/dialog.module.css'
 import s from './ResplitSceneDialog.module.css'
 
 type Choice = ShotDensity | 'custom'
@@ -20,7 +20,7 @@ const DENSITY_META: { key: ShotDensity; label: string; hint: string }[] = [
 ]
 
 // ★ 重拆本场：节奏设置 + 消耗汇总，一次确认到底。点确认后弹窗原地跑进度，跑完关闭。
-// v2.4 §7：重拆保留，但**不再提取资产**——资产检查区换成一行静态灰字。
+// 重拆保留，但**不再提取资产**——资产检查区换成一行静态灰字。
 // 重拆是「换一种拆法」，不是「再读一遍剧本」；要补资产请去项目资产库加。
 export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onClose: () => void }) {
   const scene = useStore((st) => st.project.scenes[sceneId])

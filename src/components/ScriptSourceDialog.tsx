@@ -3,8 +3,8 @@ import { useStore } from '../store/useStore'
 import { PHASES } from '../services/taskRun'
 import { TaskProgress } from './TaskProgress'
 import ui from '../styles/ui.module.css'
-import d from './ScriptImportDialog.module.css'
-import rs from './ReplaceEpisodeDialog.module.css'
+import d from '../styles/dialog.module.css'
+import rs from './ScriptSourceDialog.module.css'
 
 // 选剧本来源的弹窗（v2.5 §5.1）。两处入口共用一个组件，只换文案与收尾动作：
 //   first      —— 空态 hero 的「＋ 上传剧本」。上传必须是一个**真实的选文件动作**，

@@ -112,11 +112,6 @@
   background: var(--danger-bg);
   color: var(--danger);
 }
-.menuSep {
-  height: 1px;
-  margin: 4px 6px;
-  background: var(--line2);
-}
 
 /* ── 异常提示条（没有异常就整条不渲染）：卡片上方、同宽 ── */
 .anomaly {

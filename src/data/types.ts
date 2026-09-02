@@ -60,7 +60,7 @@ export interface Scene {
 }
 
 /** ★ 场这一层自己的东西。这些内容跨镜，挂在单个镜上没有意义 */
-export interface SceneTrack {
+interface SceneTrack {
   mood: string            // 情绪走向
   bgm: string             // 配乐建议 —— 只作为拍摄台整场配乐生成的输入，不下发到镜
 }
@@ -124,17 +124,17 @@ export interface Character extends AssetBase {
 }
 
 /** 服装是完全扁平的资产，不再持有归属（决策 3a）—— 归属由 look 表达。 */
-export interface Costume extends AssetBase {
+interface Costume extends AssetBase {
   kind: 'costume'
 }
 
-export interface Location extends AssetBase {
+interface Location extends AssetBase {
   kind: 'location'
   timeOfDay: string   // 保留为展示标签，不做任何合并 / 矩阵逻辑（决策 4a）
 }
 
 // 删空后只剩 AssetBase 字段，保留 interface 不合并 —— 后续道具还会长字段。
-export interface Prop extends AssetBase {
+interface Prop extends AssetBase {
   kind: 'prop'
 }
 

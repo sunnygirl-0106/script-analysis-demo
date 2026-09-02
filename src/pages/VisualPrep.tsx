@@ -4,7 +4,7 @@ import { FIRST_BATCH_KINDS, type Asset } from '../data/types'
 import { KIND_LABEL } from '../components/entity'
 import { syncState } from '../services/staleness'
 import ui from '../styles/ui.module.css'
-import di from '../components/ScriptImportDialog.module.css'
+import di from '../styles/dialog.module.css'
 import s from './VisualPrep.module.css'
 
 // 阶段② 简版：队列 = 第一批四类基础资产 ∩ 未排除（决策 2b）。着装角色不进第一批，不在此出现。

@@ -6,7 +6,7 @@ import { sceneDuration } from '../services/timeline'
 import { ResplitEpisodeDialog } from './ResplitEpisodeDialog'
 import { ResplitSceneDialog } from './ResplitSceneDialog'
 import ui from '../styles/ui.module.css'
-import di from './ScriptImportDialog.module.css'
+import di from '../styles/dialog.module.css'
 import s from './EpisodeTree.module.css'
 
 // 菜单项左侧的灰色小图标：统一 24×24 描边风格（对齐 AppShell / ShotRow）。
@@ -38,7 +38,7 @@ const ic = {
   trash: svg(<path d="M5 7h14M10 7V5h4v2M6 7l1 12h10l1-12" strokeLinecap="round" strokeLinejoin="round" />),
 }
 
-// v2.4 §六：集级菜单只剩「重新拆分本集镜头 / 删除本集」——
+// 集级菜单只剩「重新拆分本集镜头 / 删除本集」——
 // 追加剧集与替换本集剧本都退役了，补充剧本的唯一入口在步骤① 整理剧本页的 ⋯ 里。
 type Dialog =
   | { type: 'resplit'; epId: string }

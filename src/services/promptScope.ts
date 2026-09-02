@@ -1,5 +1,4 @@
 // 生成弹窗的范围求解与默认勾选。纯函数，不碰 UI。
-// 规则版本：v1.3（2026-08-15）。断言见 tests/promptScope.test.ts 的 R14。
 import type { Project, PromptState } from '../data/types'
 
 export type PromptScope = 'scene' | 'episode' | 'project'

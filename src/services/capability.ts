@@ -1,11 +1,10 @@
 // 能力矩阵：替代一刀切的阶段锁（决策 1a/1b）。纯函数。
-// 规则版本：v2.0（2026-09-01）。断言见 tests/rules.test.ts 的 R6 / R8。
 //
 // 为什么不再用 canEdit(project, stage)：进入视觉筹备后仍要能改提示词和剧本（决策 1a），
 // 全局锁与此直接冲突。改成字段级 can(project, capability)，每种编辑各自表态。
 import type { Project } from '../data/types'
 
-export type Capability =
+type Capability =
   | 'editPrompt'        // 改任意资产的 imagePrompt
   | 'editScript'        // 导入 / 重拆 / 追加集 / 替换集 / 删集
   | 'editShotFields'    // 改镜头字段：景别 / 焦段 / 时长 / 画面描述 / 对白…

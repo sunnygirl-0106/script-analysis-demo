@@ -11,7 +11,7 @@ import { PencilIcon } from './PencilIcon'
 import { costShotPrompts, fmtCost } from '../services/cost'
 import { PHASES, taskDuration } from '../services/taskRun'
 import { TaskProgress } from './TaskProgress'
-import d from './ScriptImportDialog.module.css'
+import d from '../styles/dialog.module.css'
 import c from './ConfirmPromptDialog.module.css'
 
 // 「生成镜头提示词」前置确认。范围由组件自己按 scope 求解（本场 / 本集 / 全剧），

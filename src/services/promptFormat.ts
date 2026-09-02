@@ -1,7 +1,7 @@
 // 把 '【镜头规格】…\n【主体】…' 解析成分段结构，供提示词分段展示用。
 // 视频提示词首部可能是无标签的时间码行，归入 tag 为空的段。
 
-export interface PromptSection {
+interface PromptSection {
   tag: string
   body: string
 }

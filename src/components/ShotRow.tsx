@@ -19,7 +19,7 @@ import { ShotFieldCell } from './ShotFieldCell'
 import { DialogueCell } from './DialogueCell'
 import { ShotPromptDialog } from './ShotPromptDialog'
 import ui from '../styles/ui.module.css'
-import di from './ScriptImportDialog.module.css'
+import di from '../styles/dialog.module.css'
 import s from './Storyboard.module.css'
 
 function fmt(sec: number): string {

@@ -108,16 +108,8 @@
     var(--bg1) 20px
   );
 }
-/* 角色：三视图 —— 三根竖长条 */
-.shapeChar {
-  height: 100px;
-}
 .shapeChar .slot {
   width: 26px;
-}
-/* 服装：正背两面 —— 横向双图 */
-.shapeCostume {
-  height: 88px;
 }
 .shapeCostume .slot {
   width: 60px;

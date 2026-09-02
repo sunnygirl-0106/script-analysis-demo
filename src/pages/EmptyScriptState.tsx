@@ -6,7 +6,7 @@ import { ScriptSourceDialog } from '../components/ScriptSourceDialog'
 import s from './EmptyScriptState.module.css'
 
 // 空态（源自 空剧本.html 的 2a）：进站第一屏。
-// v2.5 §5.1 起：点「＋ 上传剧本」先弹一个真实的选文件弹窗（上传文件 / 粘贴文本），
+// 点「＋ 上传剧本」先弹一个真实的选文件弹窗（上传文件 / 粘贴文本），
 // 点「开始整理」才关窗跑整页动效——上传必须是一个真的动作，不能一点就自己开始。
 // 没有确认花费弹窗：上传 / 研读 / 拆集免费，整理剧本页本身就是预估结果页。
 export function EmptyScriptState() {

@@ -1,5 +1,4 @@
 // 着装角色（look）相关的纯函数：命名与反查。
-// 规则版本：v1.2（2026-08-12）。断言见 tests/rules.test.ts 的 R11。
 import type { Asset, Look } from '../data/types'
 
 /**
@@ -20,9 +19,3 @@ export function looksOfCharacter(characterId: string, assets: Record<string, Ass
   )
 }
 
-/** 某件服装关联的全部角色造型（一件服装可被多个 look 使用，决策 3a）。 */
-export function looksUsingCostume(costumeId: string, assets: Record<string, Asset>): Look[] {
-  return Object.values(assets).filter(
-    (a): a is Look => a.kind === 'look' && a.costumeIds.includes(costumeId),
-  )
-}

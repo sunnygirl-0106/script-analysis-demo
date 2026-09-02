@@ -1,4 +1,3 @@
-// R14 生成范围求解与默认勾选 · since v1.3 · updated v1.3
 // 断言对应《改动方案-v1.3.md》§1.2 / §6.5。中文描述即产品规则。
 import { describe, it, expect } from 'vitest'
 import { seedProject } from '../data/seed'
@@ -13,28 +12,24 @@ const allInOrder = (p = fresh()) =>
 
 describe('R14 生成范围求解与默认勾选', () => {
   it('scope=scene 只含当前场，且顺序与场内一致', () => {
-    // v1.3
     const p = fresh()
     expect(shotIdsOfScope(p, 'scene', 's1')).toEqual(p.scenes.s1!.shotIds)
     expect(shotIdsOfScope(p, 'scene', 's1').length).toBe(8)
   })
 
   it('scope=episode 覆盖当前集全部场，按集→场→镜排列', () => {
-    // v1.3
     const p = fresh()
     const ep1Shots = p.episodes[0]!.sceneIds.flatMap((sid) => p.scenes[sid]!.shotIds)
     expect(shotIdsOfScope(p, 'episode', 's1')).toEqual(ep1Shots)
   })
 
   it('scope=project 覆盖全剧全部镜头，顺序为集→场→镜', () => {
-    // v1.3
     const p = fresh()
     expect(shotIdsOfScope(p, 'project', 's1')).toEqual(allInOrder(p))
     expect(shotIdsOfScope(p, 'project', 's1').length).toBe(25)
   })
 
   it('defaultSelection：pending / stale 勾选，ready / generating 不勾选', () => {
-    // v1.3
     const ids = ['a', 'b', 'c', 'd']
     const states: Record<string, PromptState> = {
       a: 'pending',
@@ -51,13 +46,11 @@ describe('R14 生成范围求解与默认勾选', () => {
   })
 
   it('defaultSelection：无状态项按 pending 处理，默认勾选', () => {
-    // v1.3
     const sel = defaultSelection(['x'], {})
     expect(sel.has('x')).toBe(true)
   })
 
   it('groupByScene：分组数 = 有镜头的场数，每组镜数与场内一致', () => {
-    // v1.3
     const p = fresh()
     const ids = shotIdsOfScope(p, 'project', 's1')
     const groups = groupByScene(p, ids)
@@ -69,7 +62,6 @@ describe('R14 生成范围求解与默认勾选', () => {
   })
 
   it('groupByScene：只保留含入参镜头的场（scene 范围只出一组）', () => {
-    // v1.3
     const p = fresh()
     const ids = shotIdsOfScope(p, 'scene', 's2')
     const groups = groupByScene(p, ids)

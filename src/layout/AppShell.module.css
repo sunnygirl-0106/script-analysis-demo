@@ -38,27 +38,6 @@
   height: 22px;
   display: block;
 }
-.flow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 11.5px;
-  color: var(--t4);
-}
-.flowStep {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: var(--rsm);
-  cursor: pointer;
-  transition: 0.14s;
-  border: 1px solid transparent;
-}
-.flowStep:hover {
-  color: var(--t2);
-  background: var(--bg3);
-}
 .flowStep.cur {
   color: var(--acc);
   background: var(--acc-bg);
@@ -74,10 +53,6 @@
   border-radius: 50%;
   background: currentColor;
   opacity: 0.7;
-}
-.flowArrow {
-  color: var(--t4);
-  font-size: 10px;
 }
 /* ── 右上账户区 ── */
 .right {

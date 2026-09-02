@@ -6,7 +6,7 @@ import { costSplit, fmtCost } from '../services/cost'
 import { PHASES, taskDuration } from '../services/taskRun'
 import { TaskProgress } from './TaskProgress'
 import ui from '../styles/ui.module.css'
-import d from './ScriptImportDialog.module.css'
+import d from '../styles/dialog.module.css'
 import s from './ResplitEpisodeDialog.module.css'
 
 const DENSITY: { key: ShotDensity; label: string }[] = [
@@ -16,7 +16,7 @@ const DENSITY: { key: ShotDensity; label: string }[] = [
 ]
 
 // ★ 重拆本集：设置 + 消耗，一次确认，弹窗内跑进度。
-// v2.4 §7：重拆不再提取资产，资产检查区换成一行静态灰字（同重拆本场）。
+// 重拆不再提取资产，资产检查区换成一行静态灰字（同重拆本场）。
 export function ResplitEpisodeDialog({ episodeId, onClose }: { episodeId: string; onClose: () => void }) {
   const project = useStore((st) => st.project)
   const runResplitEpisode = useStore((st) => st.runResplitEpisode)

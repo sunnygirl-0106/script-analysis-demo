@@ -1,4 +1,3 @@
-// R15 候选层：抽取去重 / 三选一结算 / 同名拦截 / 既有资产引用相等 · since v2.0
 // 测试里的中文描述就是产品规则本身，不要为了通过测试去改测试。
 import { describe, it, expect } from 'vitest'
 import { seedProject, seedFreshProject, A } from '../data/seed'

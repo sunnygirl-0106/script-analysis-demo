@@ -1,7 +1,7 @@
 // 时长是累计时间轴。纯函数，不 import 任何 React。
 import type { Scene, Shot } from '../data/types'
 
-export interface TimelineEntry {
+interface TimelineEntry {
   shotId: string
   startAt: number
   endAt: number

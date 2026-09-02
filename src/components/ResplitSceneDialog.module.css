@@ -1,4 +1,4 @@
-/* 复用 ScriptImportDialog.module.css 的 overlay / dialog / title / actions；这里只补重拆特有的块。 */
+/* 复用 styles/dialog.module.css 的 overlay / dialog / title / actions；这里只补重拆特有的块。 */
 .sub {
   font-size: 12px;
   color: var(--t4);

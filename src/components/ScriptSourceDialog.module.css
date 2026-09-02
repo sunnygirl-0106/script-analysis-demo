@@ -1,6 +1,6 @@
 /* 选文件类弹窗的公共样式：容器 / tab / 拖拽上传区 / 粘贴框 / 底部灰字。
-   遮罩 / 标题 / 操作栏沿用 ScriptImportDialog.module.css 的类。
-   ⚠ 同名的 ReplaceEpisodeDialog.tsx 已于 v2.4 退役，样式由 ScriptSourceDialog 接管。 */
+   遮罩 / 标题 / 操作栏沿用 styles/dialog.module.css 的类。
+   这里只补「选剧本来源」弹窗特有的 tab / 拖放区 / 粘贴框。 */
 .dialog {
   width: 480px;
   max-width: calc(100vw - 40px);
@@ -9,12 +9,6 @@
   border-radius: var(--rlg);
   box-shadow: 0 20px 50px rgb(0 0 0 / 0.5);
   padding: 20px 22px;
-}
-.sub {
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--t3);
-  margin: -6px 0 14px;
 }
 
 /* tab 切换 */
@@ -98,87 +92,6 @@
   font-size: 11px;
   line-height: 1.7;
   color: var(--t4);
-}
-
-/* 多集选择 */
-.pickList {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-.pick {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 13px;
-  border: 1px solid var(--line2);
-  border-radius: var(--rlg);
-  background: var(--bg1);
-  font-size: 12.5px;
-  color: var(--t2);
-  cursor: pointer;
-  transition: 0.14s;
-}
-.pick:hover {
-  border-color: var(--edge);
-}
-.pickOn {
-  border-color: var(--acc-line);
-  background: var(--acc-bg);
-}
-.pick input {
-  accent-color: var(--acc);
-}
-
-/* 确认页对照 */
-.meta {
-  font-size: 12.5px;
-  color: var(--t2);
-  margin-bottom: 8px;
-}
-.compare {
-  font-size: 12.5px;
-  color: var(--t1);
-  padding: 9px 12px;
-  background: var(--bg1);
-  border: 1px solid var(--line2);
-  border-radius: var(--rsm);
-  margin-bottom: 12px;
-}
-
-/* demo 专用触发器：极弱化到几乎不可见 */
-.demoHint {
-  display: block;
-  margin: 12px auto 0;
-  font-size: 10.5px;
-  color: var(--t5);
-  opacity: 0.45;
-  cursor: pointer;
-  transition: 0.14s;
-}
-.demoHint:hover {
-  opacity: 0.9;
-  text-decoration: underline;
-}
-
-/* 拆解中 */
-.running {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 26px 12px;
-  font-size: 13px;
-  color: var(--t2);
-}
-.spin {
-  width: 15px;
-  height: 15px;
-  border: 2px solid var(--acc);
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: reSpin 0.7s linear infinite;
 }
 @keyframes reSpin {
   to {

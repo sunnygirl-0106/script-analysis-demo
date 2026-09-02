@@ -1,5 +1,4 @@
 // R9 资产完整性提示。纯函数。
-// 规则版本：v1.2（2026-08-12）。断言见 tests/rules.test.ts 的 R9。
 //
 // 只在下面三种情况提示，其余一律不提示。**明确不提示**（不要"补全"回去）：
 //   · 没有道具 → 正常，大量镜头本来就没道具
@@ -25,9 +24,9 @@ function visibleText(text: string): string {
     .join(' ')
 }
 
-export type IssueLevel = 'action' | 'hint'
+type IssueLevel = 'action' | 'hint'
 
-export interface MountIssue {
+interface MountIssue {
   level: IssueLevel
   text: string
   /** level==='action' 时携带：点一下就能挂上的那个资产（角色会挂它的 look） */

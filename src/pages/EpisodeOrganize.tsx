@@ -4,7 +4,7 @@ import { useClickOutside } from '../hooks/useClickOutside'
 import { RATE, costExtract, fmtCost } from '../services/cost'
 import { ScriptSourceDialog } from '../components/ScriptSourceDialog'
 import ui from '../styles/ui.module.css'
-import d from '../components/ScriptImportDialog.module.css'
+import d from '../styles/dialog.module.css'
 import s from './EpisodeOrganize.module.css'
 
 // 页级 ⋯ 菜单的描边图标（沿用 EpisodeTree 里那套 15px svg 写法）。

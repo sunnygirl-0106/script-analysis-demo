@@ -50,7 +50,6 @@ export const PHASES = {
   ],
 } satisfies Record<string, Phase[]>
 
-export type PhaseKey = keyof typeof PHASES
 
 /** 拆分阶段文案：把用户刚选的节奏名填进第一句。 */
 export function splitPhases(densityLabel: string): Phase[] {

@@ -5,14 +5,14 @@ import type { Decision } from './decision'
 import { DENSITY_META } from '../services/density'
 import { EST, costSplitByWords, estimateScenes, estimateShotRange, fmtCost } from '../services/cost'
 import ui from '../styles/ui.module.css'
-import d from './ScriptImportDialog.module.css'
+import d from '../styles/dialog.module.css'
 import s from './SplitDensityDialog.module.css'
 
 // 节奏弹窗（v2.5 §6.2）。v2.4 把三张节奏卡做成了步骤③ 的起点页，本轮推翻——
 // 选节奏是「确认资产并开始拆分」这一个动作里的一个参数，它属于弹窗，不值得一整页。
 //
 // 镜数是**生成前**的估算，所以三张卡与摘要一律给区间；价格按字数 × 档位系数算，是确定值。
-// v2.7 §3.7 把解释这件事的那行琥珀色小字删了——区间本身已经在说「这是估的」。
+// 把解释这件事的那行琥珀色小字删了——区间本身已经在说「这是估的」。
 export function SplitDensityDialog({
   decisions, onClose,
 }: {
