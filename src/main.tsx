@@ -14,8 +14,7 @@ if (new URLSearchParams(window.location.search).get('fresh') === '1') {
   useStore.setState({
     project: structuredClone(seedFreshProject),
     candidates: [],
-    analysisStep: 'episodes',
-    analysisPhase: 'done',
+    analysisView: 'episodes',
     promptStates: {},
     promptEdited: {},
   })

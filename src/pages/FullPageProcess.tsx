@@ -1,11 +1,12 @@
 import { useStore } from '../store/useStore'
+import { isRunningView, type RunningView } from '../data/types'
 import { ScriptIllustration } from '../components/ScriptIllustration'
 import { useTaskTimeline } from '../hooks/useTaskTimeline'
 import { PHASES, splitPhases, type Phase } from '../services/taskRun'
 import { DENSITY_LABEL } from '../services/density'
 import s from './FullPageProcess.module.css'
 
-// 整页动效（v2.5 §四）。三个相位共用这一个组件，只换文案：
+// 整页动效。三个动效屏共用这一个组件，只换文案：
 //   organizing → 整理剧本页 ／ extracting → 资产确认页 ／ splitting → 分镜表
 //
 // 原则：**动效页属于目标步骤，不属于来源步骤**。用户点的是「进入下一步」，
@@ -19,7 +20,7 @@ import s from './FullPageProcess.module.css'
 const DURATION = { organizing: 4200, extracting: 4000, splitting: 4500 } as const
 
 export function FullPageProcess() {
-  const phase = useStore((st) => st.analysisPhase)
+  const view = useStore((st) => st.analysisView)
   const title = useStore((st) => st.project.title)
   const pendingDensity = useStore((st) => st.pendingDensity)
   const defaultDensity = useStore((st) => st.project.defaultDensity)
@@ -27,18 +28,18 @@ export function FullPageProcess() {
   const finishExtract = useStore((st) => st.finishExtract)
   const finishSplit = useStore((st) => st.finishSplit)
 
-  if (phase !== 'organizing' && phase !== 'extracting' && phase !== 'splitting') return null
+  if (!isRunningView(view)) return null
 
   const densityLabel = DENSITY_LABEL[pendingDensity ?? defaultDensity]
-  const script: Record<typeof phase, { heading: string; phases: Phase[]; onDone: () => void }> = {
+  const script: Record<RunningView, { heading: string; phases: Phase[]; onDone: () => void }> = {
     organizing: { heading: `正在研读《${title}》`, phases: PHASES.organize, onDone: finishOrganize },
     extracting: { heading: '资产提取中，预计耗时 5 分钟', phases: PHASES.extract, onDone: finishExtract },
     splitting: { heading: '分镜拆解中，预计耗时 8 分钟', phases: splitPhases(densityLabel), onDone: finishSplit },
   }
-  const { heading, phases, onDone } = script[phase]
+  const { heading, phases, onDone } = script[view]
 
-  // key=phase：换相位就是换一次任务，时间线要重排（hook 只在挂载时排一次）。
-  return <Process key={phase} heading={heading} phases={phases} durationMs={DURATION[phase]} onDone={onDone} />
+  // key=view：换一屏就是换一次任务，时间线要重排（hook 只在挂载时排一次）。
+  return <Process key={view} heading={heading} phases={phases} durationMs={DURATION[view]} onDone={onDone} />
 }
 
 function Process({

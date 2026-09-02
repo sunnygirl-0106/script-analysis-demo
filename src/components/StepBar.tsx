@@ -1,4 +1,5 @@
 import { useStore } from '../store/useStore'
+import { isRunningView, STEP_OF_VIEW } from '../data/types'
 import type { Project } from '../data/types'
 import s from './StepBar.module.css'
 
@@ -33,13 +34,11 @@ type Look = 'current' | 'done' | 'jumpable' | 'disabled'
 
 export function StepBar() {
   const project = useStore((st) => st.project)
-  const analysisPhase = useStore((st) => st.analysisPhase)
-  const analysisStep = useStore((st) => st.analysisStep)
+  const analysisView = useStore((st) => st.analysisView)
   const activePage = useStore((st) => st.activePage)
   const candidates = useStore((st) => st.candidates)
   const promptStates = useStore((st) => st.promptStates)
-  const setAnalysisStep = useStore((st) => st.setAnalysisStep)
-  const setAnalysisPhase = useStore((st) => st.setAnalysisPhase)
+  const setAnalysisView = useStore((st) => st.setAnalysisView)
   const setPage = useStore((st) => st.setPage)
   const setTab = useStore((st) => st.setTab)
 
@@ -50,20 +49,13 @@ export function StepBar() {
   const busy = shotIds.some((id) => stateOf(id) === 'generating')
   const needCount = shotIds.filter((id) => stateOf(id) === 'pending' || stateOf(id) === 'stale').length
   const allReady = shotsExist && needCount === 0 && !busy
-  const settled = analysisPhase === 'done'
+  // 动效跑着的时候不许跳转；空态也还没有可跳的东西。
+  const settled = !isRunningView(analysisView) && analysisView !== 'empty'
   const extracted = project.episodes.some((e) => e.extractedAt)
 
   // 当前步（恰有一个）：在资产库(visual) → 0（三步都走完，全部显示 ✓）。
-  // 相位优先于 analysisStep —— 虽然两者在 v2.5 里被刻意保持同步（点下一步的瞬间两个一起切），
-  // 相位先判一遍能让「动效属于目标步骤」这条规则在代码里显式可读。
-  const current =
-    activePage === 'visual' ? 0
-    : analysisPhase === 'organizing' || analysisPhase === 'empty' ? 1
-    : analysisPhase === 'extracting' ? 2
-    : analysisPhase === 'splitting' ? 3
-    : analysisStep === 'episodes' ? 1
-    : analysisStep === 'assetConfirm' ? 2
-    : 3
+  // 其余直接查表 —— 「动效屏归目标步骤」这条规则写在 STEP_OF_VIEW 里，不在这儿分支。
+  const current = activePage === 'visual' ? 0 : STEP_OF_VIEW[analysisView]
 
   // 完成态：走过且其工作已达成。**按顺序累积**（v2.6 §1.2）——
   // 后一步的 ✓ 必须蕴含前面每一步都干完了，否则会出现「① 还没做，② 已 ✓」这种不可能的状态。
@@ -80,14 +72,12 @@ export function StepBar() {
   }
 
   const jump = (n: number) => {
-    // 三步都落在 analysis 页；App.tsx 的子页分派被 analysisPhase 卡着，
-    // 所以跳转必须把相位推到 done 才能真正翻页。
-    setAnalysisPhase('done')
+    // 三步都落在 analysis 页，切一个 view 就够了（以前要同时推相位与步骤两个字段）。
     setPage('analysis')
     switch (n) {
-      case 1: setAnalysisStep('episodes'); break
-      case 2: setAnalysisStep('assetConfirm'); setTab('character'); break
-      case 3: setAnalysisStep('storyboard'); setTab('shot'); break
+      case 1: setAnalysisView('episodes'); break
+      case 2: setAnalysisView('assetConfirm'); setTab('character'); break
+      case 3: setAnalysisView('storyboard'); setTab('shot'); break
     }
   }
 
@@ -100,7 +90,7 @@ export function StepBar() {
 
   // 整理跑完之前一集都还没有 —— 第①步的副文案不许提前报出「N 集 · X 字」（§九.3）。
   const subProject =
-    analysisPhase === 'empty' || analysisPhase === 'organizing' ? { ...project, episodes: [] } : project
+    analysisView === 'empty' || analysisView === 'organizing' ? { ...project, episodes: [] } : project
 
   return (
     <div className={s.bar}>

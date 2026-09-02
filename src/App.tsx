@@ -9,31 +9,32 @@ import { VisualPrep } from './pages/VisualPrep'
 import { Studio } from './pages/Studio'
 import { Toast } from './components/Toast'
 
-// 剧本分析的子页分派（v2.5 §三）。两个维度：
-//   analysisPhase —— 呈现相位（空态 / 整理中 / 提取中 / 拆分中 / 完成），它优先；
-//   analysisStep  —— 三步流程走到哪一步。
-// 三个「中」相位都落到同一个整页动效组件，各自跑完跨到下一步。
+// 剧本分析的子页分派：一个 analysisView 决定一屏（见 data/types.ts 的 AnalysisView）。
+// 三个「…ing」都落到同一个整页动效组件，各自跑完跨到下一屏。
+function analysisScreen(view: ReturnType<typeof useStore.getState>['analysisView']) {
+  switch (view) {
+    case 'empty':
+      return <EmptyScriptState />
+    case 'organizing':
+    case 'extracting':
+    case 'splitting':
+      return <FullPageProcess />
+    case 'episodes':
+      return <EpisodeOrganize />
+    case 'assetConfirm':
+      return <AssetConfirm />
+    case 'storyboard':
+      return <ScriptAnalysis />
+  }
+}
+
 export default function App() {
   const activePage = useStore((s) => s.activePage)
-  const analysisPhase = useStore((s) => s.analysisPhase)
-  const analysisStep = useStore((s) => s.analysisStep)
-
-  const analysisContent =
-    analysisPhase === 'empty' ? (
-      <EmptyScriptState />
-    ) : analysisPhase !== 'done' ? (
-      <FullPageProcess />
-    ) : analysisStep === 'episodes' ? (
-      <EpisodeOrganize />
-    ) : analysisStep === 'assetConfirm' ? (
-      <AssetConfirm />
-    ) : (
-      <ScriptAnalysis />
-    )
+  const analysisView = useStore((s) => s.analysisView)
 
   return (
     <AppShell>
-      {activePage === 'analysis' && analysisContent}
+      {activePage === 'analysis' && analysisScreen(analysisView)}
       {activePage === 'visual' && <VisualPrep />}
       {activePage === 'studio' && <Studio />}
       <Toast />

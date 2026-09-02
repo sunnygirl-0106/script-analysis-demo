@@ -62,7 +62,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const setPage = useStore((st) => st.setPage)
   const navCollapsed = useStore((st) => st.navCollapsed)
   const toggleNav = useStore((st) => st.toggleNav)
-  const analysisPhase = useStore((st) => st.analysisPhase)
+  const analysisView = useStore((st) => st.analysisView)
   const replayDemo = useStore((st) => st.replayDemo)
   const finishOrganize = useStore((st) => st.finishOrganize)
   const finishExtract = useStore((st) => st.finishExtract)
@@ -71,12 +71,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   // 演示控制器 pill：三段整页动效里都能「跳过」直达该段的结果；跑完可「重新演示」复位重播。
   // 空态不显示 pill（空态自带 CTA）。
   const skip =
-    analysisPhase === 'organizing' ? finishOrganize
-    : analysisPhase === 'extracting' ? finishExtract
-    : analysisPhase === 'splitting' ? finishSplit
+    analysisView === 'organizing' ? finishOrganize
+    : analysisView === 'extracting' ? finishExtract
+    : analysisView === 'splitting' ? finishSplit
     : null
   const demoPill =
-    activePage === 'analysis' && analysisPhase !== 'empty' ? (
+    activePage === 'analysis' && analysisView !== 'empty' ? (
       skip ? (
         <button className={s.demoPill} onClick={skip}>
           跳过 ⏭

@@ -1,7 +1,7 @@
 // Zustand：一个 project + 所有动作。不做持久化，刷新回到初始状态。
 import { create } from 'zustand'
 import type {
-  AnalysisStep, AssetKind, CandidateAsset, Episode, Look, MountRef,
+  AnalysisView, AssetKind, CandidateAsset, Episode, Look, MountRef,
   Project, PromptState, Scene, Shot, ShotDensity, Stage,
 } from '../data/types'
 import { seedProject, seedFreshProject, seedCandidates, emptyProject } from '../data/seed'
@@ -36,15 +36,6 @@ function usageIndexOf(project: Project): Record<string, AssetUsage> {
 
 export type Tab = 'character' | 'costume' | 'location' | 'prop' | 'shot'
 
-/** 上传演示的呈现相位（v2.5 §三）。三个「中」相位各对应一段整页动效，且**各跨一步**：
- *    organizing → 跑完落整理剧本页（步骤①）
- *    extracting → 跑完落资产确认页（步骤②）
- *    splitting  → 跑完落分镜表（步骤③）
- *  动效页属于**目标**步骤：点下「进入下一步」的瞬间 analysisStep 就已经切过去了，
- *  步骤条立刻响应，动效是下一步在干活。
- *  纯 UI 态，不进领域模型。seed 始终完整加载，动画只做呈现层揭示。
- *  与 AnalysisStep（现在在三步的哪一步）正交，不要合并。 */
-export type AnalysisPhase = 'empty' | 'organizing' | 'extracting' | 'splitting' | 'done'
 
 export interface ToastAction {
   label: string
@@ -99,8 +90,8 @@ interface UIState {
   sceneSettingsOpen: boolean
   navCollapsed: boolean
   toast: Toast | null
-  // ── 拆解过程演示 ──
-  analysisPhase: AnalysisPhase
+  // ── 剧本分析页当前在哪一屏（含三个整页动效屏）。见 data/types.ts 的 AnalysisView。 ──
+  analysisView: AnalysisView
   /** 节奏弹窗里选中的档位，只在「确认 → 动效跑完」之间活着（v2.5 §三）。 */
   pendingDensity: ShotDensity | null
   /** 增量确认时同批带过去的候选处理方式；null = 本次是首次拆分，不是增量。 */
@@ -141,8 +132,6 @@ export interface StoreState extends UIState {
   promptEdited: Record<string, boolean>
 
   // ── 候选层与确认闸（v2.0）──
-  /** 流程相位：分镜是否已经存在。与 analysisPhase（动画）正交。 */
-  analysisStep: AnalysisStep
   /** 待确认候选。空数组 = 没有待处理增量。 */
   candidates: CandidateAsset[]
 
@@ -188,9 +177,8 @@ export interface StoreState extends UIState {
   finishSplit: () => void
   /** 步骤②（已入库后）的主按钮：结算新候选 + 给草稿集补场镜 → 步骤③。 */
   confirmIncremental: (decisions: Record<string, Decision>) => void
-  setAnalysisPhase: (phase: AnalysisPhase) => void
-  /** 流程条跳转用：切阶段② / 阶段③ 相位（其余相位切换各有专用入口，不走这里）。 */
-  setAnalysisStep: (step: AnalysisStep) => void
+  /** 直接切屏。流程条跳转与动效收尾走这里；其余切换各有专用入口。 */
+  setAnalysisView: (view: AnalysisView) => void
   // 拖拽调整面板宽度（自动夹取到 PANEL_MIN/MAX）。
   setPanelW: (which: 'episode' | 'script', width: number) => void
   // 「重新演示」：复位到空态，并把工作区视图复位（第 1 场 / 分镜 tab / 收起剧本）。
@@ -258,7 +246,7 @@ export interface StoreState extends UIState {
 
   /** 「确认并保存到项目资产库」：结算候选 + 写 libraryCommittedAt。 */
   commitLibrary: () => void
-  /** 步骤③「开始拆分」：为已提取、还没有场的集**创建场并填镜**，analysisStep → 'storyboard'。 */
+  /** 步骤③「开始拆分」：为已提取、还没有场的集**创建场并填镜**，视图落到 storyboard。 */
   startSplit: (opts: { density?: ShotDensity; instant?: boolean }) => void
 
   // ── 资产库侧（v3 唯一的删除出口）──
@@ -347,7 +335,7 @@ export const useStore = create<StoreState>((set, get) => {
       s.selectedSceneId
     set({
       project: next,
-      analysisStep: 'storyboard',
+      analysisView: 'storyboard',
       activeTab: 'shot',
       selectedSceneId: first,
       sceneSettingsOpen: false,
@@ -438,7 +426,7 @@ export const useStore = create<StoreState>((set, get) => {
   navCollapsed: false,
   toast: null,
   // 进站默认空态：先看到空剧本页，点「＋ 上传剧本」才开始演示。
-  analysisPhase: 'empty',
+  analysisView: 'empty',
   pendingDensity: null,
   pendingDecisions: null,
   episodeW: 192,
@@ -446,8 +434,7 @@ export const useStore = create<StoreState>((set, get) => {
   flashShotIds: [],
   hoverMention: null,
   hoverAssetTerm: null,
-  // 候选层：默认从现状起（已入库 + 有分镜），故 storyboard、无候选、无挂起任务。
-  analysisStep: 'storyboard',
+  // 候选层：进站没有待确认候选。
   candidates: [],
 
   usageIndex: () => usageIndexOf(get().project),
@@ -490,15 +477,14 @@ export const useStore = create<StoreState>((set, get) => {
   // ── 步骤① 整理剧本（v2.5 §五）──
   // 上传弹窗点「开始整理」 → 关窗 → 整页动效（FullPageProcess 跑完调 finishOrganize）。
   // 没有确认花费弹窗、没有价格：上传 / 研读 / 拆集都免费，整理剧本页本身就是那份预估结果。
-  beginOrganize: () => set({ analysisPhase: 'organizing' }),
+  beginOrganize: () => set({ analysisView: 'organizing' }),
 
   finishOrganize: () => set({
     project: structuredClone(seedFreshProject),
     candidates: [],
     promptStates: {},
     promptEdited: {},
-    analysisStep: 'episodes',
-    analysisPhase: 'done',
+    analysisView: 'episodes',
     hoverAssetTerm: null,
     sceneSettingsOpen: false,
   }),
@@ -577,7 +563,7 @@ export const useStore = create<StoreState>((set, get) => {
 
   // 步骤条在点下去的瞬间就切到②（v2.5 §2.2）：用户点的是「进入下一步」，
   // 动效是下一步在干活，不该还停在①。
-  startExtract: () => set({ analysisPhase: 'extracting', analysisStep: 'assetConfirm' }),
+  startExtract: () => set({ analysisView: 'extracting' }),
 
   finishExtract: () => {
     const s = get()
@@ -595,8 +581,8 @@ export const useStore = create<StoreState>((set, get) => {
 
     // 已入库且这一集没抽出任何新资产：没有要确认的东西，别为了走流程而停一页。
     if (committed && candidates.length === 0) {
-      set({ project, candidates: [], analysisPhase: 'done' })
-      fillDraftEpisodes()
+      set({ project, candidates: [] })
+      fillDraftEpisodes() // 里面会把视图落到 storyboard
       get().showToast(`第 ${draftNos.join(' / ')} 集未发现新资产，已直接拆分`)
       return
     }
@@ -604,9 +590,8 @@ export const useStore = create<StoreState>((set, get) => {
     set({
       project,
       candidates,
-      analysisStep: 'assetConfirm',
+      analysisView: 'assetConfirm',
       activeTab: 'character',
-      analysisPhase: 'done',
       hoverAssetTerm: null,
     })
   },
@@ -615,8 +600,7 @@ export const useStore = create<StoreState>((set, get) => {
     // 首次拆分：入库这一下没有单独的确认页，它和拆分是同一个决定，在这里一起做掉。
     if (get().project.libraryCommittedAt == null) get().commitLibrary()
     set({
-      analysisPhase: 'splitting',
-      analysisStep: 'storyboard',
+      analysisView: 'splitting',
       pendingDensity: density,
       pendingDecisions: decisions ?? null,
     })
@@ -627,7 +611,8 @@ export const useStore = create<StoreState>((set, get) => {
     // pendingDecisions 非空 = 本次是「已入库 + 新集」的增量结算；否则是首次整本拆分。
     if (s.pendingDecisions) get().confirmIncremental(s.pendingDecisions)
     else get().startSplit({ density: s.pendingDensity ?? s.project.defaultDensity })
-    set({ analysisPhase: 'done', pendingDensity: null, pendingDecisions: null })
+    // 视图由上面的 confirmIncremental / startSplit 落到 storyboard，这里只清临时参数。
+    set({ pendingDensity: null, pendingDecisions: null })
   },
 
   confirmIncremental: (decisions) => {
@@ -642,8 +627,7 @@ export const useStore = create<StoreState>((set, get) => {
     set({ viewScope: { kind: 'project' } })
     get().showToast(`第 ${draft?.no ?? 2} 集已拆分为 ${added} 个镜头。`)
   },
-  setAnalysisPhase: (analysisPhase) => set({ analysisPhase }),
-  setAnalysisStep: (analysisStep) => set({ analysisStep }),
+  setAnalysisView: (analysisView) => set({ analysisView }),
   setPanelW: (which, width) => {
     const w = Math.round(Math.min(PANEL_MAX[which], Math.max(PANEL_MIN[which], width)))
     set(which === 'episode' ? { episodeW: w } : { scriptW: w })
@@ -655,15 +639,14 @@ export const useStore = create<StoreState>((set, get) => {
       project: structuredClone(emptyProject),
       promptStates: {},
       promptEdited: {},
-      analysisPhase: 'empty',
+      analysisView: 'empty',
       viewScope: { kind: 'project' },
       selectedSceneId: 's1',
       activeTab: 'shot',
       scriptOpen: false,
       sceneSettingsOpen: false,
       toast: null,
-      // 复位首次流程相位，否则「重新演示」之后 analysisStep / candidates / pendingTask 是串的。
-      analysisStep: 'episodes',
+      // 候选也要复位，否则「重新演示」之后是串的。
       candidates: [],
       pendingDensity: null,
       pendingDecisions: null,
@@ -1254,7 +1237,7 @@ export const useStore = create<StoreState>((set, get) => {
     const project: Project = { ...s.project, episodes, scenes, shots }
     set({
       project,
-      analysisStep: 'storyboard',
+      analysisView: 'storyboard',
       activeTab: 'shot',
       // 拆完落全剧视图（v2.7 §5.2）：第一眼该看到整部剧被拆成了什么样。
       viewScope: { kind: 'project' },

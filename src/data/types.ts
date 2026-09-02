@@ -150,11 +150,45 @@ export type Asset = Character | Costume | Location | Prop | Look
 
 // ── 候选层与流程相位（v2.0）──
 
-/** 剧本分析的流程相位（v2.4）。现在在四步里的哪一步：
- *  episodes 整理剧本 → assetConfirm 确认资产清单 → storyboard 分镜（拆分起点页 / 分镜表）。
- *  资产确认仍是一道闸：分镜在闸之后才存在。
- *  与 AnalysisPhase（上传演示的呈现相位）是两个正交概念，不要合并。 */
-export type AnalysisStep = 'episodes' | 'assetConfirm' | 'storyboard'
+/**
+ * 剧本分析页当前呈现哪一屏 —— **一条链，一个字段**。
+ *
+ *   empty ──→ organizing ──→ episodes ──→ extracting ──→ assetConfirm ──→ splitting ──→ storyboard
+ *              (整页动效)                    (整页动效)                      (整页动效)
+ *
+ * 三个「…ing」是整页动效屏，各自跑完落到它右边那一屏。
+ * 关键口径：**动效屏属于目标步骤，不属于来源步骤**——用户点的是「进入下一步」，
+ * 步骤条在点下去的瞬间就切过去了，动效是下一步在干活。
+ *
+ * 这里曾经是两个字段（analysisPhase 呈现相位 × analysisStep 走到第几步），
+ * 注释还写着「两个正交概念，不要合并」。实际并不正交：可达组合恰好就是上面这 7 屏，
+ * 每次切换都要同时写两个字段、少写一个就串味，App.tsx 还得按两者做嵌套三元分派。
+ */
+export type AnalysisView =
+  | 'empty'
+  | 'organizing'
+  | 'episodes'
+  | 'extracting'
+  | 'assetConfirm'
+  | 'splitting'
+  | 'storyboard'
+
+/** 整页动效屏。跑完各自落到 episodes / assetConfirm / storyboard。 */
+const RUNNING_VIEWS = ['organizing', 'extracting', 'splitting'] as const
+export type RunningView = (typeof RUNNING_VIEWS)[number]
+export const isRunningView = (v: AnalysisView): v is RunningView =>
+  (RUNNING_VIEWS as readonly string[]).includes(v)
+
+/** 每一屏归属步骤条的第几步。动效屏归**目标**步骤。 */
+export const STEP_OF_VIEW: Record<AnalysisView, 1 | 2 | 3> = {
+  empty: 1,
+  organizing: 1,
+  episodes: 1,
+  extracting: 2,
+  assetConfirm: 2,
+  splitting: 3,
+  storyboard: 3,
+}
 
 /** 用户对一条候选的处理方式（v3 §4.2）。 */
 export type CandidateDecision = 'new' | 'link' | 'skip'
