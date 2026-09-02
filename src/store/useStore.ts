@@ -1,7 +1,7 @@
 // Zustand：一个 project + 所有动作。不做持久化，刷新回到初始状态。
 import { create } from 'zustand'
 import type {
-  AnalysisView, AssetKind, CandidateAsset, Episode, Look, MountRef,
+  AnalysisView, Asset, AssetKind, CandidateAsset, Episode, Look, MountRef,
   Project, PromptState, Scene, Shot, ShotDensity, Stage,
 } from '../data/types'
 import { seedProject, seedFreshProject, seedCandidates, emptyProject } from '../data/seed'
@@ -253,6 +253,15 @@ export interface StoreState extends UIState {
   deleteAsset: (assetId: string) => void
 }
 
+// 归一化字典的就地替换。`{ ...p, shots: { ...p.shots, [id]: {...} } }` 这个形状在 store 里
+// 出现了十几次，嵌套三到四层，写错一层不会有任何提示（类型仍然是对的，只是更新丢了）。
+const withShot = (p: Project, id: string, next: Shot): Project =>
+  ({ ...p, shots: { ...p.shots, [id]: next } })
+const withScene = (p: Project, id: string, next: Scene): Project =>
+  ({ ...p, scenes: { ...p.scenes, [id]: next } })
+const withAsset = (p: Project, id: string, next: Asset): Project =>
+  ({ ...p, assets: { ...p.assets, [id]: next } })
+
 let toastSeq = 0
 
 // 提示词「逐镜揭示」的计时器。**一个** interval 分批推进，而不是一镜一个 setTimeout：
@@ -351,7 +360,7 @@ export const useStore = create<StoreState>((set, get) => {
     if (!hasDensityPresets(sceneId)) {
       const reset = resplitScene(s.project, sceneId)
       const rscene = reset.scenes[sceneId]!
-      const next = { ...reset, scenes: { ...reset.scenes, [sceneId]: { ...rscene, density: 'standard' as ShotDensity } } }
+      const next = withScene(reset, sceneId, { ...rscene, density: 'standard' as ShotDensity })
       set({ project: next, sceneSettingsOpen: false })
       get().showToast('当前演示仅第 1 场支持不同镜头节奏，本场已按原方式重新生成')
       return
@@ -392,7 +401,7 @@ export const useStore = create<StoreState>((set, get) => {
       } else {
         const reset = resplitScene(proj, sid)
         const rscene = reset.scenes[sid]!
-        proj = { ...reset, scenes: { ...reset.scenes, [sid]: { ...rscene, density: 'standard' as ShotDensity } } }
+        proj = withScene(reset, sid, { ...rscene, density: 'standard' as ShotDensity })
         kept.push(scene.no)
       }
     }
@@ -706,7 +715,7 @@ export const useStore = create<StoreState>((set, get) => {
       const shot = s.project.shots[shotId]
       if (!shot) return s
       return {
-        project: { ...s.project, shots: { ...s.project.shots, [shotId]: { ...shot, [field]: value } } },
+        project: withShot(s.project, shotId, { ...shot, [field]: value }),
       }
     })
     // 改的是「第一步字段」才标脏；直接编辑 image/videoPrompt 本身不算内容改动。
@@ -754,7 +763,7 @@ export const useStore = create<StoreState>((set, get) => {
         if (sh && sh.no !== i + 1) shots[sid] = { ...sh, no: i + 1 }
       })
       return {
-        project: { ...s.project, scenes: { ...s.project.scenes, [sceneId]: { ...scene, shotIds } }, shots },
+        project: { ...withScene(s.project, sceneId, { ...scene, shotIds }), shots },
         promptStates: { ...s.promptStates, [id]: 'pending' as PromptState },
       }
     })
@@ -793,7 +802,7 @@ export const useStore = create<StoreState>((set, get) => {
     set((s) => {
       const scene = s.project.scenes[sceneId]
       if (!scene || scene.name === trimmed) return s
-      return { project: { ...s.project, scenes: { ...s.project.scenes, [sceneId]: { ...scene, name: trimmed } } } }
+      return { project: withScene(s.project, sceneId, { ...scene, name: trimmed }) }
     })
   },
 
@@ -885,7 +894,7 @@ export const useStore = create<StoreState>((set, get) => {
       const promptEdited = { ...s.promptEdited }
       delete promptEdited[shotId]
       return {
-        project: { ...s.project, scenes: { ...s.project.scenes, [shot.sceneId]: { ...scene, shotIds } }, shots },
+        project: { ...withScene(s.project, shot.sceneId, { ...scene, shotIds }), shots },
         promptStates,
         promptEdited,
       }
@@ -905,7 +914,7 @@ export const useStore = create<StoreState>((set, get) => {
       const shot = s.project.shots[shotId]
       if (!shot || shot.mounts.some((m) => m.assetId === mount.assetId)) return s
       const mounts = [...shot.mounts, mount]
-      return { project: { ...s.project, shots: { ...s.project.shots, [shotId]: { ...shot, mounts } } } }
+      return { project: withShot(s.project, shotId, { ...shot, mounts }) }
     })
     if (willChange) touchPrompt(shotId)
   },
@@ -918,7 +927,7 @@ export const useStore = create<StoreState>((set, get) => {
       const shot = s.project.shots[shotId]
       if (!shot) return s
       const mounts = shot.mounts.filter((m) => m.assetId !== assetId)
-      return { project: { ...s.project, shots: { ...s.project.shots, [shotId]: { ...shot, mounts } } } }
+      return { project: withShot(s.project, shotId, { ...shot, mounts }) }
     })
     if (willChange) touchPrompt(shotId)
   },
@@ -928,12 +937,7 @@ export const useStore = create<StoreState>((set, get) => {
     set((s) => {
       const scene = s.project.scenes[sceneId]
       if (!scene) return s
-      return {
-        project: {
-          ...s.project,
-          scenes: { ...s.project.scenes, [sceneId]: { ...scene, track: { ...scene.track, ...patch } } },
-        },
-      }
+      return { project: withScene(s.project, sceneId, { ...scene, track: { ...scene.track, ...patch } }) }
     })
   },
 
@@ -984,12 +988,7 @@ export const useStore = create<StoreState>((set, get) => {
     set((s) => {
       const l = s.project.assets[lookId]
       if (!l || l.kind !== 'look') return s
-      return {
-        project: {
-          ...s.project,
-          assets: { ...s.project.assets, [lookId]: { ...l, costumeIds: [...costumeIds] } },
-        },
-      }
+      return { project: withAsset(s.project, lookId, { ...l, costumeIds: [...costumeIds] }) }
     })
     // 换服装是视觉变更：引用该造型的镜头画面提示词过期 → 标待更新（只标不重生）。
     for (const sid of shotsAffectedByAsset(get().project, lookId)) touchPrompt(sid, false)
@@ -1008,7 +1007,7 @@ export const useStore = create<StoreState>((set, get) => {
     // 名称用派生名占位存下来，便于后续原文高亮与展示（与 seed 的显式命名一致）。
     look.name = lookName(look, get().project.assets)
     set((s) => ({
-      project: { ...s.project, assets: { ...s.project.assets, [id]: look } },
+      project: withAsset(s.project, id, look),
     }))
     return id
   },

@@ -18,7 +18,7 @@
 npm i
 npm run dev        # 本地开发
 npm run typecheck  # TypeScript strict 检查
-npm test           # 纯函数单测（2 个文件 / 13 条）
+npm test           # 纯函数单测（4 个文件 / 32 条）
 npm run lint       # oxlint
 npm run build      # 生产构建
 ```
@@ -28,10 +28,10 @@ npm run build      # 生产构建
 ```
 src/data/types.ts   全部领域类型，产品契约
 src/data/seed.ts    演示数据（第 1 集全量）+ prompts/ 逐镜提示词语料
-src/services/       19 个纯函数模块，不碰 UI（见下）
+src/services/       20 个纯函数模块，不碰 UI（见下）
 src/store/useStore.ts  一个 Zustand store，承载 project 与全部动作
 src/pages/          7 个页面
-src/components/     25 个组件
+src/components/     27 个组件（Dialog 是全部弹窗的公共壳，icons 是共享图标）
 src/styles/         theme.css 设计令牌 · global.css · ui.module.css 原子类 · dialog.module.css 弹窗公共壳
 ```
 
@@ -44,6 +44,7 @@ src/styles/         theme.css 设计令牌 · global.css · ui.module.css 原子
 - `appearanceIndex.ts` 出场记录派生索引（不落库）
 - `reference.ts` / `staleness.ts` 引用态与单向传播
 - `mentions.ts` 「文本 ↔ 资产」对账（散文里的名字就是普通汉字，挂载列才是结构化真相）
+- `dialogue.ts` 对白 · 旁白的字符串 DSL 编解码
 - `density.ts` 重拆颗粒度 · `lock.ts` 重拆与删集 · `completeness.ts` 资产完整性提示 · `duration.ts` 长镜头阈值
 
 ## 几条容易记反的口径
@@ -64,7 +65,8 @@ src/styles/         theme.css 设计令牌 · global.css · ui.module.css 原子
 
 ## 测试口径
 
-只保留**纯函数**单测（`candidates` 候选去重与结算、`promptScope` 生成范围求解）。
+只保留**纯函数**单测：`candidates` 候选去重与结算 · `promptScope` 生成范围求解 ·
+`mentions` 实体词表的长词优先 · `dialogue` 对白 DSL 的解析与往返。
 
 不写、也不要补：demo 语料的长度阈值 / 段落齐全性断言、UI 集成断言、以及任何形式的「规则版本追溯」标记。
 这些在此前的版本里存在过，代价是每改一次口径就要手工同步一批标记，而收益为零——CI 并不跑它们。
