@@ -3,88 +3,20 @@ import { createPortal } from 'react-dom'
 import { useStore } from '../store/useStore'
 import type { Look } from '../data/types'
 import { armEditSwallow, consumeEditSwallow } from '../services/editGuard'
+import {
+  parseDialogue,
+  serializeDialogue,
+  textHint,
+  usedSpeakers,
+  type DlgLine,
+} from '../services/dialogue'
 import s from './DialogueCell.module.css'
 
 // 对白 · 旁白：结构化行内编辑。类型（台词 / 旁白）+ 说话人 + 内容。
-// 数据仍以字符串存在 shot.dialogue（不动数据模型），本组件负责解析 ↔ 序列化。
-//
-// 说话人的口径（v1.3）：
-//  - 下拉只列「本镜画面中的角色」（由 mounts 派生），外加一项「其他（未指定具体角色）」。
-//  - 选「其他」进入行内自填：可以写人名，也可以写「画外音」「心里话」「电视里的播报」这类声音来源，
-//    还可以留空。自填内容不进角色资产表、不出图。
-//  - 说话人若恰好等于某个角色名、且该角色不在本镜画面中 → 展示层自动附一个只读的「画外」标记。
-
-type DlgType = '台词' | '旁白'
-interface DlgLine {
-  type: DlgType
-  speaker: string
-  text: string
-}
+// 字符串 ↔ 结构化行的编解码在 services/dialogue.ts，本组件只管交互。
 
 const TIP_OTHER =
   '用于标注无法关联至具体角色的声音，如广播或系统播报。该信息不创建角色资产，也不参与角色形象生成。'
-
-/** 无主语的叙述音前缀 → 旁白 */
-const VO_PREFIX = /^(旁白|字幕)$/
-/** 有声音但说话人未知的前缀 → 台词 + 说话人留空（历史 bug：这些曾被一并吞成旁白并丢掉说话人） */
-const UNKNOWN_PREFIX = /^(画外|画外音|独白|内心独白|内心|OS|V\.?O\.?)$/i
-
-/**
- * 解析已有字符串为结构化行。尽量宽容：
- *  - 「」/『』 内为正文，其前为前缀；没有引号时以第一个 ：/: 切分。
- *  - 前缀里的括注（如「碎碎念」「门外喊声」）不丢，回填到正文开头。
- *  - 「旁白：」「字幕：」→ 旁白；「画外音：」「独白：」→ 台词但说话人留空（不再静默归为旁白）。
- *  - 纯「……」无前缀 → 台词，说话人留空。
- */
-function parseDialogue(raw: string): DlgLine[] {
-  const t = (raw ?? '').trim()
-  if (!t || t === '无') return []
-  return t
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map<DlgLine>((line) => {
-      // 拆前缀与正文
-      const q = line.match(/^(.*?)[「『](.*)[」』]\s*$/)
-      let prefix = q ? q[1] : ''
-      let text = q ? q[2] : line
-      if (!q) {
-        const c = line.search(/[：:]/)
-        if (c >= 0) {
-          prefix = line.slice(0, c)
-          text = line.slice(c + 1)
-        }
-      }
-      prefix = prefix.trim().replace(/[：:]\s*$/, '').trim()
-      text = text.trim()
-
-      // 括注单独取出，回填到正文（如「苏可（碎碎念）：…」→ 说话人 苏可，正文「（碎碎念）…」）
-      const notes = prefix.match(/[（(][^）)]*[)）]/g) ?? []
-      const name = prefix.replace(/[（(][^）)]*[)）]/g, '').trim()
-      if (notes.length) text = `${notes.join('')}${text}`
-
-      if (VO_PREFIX.test(name)) return { type: '旁白', speaker: '', text }
-      if (UNKNOWN_PREFIX.test(name)) return { type: '台词', speaker: '', text }
-      return { type: '台词', speaker: name, text }
-    })
-}
-
-/** 台词无说话人时不写前缀，回读仍是「台词 + 说话人留空」，不再落一个「？」进数据。 */
-function serializeDialogue(lines: DlgLine[]): string {
-  return lines
-    .filter((l) => l.text.trim() || l.speaker.trim())
-    .map((l) => {
-      if (l.type === '旁白') return `旁白：「${l.text}」`
-      return l.speaker.trim() ? `${l.speaker}：「${l.text}」` : `「${l.text}」`
-    })
-    .join('\n')
-}
-
-/** 内容框的输入提示。 */
-function textHint(l: DlgLine): string {
-  if (l.type === '旁白') return '输入旁白内容'
-  return '输入台词内容'
-}
 
 const POP_W = 500
 const POP_MAX_H = 360
@@ -150,15 +82,11 @@ export function DialogueCell({ shotId, value, readOnly }: Props) {
   )
 
   // 全剧对白里用过的自定义声音来源（联想候选，不是角色资产）。
-  const usedFree = useMemo(() => {
-    const set = new Set<string>()
-    for (const sh of Object.values(shots)) {
-      for (const l of parseDialogue(sh.dialogue)) {
-        if (l.type === '台词' && l.speaker && !allChars.includes(l.speaker)) set.add(l.speaker)
-      }
-    }
-    return [...set]
-  }, [shots, allChars])
+  // 全剧自填过的说话人（排掉角色名）。全剧扫描由 usedSpeakers 记忆化，所有格子共用一次。
+  const usedFree = useMemo(
+    () => usedSpeakers(shots).filter((n) => !allChars.includes(n)),
+    [shots, allChars],
+  )
 
   const isChar = (n: string) => allChars.includes(n)
   /** 只读派生：说话人恰好是某角色、且不在本镜画面中 → 画外。 */

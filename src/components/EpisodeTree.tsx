@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode, type MouseEvent as ReactMouseEvent } from 'react'
+import { useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { Dialog } from './Dialog'
 import { useStore } from '../store/useStore'
 import { useClickOutside } from '../hooks/useClickOutside'
@@ -6,38 +6,10 @@ import { can } from '../services/capability'
 import { sceneDuration } from '../services/timeline'
 import { ResplitEpisodeDialog } from './ResplitEpisodeDialog'
 import { ResplitSceneDialog } from './ResplitSceneDialog'
+import { ic } from './icons'
 import ui from '../styles/ui.module.css'
 import di from '../styles/dialog.module.css'
 import s from './EpisodeTree.module.css'
-
-// 菜单项左侧的灰色小图标：统一 24×24 描边风格（对齐 AppShell / ShotRow）。
-const svg = (d: ReactNode) => (
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={1.7}>
-    {d}
-  </svg>
-)
-const ic = {
-  rename: svg(
-    <>
-      <path d="M4 20h4L19 9a2 2 0 0 0-3-3L5 17v3z" strokeLinejoin="round" />
-      <path d="M14 7l3 3" strokeLinecap="round" />
-    </>,
-  ),
-  insert: svg(
-    <>
-      <path d="M4 9h16" strokeLinecap="round" />
-      <path d="M12 13.5v6M9 16.5h6" strokeLinecap="round" />
-    </>,
-  ),
-  resplit: svg(
-    <>
-      <circle cx="6.5" cy="7" r="2" />
-      <circle cx="6.5" cy="17" r="2" />
-      <path d="M8.3 8.1 20 15.5M8.3 15.9 20 8.5" strokeLinecap="round" />
-    </>,
-  ),
-  trash: svg(<path d="M5 7h14M10 7V5h4v2M6 7l1 12h10l1-12" strokeLinecap="round" strokeLinejoin="round" />),
-}
 
 // 集级菜单只剩「重新拆分本集镜头 / 删除本集」——
 // 追加剧集与替换本集剧本都退役了，补充剧本的唯一入口在步骤① 整理剧本页的 ⋯ 里。

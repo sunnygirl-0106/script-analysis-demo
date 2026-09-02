@@ -32,13 +32,13 @@
   transition: all 0.2s ease;
 }
 .check:hover {
-  border-color: #8fdcd2;
+  border-color: var(--acc);
   background: rgba(143, 220, 210, 0.08);
 }
 .check:checked,
 .check:indeterminate {
-  background: #8fdcd2;
-  border-color: #8fdcd2;
+  background: var(--acc);
+  border-color: var(--acc);
 }
 .check:checked::after {
   content: '';
@@ -47,7 +47,7 @@
   top: 1.5px;
   width: 3px;
   height: 7px;
-  border: solid #121212;
+  border: solid var(--bg0);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
@@ -59,7 +59,7 @@
   width: 9px;
   height: 1.5px;
   border-radius: 1px;
-  background: #121212;
+  background: var(--bg0);
 }
 .check:disabled {
   opacity: 0.4;

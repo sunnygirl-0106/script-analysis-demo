@@ -3,7 +3,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--z-dialog);
-  background: rgb(0 0 0 / 0.5);
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,7 +14,7 @@
   background: var(--bg2);
   border: 1px solid var(--edge);
   border-radius: var(--rlg);
-  box-shadow: 0 20px 50px rgb(0 0 0 / 0.5);
+  box-shadow: var(--sh-dialog);
   padding: 20px 22px;
 }
 .title {

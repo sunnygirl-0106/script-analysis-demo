@@ -225,7 +225,7 @@
 .newDialog {
   width: 360px; max-width: calc(100vw - 40px); background: var(--bg2);
   border: 1px solid var(--edge); border-radius: var(--rlg);
-  box-shadow: 0 20px 50px rgb(0 0 0 / 0.5); padding: 20px 22px;
+  box-shadow: var(--sh-dialog); padding: 20px 22px;
 }
 .newTitle { font-size: 15px; font-weight: 700; color: var(--t1); margin-bottom: 14px; }
 .newInput {

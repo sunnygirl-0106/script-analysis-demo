@@ -1,40 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Dialog } from '../components/Dialog'
 import { useStore } from '../store/useStore'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { RATE, costExtract, fmtCost } from '../services/cost'
 import { ScriptSourceDialog } from '../components/ScriptSourceDialog'
+import { ic } from '../components/icons'
 import ui from '../styles/ui.module.css'
 import d from '../styles/dialog.module.css'
 import s from './EpisodeOrganize.module.css'
-
-// 页级 ⋯ 菜单的描边图标（沿用 EpisodeTree 里那套 15px svg 写法）。
-const svg = (dPath: ReactNode) => (
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={1.7}>
-    {dPath}
-  </svg>
-)
-const ic = {
-  upload: svg(
-    <>
-      <path d="M12 16V5" strokeLinecap="round" />
-      <path d="M8 8.6 12 4.6l4 4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M4.5 18.5h15" strokeLinecap="round" />
-    </>,
-  ),
-  add: svg(
-    <>
-      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-    </>,
-  ),
-  download: svg(
-    <>
-      <path d="M12 4v11" strokeLinecap="round" />
-      <path d="M8 11.4 12 15.4l4-4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M4.5 19.5h15" strokeLinecap="round" />
-    </>,
-  ),
-}
 
 // 步骤① 整理剧本（v2.4 §3.2 + v2.5 §五）。单栏手风琴：一个集一块，展开看正文。
 //

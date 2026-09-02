@@ -111,7 +111,7 @@
   right: 8%;
   top: 13px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgb(var(--acc-rgb) / 0.3) 18%, #343434 55%, #2b2b2b 82%, transparent);
+  background: linear-gradient(90deg, transparent, rgb(var(--acc-rgb) / 0.3) 18%, var(--raise) 55%, #2b2b2b 82%, transparent);
 }
 .stepRow {
   position: relative;

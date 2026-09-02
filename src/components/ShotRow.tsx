@@ -11,6 +11,7 @@ import {
   type Shot,
 } from '../data/types'
 import { chipClass, KIND_LABEL } from './entity'
+import { ic } from './icons'
 import { useEntityLit } from './EntityText'
 import { mountIssues } from '../services/completeness'
 import { isLongShot } from '../services/duration'
@@ -460,9 +461,7 @@ export const ShotRow = memo(function ShotRow({ shot, startAt, endAt, active, alt
               setConfirming(true)
             }}
           >
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={1.7}>
-              <path d="M5 7h14M10 7V5h4v2M6 7l1 12h10l1-12" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            {ic.trash}
           </button>
         )}
       </div>
