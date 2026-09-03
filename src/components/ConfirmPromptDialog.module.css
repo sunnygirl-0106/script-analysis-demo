@@ -33,7 +33,7 @@
 }
 .check:hover {
   border-color: var(--acc);
-  background: rgba(143, 220, 210, 0.08);
+  background: rgb(var(--acc-rgb) / 0.08);
 }
 .check:checked,
 .check:indeterminate {
