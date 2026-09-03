@@ -1,6 +1,6 @@
+import { Fragment } from 'react'
 import { useStore } from '../store/useStore'
 import { isRunningView, STEP_OF_VIEW } from '../data/types'
-import type { Project } from '../data/types'
 import s from './StepBar.module.css'
 
 // 剧本分析的三步流程条（v2.5 §7.2）。既是进度指示，也是演示用的跳转入口。
@@ -16,22 +16,18 @@ import s from './StepBar.module.css'
 // 三个「中」相位各属于它要跨到的那一步：organizing→①、extracting→②、splitting→③。
 // 这就是修「拆完之后步骤条默认跳到生成提示词」那个问题的地方：拆完就是第③步本身。
 //
+// 外观是「编号 + 发光下划线」（见 StepBar.module.css）：一行三组「1 标题」，
+// 只有当前步脚下有一道发光的线，其余两步不画线。**这一版刻意不带集数 / 字数之类的尾巴**——
+// 它要的就是不占地方，别再往行里塞第二排小字（字数已并入分镜表页脚的统计行）。
+//
 // STEPS 是单一真相源：本组件与 EmptyScriptState 的进站指引共用同一份。
-// 三步都只有标题——② ③ 那两行小字（「角色 / 服装 / 场景 / 道具」之类）说的是步骤名已经说过的事，
-// 撤掉。① 唯一要报的是已经整理出来的量，它是同一行后面的灰尾巴，不是第二行。
 export const STEPS: { n: number; label: string }[] = [
   { n: 1, label: '整理剧本' },
   { n: 2, label: '确认资产清单' },
   { n: 3, label: '生成分镜脚本' },
 ]
 
-/** ① 的灰尾巴：`整理剧本 · 1 集 · 4,800 字`。一集都还没有就什么都不显示。 */
-const epTail = (p: Project) =>
-  p.episodes.length
-    ? `· ${p.episodes.length} 集 · ${p.episodes.reduce((n, e) => n + e.wordCount, 0).toLocaleString()} 字`
-    : ''
-
-type Look = 'current' | 'done' | 'jumpable' | 'disabled'
+type Look = 'current' | 'done' | 'todo' | 'disabled'
 
 export function StepBar() {
   const project = useStore((st) => st.project)
@@ -54,12 +50,12 @@ export function StepBar() {
   const settled = !isRunningView(analysisView) && analysisView !== 'empty'
   const extracted = project.episodes.some((e) => e.extractedAt)
 
-  // 当前步（恰有一个）：在资产库(visual) → 0（三步都走完，全部显示 ✓）。
+  // 当前步（恰有一个）：在资产库(visual) → 0（三步都走完，全部显示已完成）。
   // 其余直接查表 —— 「动效屏归目标步骤」这条规则写在 STEP_OF_VIEW 里，不在这儿分支。
   const current = activePage === 'visual' ? 0 : STEP_OF_VIEW[analysisView]
 
   // 完成态：走过且其工作已达成。**按顺序累积**（v2.6 §1.2）——
-  // 后一步的 ✓ 必须蕴含前面每一步都干完了，否则会出现「① 还没做，② 已 ✓」这种不可能的状态。
+  // 后一步的完成必须蕴含前面每一步都干完了，否则会出现「① 还没做，② 已完成」这种不可能的状态。
   const done: Record<number, boolean> = {
     1: extracted,                            // 任一集提取过资产 = 整理这一步的产出已交付
     2: extracted && committed,               // 已入库
@@ -85,13 +81,9 @@ export function StepBar() {
   const lookOf = (n: number): Look => {
     if (n === current) return 'current'
     if (done[n]) return 'done'
-    if (jumpable[n]) return 'jumpable'
+    if (jumpable[n]) return 'todo'
     return 'disabled'
   }
-
-  // 整理跑完之前一集都还没有 —— 第①步的尾巴不许提前报出「N 集 · X 字」（§九.3）。
-  const tail =
-    analysisView === 'empty' || analysisView === 'organizing' ? '' : epTail(project)
 
   return (
     <div className={s.bar}>
@@ -101,10 +93,10 @@ export function StepBar() {
           // 当前步也可点（点了就在原地重新导航一次，幂等）；只有 disabled 不可点。
           const clickable = look !== 'disabled'
           return (
-            <div className={s.stepWrap} key={st.n}>
-              {i > 0 && <span className={s.sep} />}
+            <Fragment key={st.n}>
+              {i > 0 && <span className={s.slash} />}
               <button
-                className={[s.step, s[look]].filter(Boolean).join(' ')}
+                className={[s.step, s[look]].join(' ')}
                 disabled={!clickable}
                 onClick={() => clickable && jump(st.n)}
                 title={
@@ -115,13 +107,25 @@ export function StepBar() {
                       : `跳到「${st.label}」`
                 }
               >
-                <span className={s.badge}>{look === 'done' ? '✓' : st.n}</span>
-                <span className={s.txt}>
+                <span className={s.head}>
+                  <span className={s.num}>{st.n}</span>
                   <span className={s.label}>{st.label}</span>
-                  {st.n === 1 && tail && <span className={s.tail}>{tail}</span>}
+                  {look === 'done' && (
+                    <svg className={s.check} width="10" height="10" viewBox="0 0 12 12" aria-hidden>
+                      <path
+                        d="M2.4 6.4l2.3 2.2 4.6-5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
                 </span>
+                <span className={s.underline} />
               </button>
-            </div>
+            </Fragment>
           )
         })}
       </div>

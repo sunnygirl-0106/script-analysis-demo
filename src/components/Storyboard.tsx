@@ -195,7 +195,7 @@ export function Storyboard({
  *
  * 返回 Fragment 而不是包一层 div —— 每一行都得是 `.grid` 的直接子节点，
  * 列宽变量 `--cols` 才管得到它们，包一层就散了。
- * 镜号仍是场内编号（1、2、3…）：区块头已经交代了这是哪一集哪一场。
+ * 镜号是场内编号（1、2、3…）：全剧 / 本集视图下由区块头交代这是哪一集哪一场。
  */
 function SceneBlock({
   scene, readOnly, hoverId, onHover,
@@ -215,27 +215,34 @@ function SceneBlock({
   const handleDelete = useCallback((id: string) => deleteShot(id), [deleteShot])
   const flashShotIds = useStore((st) => st.flashShotIds)
   const setViewScope = useStore((st) => st.setViewScope)
+  // 只看一场时不画区块头：那一屏从头到尾就这一场，左侧目录也正高亮着它，再顶一条
+  // 「第 1 集 · 第 1 场」纯属复读。全剧 / 本集视图下一屏铺好几场，那条杠是场与场之间
+  // 唯一的分界，也是滚动时的定位，必须在。
+  const oneSceneOnly = useStore((st) => st.viewScope.kind === 'scene')
   // 表尾「在末尾插入一镜」热区：悬停显形、停住几秒自动隐藏。每个区块各一套。
   const appendIns = useAutoHideHover()
 
   const timeline = useMemo(() => computeTimeline(scene, shots), [scene, shots])
+  // 本场总时长：区块头与表尾「本场共 N 秒」都要用。
   const total = useMemo(() => sceneDuration(scene, shots), [scene, shots])
   const epNo = episodes.find((e) => e.sceneIds.includes(scene.id))?.no
 
   return (
     <>
-      <div className={s.sceneBar}>
-        <button
-          className={s.sceneBarMain}
-          title="只看这一场"
-          onClick={() => setViewScope({ kind: 'scene', sceneId: scene.id })}
-        >
-          <span className={s.sceneBarTitle}>
-            {epNo != null && <>第 {epNo} 集 · </>}第 {scene.no} 场 · {scene.name}
-          </span>
-          <span className={s.sceneBarMeta}>{scene.shotIds.length} 镜 · {total} 秒</span>
-        </button>
-      </div>
+      {!oneSceneOnly && (
+        <div className={s.sceneBar}>
+          <button
+            className={s.sceneBarMain}
+            title="只看这一场"
+            onClick={() => setViewScope({ kind: 'scene', sceneId: scene.id })}
+          >
+            <span className={s.sceneBarTitle}>
+              {epNo != null && <>第 {epNo} 集 · </>}第 {scene.no} 场 · {scene.name}
+            </span>
+            <span className={s.sceneBarMeta}>{scene.shotIds.length} 镜 · {total} 秒</span>
+          </button>
+        </div>
+      )}
 
       {timeline.map((entry, i) => {
         const shot = shots[entry.shotId]

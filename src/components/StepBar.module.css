@@ -1,9 +1,25 @@
-/* 三步流程条：主内容区顶部的窄条。仅用 theme 变量取色。 */
+/* 三步流程条 · 编号 + 发光下划线（在《步骤指示器-编号下划线》设计稿基础上收窄）。
+ *
+ * 一行三组「1 标题」。**下划线只有当前步才画**——稿子里三条线都在（已完成一条暗线、
+ * 待办一条更暗的），三条并排反而看不出谁是当前；现在整条里只有一道发光，指向唯一。
+ * 已完成靠「主色编号 + ✓ 」自证，不再需要线。三组之间是一根倾斜 18° 的细斜杠。
+ *
+ * 编号是这一版唯一的装饰：Playfair Display 斜体，高对比度衬线，
+ * 比等宽黑体有分量，也和中文标题的方正形成对比。字体在 index.html 里引。
+ *
+ * 下划线宽度不写死：.step 是 flex 列，下划线 align-self:stretch，
+ * 列宽由上面那行文字撑出来，所以线永远和标题一样长。
+ *
+ * 没有色块、没有水印、没有第二行小字 —— 这一版就是要「不占地方」，别往回加。
+ * 取色：稿子的 #6fd8cd → --acc；几档压在深底上的半透明白就地记名（--step-*）。
+ */
+
 .bar {
+  --step-todo-fg: rgb(255 255 255 / 0.42); /* #66716f：待办标题 */
+  --step-todo-num: rgb(255 255 255 / 0.26); /* 待办编号（衬线笔画细，比稿子的 0.20 提一点才立得住） */
+  --step-slash: rgb(255 255 255 / 0.12); /* 组间斜杠 */
+
   flex: none;
-  display: flex;
-  align-items: center;
-  gap: 16px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--line);
   background: var(--bg1);
@@ -12,97 +28,107 @@
 .steps {
   display: flex;
   align-items: center;
-  min-width: 0;
-  flex-wrap: nowrap;
-  overflow-x: auto;
+  justify-content: center;
+  gap: 22px;
+  min-height: 30px;
 }
-.stepWrap {
-  display: inline-flex;
-  align-items: center;
+
+/* 组间斜杠：一根竖线歪 18°。 */
+.slash {
   flex: none;
-}
-.sep {
-  width: 22px;
-  height: 1px;
-  background: var(--line);
-  margin: 0 4px;
-  flex: none;
+  width: 1px;
+  height: 14px;
+  background: var(--step-slash);
+  transform: rotate(18deg);
 }
 
 .step {
   appearance: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 12px 5px 8px;
-  border-radius: var(--rpill);
-  border: 1px solid transparent;
+  border: 0;
   background: transparent;
-  cursor: pointer;
-  transition: 0.16s cubic-bezier(0.22, 0.61, 0.36, 1);
-  white-space: nowrap;
-}
-.badge {
+  padding: 0;
   flex: none;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  border: 1px solid var(--line);
-  color: var(--t4);
-  background: var(--bg2);
-}
-/* 单行：标题 + ① 的灰尾巴排在一起，三个 pill 高度一致。 */
-.txt {
-  display: inline-flex;
-  align-items: baseline;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 6px;
-  line-height: 1.15;
-  text-align: left;
+  cursor: pointer;
+}
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+/* 装饰性编号：衬线斜体，字号压过标题一头，line-height:1 让它精确坐在基线上。 */
+.num {
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: 19px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  transition: color 0.3s;
+  color: var(--step-todo-num);
 }
 .label {
-  font-size: 12.5px;
-  color: var(--t3);
-  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 500;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  transition: color 0.3s;
+  color: var(--step-todo-fg);
 }
-.tail {
-  font-size: 11.5px;
+.check {
+  flex: none;
+  display: block;
+  align-self: center;
+  color: rgb(var(--acc-rgb) / 0.7);
+}
+
+/* 下划线：默认透明。**始终占着这 2px + 6px 间距**，所以切步骤时整行不跳动，
+   只有那道光在三组之间移动。宽度跟着上面那行文字走（见文件头注释）。 */
+.underline {
+  align-self: stretch;
+  height: 2px;
+  border-radius: var(--rpill);
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  background: transparent;
+}
+
+/* ---- 已完成：编号半透明主色 + ✓，标题退到次要灰。不画线。 ---- */
+.done .num {
+  color: rgb(var(--acc-rgb) / 0.5);
+}
+.done .label {
   color: var(--t4);
 }
 
-/* 当前步：主色描边 + 淡底。 */
+/* ---- 进行中：唯一发光的一条。渐变两端收淡，中段实色 + 外发光。 ---- */
 .current {
-  border-color: var(--acc-line);
-  background: var(--acc-bg);
   cursor: default;
 }
-.current .badge {
-  border-color: var(--acc);
-  color: var(--on-acc);
-  background: var(--acc);
+.current .num {
+  color: var(--acc);
 }
-.current .label { color: var(--acc); }
-
-/* 已完成步：次要灰 + ✓，可点回看。 */
-.done .badge {
-  border-color: var(--scene);
-  color: var(--scene);
-  background: transparent;
+.current .label {
+  color: var(--t1);
+  font-weight: 600;
 }
-.done .label { color: var(--t3); }
-.done:hover { background: var(--bg2); }
+.current .underline {
+  background: linear-gradient(
+    90deg,
+    rgb(var(--acc-rgb) / 0.15),
+    var(--acc) 55%,
+    rgb(var(--acc-rgb) / 0.15)
+  );
+  box-shadow: 0 0 10px -1px rgb(var(--acc-rgb) / 0.85);
+}
 
-/* 可跳但未完成步：中性可点。 */
-.jumpable:hover { background: var(--bg2); }
-.jumpable:hover .label { color: var(--t1); }
-
-/* 不可跳步：压暗禁用。 */
+.step:not(.disabled):hover {
+  filter: brightness(1.25);
+}
 .disabled {
   cursor: not-allowed;
-  opacity: 0.5;
 }
-.disabled .label { color: var(--t5); }

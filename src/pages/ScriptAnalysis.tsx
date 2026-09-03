@@ -60,6 +60,7 @@ export function ScriptAnalysis() {
   const needIds = allShotIds.filter((id) => stateOf(id) === 'pending' || stateOf(id) === 'stale')
   const staleCount = allShotIds.filter((id) => stateOf(id) === 'stale').length
   const busy = allShotIds.some((id) => stateOf(id) === 'generating')
+  const wordTotal = project.episodes.reduce((n, e) => n + e.wordCount, 0)
   const readyCount = allShotIds.length - needIds.length
   const pct = allShotIds.length ? (readyCount / allShotIds.length) * 100 : 0
   // 全剧提示词已就绪：「生成全部提示词」消失，「去资产库生图 →」变亮。
@@ -87,9 +88,11 @@ export function ScriptAnalysis() {
           >
             {ic.download}
           </button>
+          {/* 集数 / 字数说的是「剧本体量」，场 / 镜 / 秒说的是「拆解产物」，前后各占一半。
+              字数原先挂在步骤条第①步后面，步骤条改版后不留小字了，统一并到这里。 */}
           <div className={s.info}>
-            全剧 <b>{project.episodes.length} 集</b> · <b>{Object.keys(project.scenes).length} 场</b> ·{' '}
-            <b>{shotTotal} 镜</b> · 约 {durTotal} 秒
+            全剧 <b>{project.episodes.length} 集</b> · <b>{wordTotal.toLocaleString()} 字</b> ·{' '}
+            <b>{Object.keys(project.scenes).length} 场</b> · <b>{shotTotal} 镜</b> · 约 {durTotal} 秒
           </div>
 
           {/* 进度条（v2.7 §5.6）：一句长文案换成一根 120px 的条 + `3 / 25`。整组可点。 */}

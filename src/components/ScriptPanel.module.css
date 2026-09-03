@@ -1,8 +1,10 @@
+/* 收起态竖条。与展开态 .col 同色：它俩是同一块面板的两种形态，
+   底色必须一致，否则收起 / 展开会像换了个区域。 */
 .stripe {
   width: 36px;
   flex: none;
   border-right: 1px solid var(--line);
-  background: var(--bg2);
+  background: var(--bg1);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -25,11 +27,14 @@
   letter-spacing: 3px;
 }
 
-/* 面板容器：308px 换取正文可读性（对齐原文对照稿） */
+/* 面板容器：308px 换取正文可读性（对齐原文对照稿）。
+   底色 --bg1 与左边集 / 场列表、右边分镜表行**完全一致**：三栏一个色调，
+   不再一边深一边浅。这一档也正是步骤② 全剧原文栏（.scriptCol）用的那档。
+   深浅只留给「框架」——表头 / 场次杠 / 页脚那几条 --bg2。 */
 .col {
   width: 308px;
   flex: none;
-  background: var(--bg2);
+  background: var(--bg1);
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -144,45 +149,38 @@
   flex: 1;
   font-size: 13px;
 }
-/* 场头：SCENE 03 / 场名，正文顶部的报头 */
+/* 场头：SCENE 03 / 场名。**这里不 composes script.module.css 的报头**——
+   那一份是步骤② 全剧原文用的大报头（23px 标题 + 14/18 上下留白），
+   步骤③ 这条 308px 窄栏里放不下那么大的头，会把正文挤没。字族 / 行高仍共用 .serif。 */
 .masthead {
-  composes: masthead from '../styles/script.module.css';
+  padding: 8px 0 10px;
 }
 .eyebrow {
-  composes: eyebrow from '../styles/script.module.css';
+  font-family: -apple-system, 'PingFang SC', sans-serif;
+  font-size: 9.5px;
+  letter-spacing: 2.5px;
+  color: var(--t4);
 }
 .title {
-  composes: title from '../styles/script.module.css';
+  margin-top: 3px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--t1);
 }
 
-.beat {
-  display: flex;
-  gap: 12px;
-  padding: 11px 0;
-  border-top: 1px solid var(--line2);
-  transition: background 0.14s;
+/* 正文：连续段落。没有段号栏、没有段间分隔线、没有逐段 hover 底色 ——
+   窄栏里那些都是噪音，去掉后正文净宽多出 28px（段号栏 16 + 间距 12）。
+   text-align:left 是明写的：中文每字等宽，不明确左对齐时行末容易看着像两端对齐。 */
+.body {
+  text-align: left;
 }
-.beat:first-child,
-/* 每场报头下的第一段不带上边线：那条线是段与段之间的分隔，不是场与报头之间的（v2.7 §5.5）。 */
-.masthead + .beat {
-  border-top: none;
-}
-.beat:hover {
-  background: rgb(var(--acc-rgb) / 0.03);
-}
-.beat .n {
-  flex: none;
-  width: 16px;
-  text-align: right;
-  padding-top: 6px;
-  font-family: -apple-system, 'PingFang SC', sans-serif;
-  font-size: 10px;
-  color: var(--gutter);
-  font-variant-numeric: tabular-nums;
-}
-.beat p {
-  margin: 0;
+.body p {
+  margin: 0 0 0.9em;
   text-wrap: pretty;
+}
+.body p:last-child {
+  margin-bottom: 0;
 }
 
 /* 实体高亮：同色细下划线，不改动原文字重 */
@@ -210,27 +208,27 @@
 :global([data-analyzing]) .masthead {
   animation: 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both global(an-reveal-beat);
 }
-:global([data-analyzing]) .beat {
+:global([data-analyzing]) .body p {
   animation: 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both global(an-reveal-beat);
 }
-:global([data-analyzing]) .beat:nth-child(2) {
+:global([data-analyzing]) .body p:nth-child(2) {
   animation-delay: 0.08s;
 }
-:global([data-analyzing]) .beat:nth-child(3) {
+:global([data-analyzing]) .body p:nth-child(3) {
   animation-delay: 0.18s;
 }
-:global([data-analyzing]) .beat:nth-child(4) {
+:global([data-analyzing]) .body p:nth-child(4) {
   animation-delay: 0.28s;
 }
-:global([data-analyzing]) .beat:nth-child(5) {
+:global([data-analyzing]) .body p:nth-child(5) {
   animation-delay: 0.38s;
 }
-:global([data-analyzing]) .beat:nth-child(6) {
+:global([data-analyzing]) .body p:nth-child(6) {
   animation-delay: 0.48s;
 }
-:global([data-analyzing]) .beat:nth-child(7) {
+:global([data-analyzing]) .body p:nth-child(7) {
   animation-delay: 0.58s;
 }
-:global([data-analyzing]) .beat:nth-child(n + 8) {
+:global([data-analyzing]) .body p:nth-child(n + 8) {
   animation-delay: 0.68s;
 }

@@ -1,7 +1,9 @@
+/* 集 / 场列表。底色刻意与中间剧本栏、右侧分镜表行同为 --bg1：三栏一个色调，
+   深浅只留给「框架」（表头 / 场次杠 / 页脚那几条 --bg2）。行的样式本身是原样，没动。 */
 .side {
   width: 192px;
   flex: none;
-  background: var(--bg2);
+  background: var(--bg1);
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;

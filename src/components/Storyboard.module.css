@@ -77,15 +77,20 @@
   position: sticky;
   top: 0;
   z-index: 34;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel);
-  font-size: 10.5px;
-  color: var(--t3);
+  /* 表头是这一页唯一需要「浮在内容之上」的横条，所以给它整页最亮的一档底 --bg3：
+     行底是 --bg1，两者差 13 级，扫一眼就分得出哪一行是列名。
+     再压一道向下的投影，滚动时表头压着行走，边界不会糊在一起。 */
+  background: var(--bg3);
+  border-bottom: 1px solid var(--edge);
+  box-shadow: 0 4px 10px -6px rgb(0 0 0 / 0.7);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--t1);
   letter-spacing: 0.6px;
   white-space: nowrap;
 }
 .hCell {
-  padding: 8px 12px;
+  padding: 10px 12px;
   display: flex;
   align-items: center;
   border-right: 1px solid var(--line2);
@@ -101,7 +106,7 @@
   position: sticky;
   right: 46px;
   z-index: 35;
-  background: var(--panel);
+  background: var(--bg3);
   box-shadow: -8px 0 12px -8px rgb(0 0 0 / 0.55);
 }
 /* 删除列表头：钉在最右，无标题 */
@@ -110,7 +115,7 @@
   right: 0;
   z-index: 35;
   border-right: none;
-  background: var(--panel);
+  background: var(--bg3);
 }
 /* 滚到最右端：不再需要“悬浮遮挡”的投影 */
 .scrollAtEnd .hCellPrompt,
@@ -124,7 +129,7 @@
   height: 128px;
   cursor: pointer;
   border-bottom: 1px solid var(--line2);
-  background: var(--panel);
+  background: var(--bg1);
   cursor: default;
   transition: background 0.24s cubic-bezier(0.22, 0.61, 0.36, 1), height 0.24s ease,
     opacity 0.24s ease, transform 0.24s ease;
@@ -179,10 +184,11 @@
   min-height: 0;
   overflow: hidden;
 }
-/* 斑马纹：奇偶行深浅交替（基础行 --panel 浅，交替行 --bg2 深）。
-   展开面板是行的兄弟节点，会打乱 nth-child，所以由 JS 传 alt 显式指定。 */
+/* 斑马纹已取消：三栏统一色调后，一深一浅的交替行是这一页最后一处色调噪音，
+   行与行之间靠 --line2 那道下边线分隔就够了。
+   类名保留（ShotRow 仍按奇偶传 alt），只是不再改底色 —— 哪天想要回来改这一处即可。 */
 .rowAlt {
-  background: var(--bg2);
+  background: var(--bg1);
 }
 .rowOn {
   background: var(--row-on-bg) !important;
@@ -296,8 +302,8 @@
   cursor: help;
 }
 .tcRange {
-  font-size: 10.5px;
-  color: var(--t5);
+  font-size: 11px;
+  color: var(--t3);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.2px;
   white-space: nowrap;
@@ -329,8 +335,8 @@
   align-items: start;
 }
 .groupTitle {
-  font-size: 10px;
-  color: var(--t5);
+  font-size: 11px;
+  color: var(--t3);
   letter-spacing: 0.4px;
   /* 行高对齐 chip（24px），使标签垂直居中于第一行 chip */
   line-height: 24px;
@@ -390,8 +396,8 @@
 .castCostume {
   flex: none;
   white-space: nowrap;
-  font-size: 10.5px;
-  color: var(--t5);
+  font-size: 11px;
+  color: var(--t3);
   line-height: 1.3;
 }
 /* 删除叉：不占标签宽度，做成右上角浮层，hover / 聚焦本卡时才出现 —— 标签平时更短 */
@@ -571,12 +577,13 @@
   }
 }
 /* ── 场区块头（v2.7 §5.4）──
-   全剧 / 本集视图下一屏里有好几场，每场靠这条横杠分开并自报家门：
-   哪一集哪一场、多少镜多少秒，右侧两个顺手的口（场级设定 / 重拆本场）。
-   sticky 在列头下面：滚到第 3 场时，头顶那条杠说的必须还是第 3 场。 */
+   全剧 / 本集视图下一屏里有好几场，每场靠这条横杠分开并自报家门：哪一集哪一场、多少镜多少秒。
+   **只在全剧 / 本集视图渲染**（判断在 SceneBlock 里）——只看一场时它是复读，不画。
+   sticky 贴在列头下沿：滚到第 3 场时，头顶那条杠说的必须还是第 3 场。
+   top 必须等于列头实高（.hCell 上下各 10px + 11px 字 + 1px 下边框），改列头内边距要跟着改这里。 */
 .sceneBar {
   position: sticky;
-  top: 30px;
+  top: 34px;
   z-index: 31;
   display: flex;
   align-items: center;

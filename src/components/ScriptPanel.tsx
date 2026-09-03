@@ -30,7 +30,8 @@ function highlight(text: string, assets: Record<string, Asset>): ReactNode {
   })
 }
 
-// 原文按自然段拆成「beat」，供左侧段号栏逐段标号。空行不占号。
+// 原文按自然段拆开。**只保留自然段落，不再切成带编号带分隔线的「beat」块**——
+// 步骤③ 看的是某一场的原文，连续读下去就行，段号栏和分隔线在这儿只是噪音。
 function toBeats(raw: string): string[] {
   return raw
     .split('\n')
@@ -101,7 +102,7 @@ export function ScriptPanel() {
           <SceneScript key={sc.id} scene={sc} assets={assets} />
         ))}
         {scenes.length === 0 && (
-          <div className={s.beat}>
+          <div className={s.body}>
             <p>—</p>
           </div>
         )}
@@ -110,7 +111,7 @@ export function ScriptPanel() {
   )
 }
 
-/** 一场原文：报头 + 正文。段号在场内从 01 起，与场区块的镜号同一个道理。 */
+/** 一场原文：小报头 + 连续正文。 */
 function SceneScript({ scene, assets }: { scene: Scene; assets: Record<string, Asset> }) {
   const beats = toBeats(scene.rawText)
   return (
@@ -119,18 +120,13 @@ function SceneScript({ scene, assets }: { scene: Scene; assets: Record<string, A
         <div className={s.eyebrow}>SCENE {String(scene.no).padStart(2, '0')}</div>
         <div className={s.title}>{scene.name}</div>
       </div>
-      {beats.length > 0 ? (
-        beats.map((beat, i) => (
-          <div className={s.beat} key={i}>
-            <span className={s.n}>{String(i + 1).padStart(2, '0')}</span>
-            <p>{highlight(beat, assets)}</p>
-          </div>
-        ))
-      ) : (
-        <div className={s.beat}>
+      <div className={s.body}>
+        {beats.length > 0 ? (
+          beats.map((beat, i) => <p key={i}>{highlight(beat, assets)}</p>)
+        ) : (
           <p>—</p>
-        </div>
-      )}
+        )}
+      </div>
     </>
   )
 }
