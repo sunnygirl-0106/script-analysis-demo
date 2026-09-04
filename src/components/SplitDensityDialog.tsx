@@ -8,6 +8,7 @@ import { EST, costSplitByWords, estimateScenes, estimateShotRange, fmtCost } fro
 import ui from '../styles/ui.module.css'
 import d from '../styles/dialog.module.css'
 import s from './SplitDensityDialog.module.css'
+import { ic } from './icons'
 
 // 节奏弹窗（v2.5 §6.2）。v2.4 把三张节奏卡做成了步骤③ 的起点页，本轮推翻——
 // 选节奏是「确认资产并开始拆分」这一个动作里的一个参数，它属于弹窗，不值得一整页。
@@ -47,7 +48,7 @@ export function SplitDensityDialog({
     >
       <div className={s.head}>
         <div className={d.title}>{incremental ? '确认新增资产并开始拆分' : '确认资产并开始拆分'}</div>
-        <button className={s.close} onClick={onClose} title="关闭" aria-label="关闭">×</button>
+        <button className={s.close} onClick={onClose} title="关闭" aria-label="关闭">{ic.close}</button>
       </div>
       <div className={s.sub}>
         {scope} · 预计约 {scenes} 场。

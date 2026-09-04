@@ -1,7 +1,9 @@
-/* 步骤① 整理剧本页（v2.6 §三 / v2.8 §2）。head + 可滚动卡片区 + 底部横条，三段。 */
+/* 步骤① 整理剧本页（v2.6 §三 / v2.8 §2）。整页滚动区（标题 + 卡片）+ 钉住的底部横条。 */
 /* ⚠ AppShell 的 .contentBody 是横向 flex 容器：本页作为它的 flex 子项必须自己声明
    flex:1 + min-width:0，否则按内容宽度收缩，右边空掉一半（v2.5 §一）。 */
-/* 滚的只有中间那段：head 与 foot 都钉住，foot 与步骤② ③ 的底栏是同一根条。 */
+/* 整页只有一个滚动容器 .scroll：标题、异常条、卡片一起滚。
+   只有 foot 钉在底部（去下一步的入口，不能滚走）——把 30px 大标题也钉住，
+   等于在每一屏顶部白扣掉近 100px，正文永远只剩半屏。 */
 .page {
   flex: 1;
   min-width: 0;
@@ -11,15 +13,14 @@
   flex-direction: column;
   background: var(--bg0);
 }
-.head {
-  flex: none;
-  padding: 32px 0 16px;
-}
 .scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding-bottom: 28px;
+}
+.head {
+  padding: 32px 0 16px;
 }
 
 /* 头 / 异常条 / 卡片共用同一条 1080 的边界。 */
@@ -39,14 +40,14 @@
 .headTitle {
   flex: 1;
   min-width: 0;
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--t1);
 }
 .headSub {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--t4);
 }
 
@@ -54,22 +55,29 @@
   position: relative;
   display: inline-flex;
 }
+/* 页级「更多操作」：32px 见方的图标按钮，跟 30px 的标题一条线上对齐。
+   常驻一层淡边框——这是本页唯一的页级入口，藏成纯字符要靠 hover 才被发现。
+   菜单展开时按钮保持高亮（aria-expanded），否则点开后按钮自己先「灭」了。 */
 .dots {
   appearance: none;
-  border: 1px solid transparent;
-  background: transparent;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: var(--rsm);
+  background: var(--bg2);
+  color: var(--t3);
   cursor: pointer;
-  color: var(--t4);
-  font-size: 15px;
-  line-height: 1;
-  padding: 2px 8px;
-  border-radius: var(--rpill);
   transition: 0.16s;
 }
-.dots:hover {
+.dots:hover,
+.dots[aria-expanded='true'] {
   color: var(--t1);
   background: var(--bg3);
-  border-color: var(--line);
+  border-color: var(--edge);
 }
 .menu {
   position: absolute;
@@ -95,7 +103,7 @@
   align-items: center;
   gap: 9px;
   text-align: left;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--t2);
   padding: 7px 10px;
   border-radius: 5px;
@@ -118,25 +126,7 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
-.menuDanger:hover:not(:disabled) {
-  background: var(--danger-bg);
-  color: var(--danger);
-}
-
 /* ── 异常提示条（没有异常就整条不渲染）：卡片上方、同宽 ── */
-.anomaly {
-  margin: 4px 0 0;
-  padding: 10px 14px;
-  border: 1px solid var(--amber-line);
-  background: var(--amber-bg);
-  border-radius: var(--rsm);
-}
-.anomalyLine {
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--amber);
-}
-
 /* ── 集列表：一张 1080 宽的大卡 ── */
 .card {
   margin-top: 16px;
@@ -144,9 +134,6 @@
   border: 1px solid var(--line);
   border-radius: var(--rlg);
   background: var(--bg1);
-}
-.anomaly + .card {
-  margin-top: 20px;
 }
 .epBlock + .epBlock {
   margin-top: 28px;
@@ -166,54 +153,44 @@
   background: transparent;
   cursor: pointer;
   color: var(--t4);
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 16px;
   padding: 0;
+}
+.caret svg {
+  width: 12px;
+  height: 12px;
 }
 .caret:hover {
   color: var(--t1);
 }
-/* 主标签是「第 N 集」；AI 起的标题只是灰色副标签（v2.6 §2.3）。 */
+/* 集头只剩「第 N 集」这一个标签：AI 起的标题（「外卖与尊严」）在这一步不承担任何判断，
+   用户在这儿只需要确认「切得对不对」，一个凭空生成的名字反而抢读。 */
 .epNo {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--t1);
-  flex: none;
-}
-.epTitle {
   appearance: none;
   border: none;
   background: transparent;
   cursor: pointer;
   padding: 0;
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--t4);
-  text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.epTitle:hover {
-  color: var(--t2);
-}
-.epInput {
-  font-size: 13px;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--t1);
-  background: var(--bg3);
-  border: 1px solid var(--acc-line);
-  border-radius: 4px;
-  padding: 2px 7px;
-  outline: none;
-  min-width: 160px;
+  flex: none;
 }
 .lock {
-  font-size: 11px;
+  display: inline-flex;
+  color: var(--t4);
   opacity: 0.85;
   cursor: help;
 }
+.lock svg {
+  width: 13px;
+  height: 13px;
+}
 .newBadge {
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--acc);
   background: var(--acc-bg);
@@ -221,39 +198,65 @@
   border-radius: var(--rpill);
   padding: 0.5px 8px;
 }
+/* 集头的异常小标签（v2.11）：异常长在出问题的那一集上，不再单开一条长横幅。
+   琥珀色一枚，紧挨「未拆解」，与它同一套胶囊尺寸，只换配色。 */
+.warnBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--amber);
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-line);
+  border-radius: var(--rpill);
+  padding: 0.5px 8px;
+  white-space: nowrap;
+}
+.warnBadge svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
 .epWords {
   flex: 1;
   text-align: right;
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--t4);
 }
 
-/* 集级 ⋯：hover 才出现（选中/展开菜单时常驻）。 */
-.epMenuWrap {
-  position: relative;
-  display: inline-flex;
-  flex: none;
-}
-.epDots {
+/* 集级删除：hover 本行才显形。原来这里是个 ⋯ 菜单（重命名 / 合并 / 删除），
+   标题一去掉，重命名就没了意义，剩下的唯一动作直接摊成一个图标，少一次点击。 */
+.epDel {
   appearance: none;
   border: none;
   background: transparent;
   cursor: pointer;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--t4);
-  font-size: 15px;
-  line-height: 1;
-  padding: 2px 6px;
-  border-radius: var(--rpill);
+  border-radius: var(--rsm);
   opacity: 0;
   transition: 0.14s;
 }
-.epHead:hover .epDots,
-.epDotsOn {
+.epHead:hover .epDel,
+.epDel:focus-visible {
   opacity: 1;
 }
-.epDots:hover {
-  color: var(--t1);
-  background: var(--bg3);
+.epDel:hover:not(:disabled) {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+.epDel:disabled {
+  cursor: not-allowed;
+  color: var(--t5);
+}
+.epHead:hover .epDel:disabled {
+  opacity: 0.4;
 }
 
 /* ── 集正文：一段一段的散文，没有小标题、没有场头（v2.6 §2.1） ── */
@@ -262,7 +265,7 @@
 }
 .para {
   margin: 0 0 18px;
-  font-size: 14.5px;
+  font-size: 15px;
   line-height: 1.95;
   color: var(--t2);
 }
@@ -276,42 +279,73 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 11px 16px;
   border-top: 1px solid var(--line);
   background: var(--bg1);
 }
 .footText {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--t4);
 }
 
-/* ── 手动新建集的正文录入（v2.5 §5.3）──
-   只做到「能输文字、能算字数」：一有内容就切回普通正文渲染，不做富编辑。 */
-.draftBody {
-  padding: 2px 0 6px 28px;
-}
-.draftInput {
+/* ── 可编辑正文（未锁的集）──
+   排版跟 .para 一模一样：切进编辑态时字不跳位，用户不会觉得「换了个地方」。
+   高度由 JS 撑到内容全高，不做内嵌滚动——几千字的一集配个小滚动窗没法读。
+   平时无边框（就是正文），hover 才浮出一层淡底提示「这儿能改」，聚焦给一条主色左边线。 */
+.bodyInput {
+  display: block;
   width: 100%;
-  min-height: 168px;
-  padding: 11px 13px;
-  font-size: 13px;
-  line-height: 1.8;
+  padding: 6px 10px;
+  margin-left: -10px;
   font-family: inherit;
-  color: var(--t1);
-  background: var(--bg1);
-  border: 1px dashed var(--line);
-  border-radius: var(--rlg);
-  resize: vertical;
-}
-.draftInput:focus {
+  font-size: 15px;
+  line-height: 1.95;
+  color: var(--t2);
+  background: transparent;
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: var(--rsm);
   outline: none;
-  border-style: solid;
-  border-color: var(--acc-line);
+  overflow: hidden;
+  resize: none;
 }
-.draftHint {
-  margin-top: 7px;
-  font-size: 11px;
+.bodyInput::placeholder {
   color: var(--t5);
+}
+.bodyInput:hover {
+  background: var(--bg2);
+}
+.bodyInput:focus {
+  background: var(--bg2);
+  border-left-color: var(--acc);
+}
+
+/* ── 确认壳（进资产提取前）：窄 · 一句话 · 两个按钮，不复用 460px 的通用弹窗壳 ── */
+.confirm {
+  width: 380px;
+  max-width: calc(100vw - 40px);
+  background: var(--bg2);
+  border: 1px solid var(--edge);
+  border-radius: var(--rlg);
+  box-shadow: var(--sh-dialog);
+  padding: 20px 22px 18px;
+}
+.confirmTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--t1);
+}
+.confirmBody {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--t3);
+}
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
 }

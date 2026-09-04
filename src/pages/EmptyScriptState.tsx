@@ -3,6 +3,7 @@ import { STEPS } from '../components/StepBar'
 import { ScriptIllustration } from '../components/ScriptIllustration'
 import { ScriptSourceDialog } from '../components/ScriptSourceDialog'
 import s from './EmptyScriptState.module.css'
+import { ic } from '../components/icons'
 
 // 空态（源自 空剧本.html 的 2a）：进站第一屏。
 // 点「＋ 上传剧本」先弹一个真实的选文件弹窗（上传文件 / 粘贴文本），
@@ -27,7 +28,7 @@ export function EmptyScriptState() {
         </div>
 
         <button className={s.cta} onClick={() => setDialogOpen(true)}>
-          <span className={s.ctaPlus}>＋</span>上传剧本
+          <span className={s.ctaPlus}>{ic.add}</span>上传剧本
         </button>
         <div className={s.hint}>支持 txt / docx / fdx</div>
 

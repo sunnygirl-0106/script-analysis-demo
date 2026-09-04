@@ -39,6 +39,17 @@ function toBeats(raw: string): string[] {
     .filter((l) => l.length > 0)
 }
 
+const CN_DIGITS = '零一二三四五六七八九'
+
+/** 阿拉伯数字 → 中文数字。场号用，1–99 足够；超出范围原样返回阿拉伯数字，不硬凑。 */
+function cnNum(n: number): string {
+  if (!Number.isInteger(n) || n < 1 || n > 99) return String(n)
+  if (n < 10) return CN_DIGITS[n]!
+  const tens = Math.floor(n / 10)
+  const ones = n % 10
+  return `${tens > 1 ? CN_DIGITS[tens]! : ''}十${ones ? CN_DIGITS[ones]! : ''}`
+}
+
 // 秒 → mm:ss
 function fmtDuration(sec: number): string {
   const m = Math.floor(sec / 60)
@@ -117,7 +128,7 @@ function SceneScript({ scene, assets }: { scene: Scene; assets: Record<string, A
   return (
     <>
       <div className={s.masthead}>
-        <div className={s.eyebrow}>SCENE {String(scene.no).padStart(2, '0')}</div>
+        <div className={s.eyebrow}>第{cnNum(scene.no)}场</div>
         <div className={s.title}>{scene.name}</div>
       </div>
       <div className={s.body}>

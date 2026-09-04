@@ -9,24 +9,32 @@
   padding: 22px 24px 20px;
 }
 .title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--t1);
 }
 .body {
   margin-top: 12px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.85;
   color: var(--t3);
 }
 .est {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   margin-top: 16px;
   padding: 9px 13px;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--acc);
   background: var(--acc-bg);
   border: 1px solid var(--acc-line);
   border-radius: var(--rsm);
+}
+.est svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
 }
 .actions {
   display: flex;

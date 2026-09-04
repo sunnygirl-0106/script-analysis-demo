@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore'
 import { can } from '../services/capability'
 import { sceneDuration } from '../services/timeline'
 import s from './SceneSettingsDrawer.module.css'
+import { ic } from './icons'
 
 function fmt(sec: number): string {
   return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`
@@ -37,7 +38,7 @@ export function SceneSettingsDrawer() {
         <div className={s.head}>
           <div className={s.hTitle}>本场设置</div>
           <button className={s.close} onClick={close} title="关闭（Esc）">
-            ✕
+            {ic.close}
           </button>
         </div>
         <div className={s.sub}>

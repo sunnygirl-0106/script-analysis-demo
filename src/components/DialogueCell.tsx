@@ -12,6 +12,7 @@ import {
   type DlgLine,
 } from '../services/dialogue'
 import s from './DialogueCell.module.css'
+import { ic } from './icons'
 
 // 对白 · 旁白：结构化行内编辑。类型（台词 / 旁白）+ 说话人 + 内容。
 // 字符串 ↔ 结构化行的编解码在 services/dialogue.ts，本组件只管交互。
@@ -347,7 +348,7 @@ export function DialogueCell({ shotId, value, readOnly }: Props) {
                             title="选择说话人"
                           >
                             <span>{l.speaker || (otherEmpty.has(i) ? '未选择声音来源' : '选择说话人或声音来源')}</span>
-                            <i>▾</i>
+                            <i>{ic.caretDown}</i>
                           </button>
                         ))}
 
@@ -368,7 +369,7 @@ export function DialogueCell({ shotId, value, readOnly }: Props) {
                           })
                         }}
                       >
-                        ✕
+                        {ic.close}
                       </button>
                     </div>
                     <textarea
@@ -397,7 +398,7 @@ export function DialogueCell({ shotId, value, readOnly }: Props) {
                   patch((d) => [...d, { type: '台词', speaker: shotRoles[0] ?? '', text: '' }])
                 }}
               >
-                ＋ 台词
+                {ic.add} 台词
               </button>
               <button
                 className={s.addBtn}
@@ -406,7 +407,7 @@ export function DialogueCell({ shotId, value, readOnly }: Props) {
                   patch((d) => [...d, { type: '旁白', speaker: '', text: '' }])
                 }}
               >
-                ＋ 旁白
+                {ic.add} 旁白
               </button>
             </div>
 

@@ -33,7 +33,7 @@ const COPY: Record<Mode, {
   },
   supplement: {
     title: '上传文件 · 解析新集',
-    file: '续集-第2集.docx',
+    file: '续集-第3集.docx',
     paste: '粘贴新集剧本…',
     foot: '新的集会接在现有剧集之后，整理完成后再提取资产。',
     cta: '解析新集',
@@ -66,7 +66,7 @@ export function ScriptSourceDialog({ mode, onClose }: { mode: Mode; onClose: () 
   const supplementDone = () => {
     supplementScript()
     onClose()
-    showToast('已整理出 1 集（第 2 集），可提取资产。')
+    showToast('已整理出 1 集（第 3 集），可提取资产。')
   }
 
   return (

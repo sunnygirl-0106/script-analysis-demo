@@ -1,13 +1,16 @@
 import { Fragment, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useStore, type Tab } from '../store/useStore'
-import type { Asset, AssetKind, CandidateAsset, CandidateDecision } from '../data/types'
+import type { Asset, AssetKind, CandidateAsset } from '../data/types'
 import { KIND_DOT, KIND_LABEL } from '../components/entity'
-import { DECISION_META, type Decision } from '../components/decision'
+import { ic } from '../components/icons'
+import type { Decision } from '../components/decision'
 import { compileTerms, type Matcher } from '../services/mentions'
 import { refState } from '../services/reference'
+import { lookName, looksOfCharacter } from '../services/looks'
 import { PanelResizer } from '../components/PanelResizer'
 import { CandidatePromptDialog } from '../components/CandidatePromptDialog'
 import { SplitDensityDialog } from '../components/SplitDensityDialog'
+import { FlowButton } from '../components/FlowButton'
 import ui from '../styles/ui.module.css'
 import s from './AssetConfirm.module.css'
 
@@ -22,10 +25,17 @@ const KINDS: AssetKind[] = ['character', 'costume', 'location', 'prop']
 
 const normalize = (t: string) => t.replace(/\s+/g, '').toLowerCase()
 
-type SortKey = 'occ' | 'first' | 'name'
-const SORT_LABEL: Record<SortKey, string> = { occ: '按出现次数', first: '按首次出现', name: '按名称' }
-// 新增（手动/新建）的候选永远置顶，排序只在同组内生效（§3.4）。
+// 新增（手动/新建）的候选永远置顶（§3.4）。
 const isManual = (tempId: string) => tempId.startsWith('cand_manual_')
+
+// tab 上的类目图标：光靠一行文字，四个 tab 长得一模一样，扫不出「现在在看哪一类」。
+const KIND_ICON: Record<AssetKind, ReactNode> = {
+  character: ic.kindCharacter,
+  costume: ic.kindCostume,
+  location: ic.kindLocation,
+  prop: ic.kindProp,
+  look: ic.kindCharacter,
+}
 
 // 左原文栏宽度：可拖拽（§3.2），夹取在这个范围内。
 // 初始左右 3 : 4——原文只是对照，清单才是这一步要动的东西，右边该更宽。
@@ -65,6 +75,10 @@ function toBeats(raw: string): string[] {
   return raw.split('\n').map((l) => l.trim()).filter(Boolean)
 }
 
+// 追加集的结算路径判据（store.finishSplit 靠 pendingDecisions 是否为空分叉）。
+// 三选一撤掉之后这里恒为空对象：所有候选按默认的「新增」结算。
+const NO_DECISIONS: Record<string, Decision> = {}
+
 export function AssetConfirm() {
   const project = useStore((st) => st.project)
   const candidates = useStore((st) => st.candidates)
@@ -81,9 +95,10 @@ export function AssetConfirm() {
   const kind: AssetKind = (KINDS as string[]).includes(activeTab) ? (activeTab as AssetKind) : 'character'
   const [newOpen, setNewOpen] = useState(false)
   // 已入库时每条新候选的处理方式；点主按钮时一次性交给 confirmIncremental 结算。
-  const [decisions, setDecisions] = useState<Record<string, Decision>>({})
   const [query, setQuery] = useState('')
-  const [sortKey, setSortKey] = useState<SortKey>('occ')
+  // 集筛选（默认全集）。原来这个位置是「排序」下拉——三种排序对一份十来条的清单没什么用，
+  // 用户真正要问的是「这条是哪一集里的」，所以换成按集过滤。
+  const [epFilter, setEpFilter] = useState<'all' | string>('all')
   const [scriptW, setScriptW] = useState(460)
   // 挂载时量一次内容区宽度，把左栏摆成 3 : 4（v2.7 §3.1）。之后由拖拽接管，不再自动改。
   const containerRef = useRef<HTMLDivElement>(null)
@@ -129,6 +144,12 @@ export function AssetConfirm() {
     n: candOf(k).length + committedOf(k).length,
   }))
 
+  // 集筛选：阶段② 还没有场和镜，一条资产「属于哪一集」只能回到原文里问——
+  // 名字或别名在那一集正文里出现过，就算它出现在这一集。这跟左栏的高亮是同一套判据。
+  const scopeText = epFilter === 'all' ? null : (project.episodes.find((e) => e.id === epFilter)?.rawText ?? '')
+  const inScope = (names: (string | undefined)[]) =>
+    scopeText == null || names.some((n) => !!n && scopeText.includes(n))
+
   // 搜索：按名称 / 别名 / 提示词匹配。
   const q = query.trim().toLowerCase()
   const candMatches = (c: CandidateAsset) =>
@@ -142,25 +163,18 @@ export function AssetConfirm() {
     (a.aliases ?? []).some((x) => x.toLowerCase().includes(q)) ||
     a.imagePrompt.toLowerCase().includes(q)
 
-  // 排序：新增置顶，其余按 sortKey；只在同组（候选 / 已入库）内生效。
+  // 排序不再给用户选：手动新增置顶，其余按出现次数降序——重要的先看到，这是唯一有意义的默认。
   const sortCands = (list: CandidateAsset[]) =>
     [...list].sort((a, b) => {
       const ma = isManual(a.tempId), mb = isManual(b.tempId)
       if (ma !== mb) return ma ? -1 : 1
-      if (sortKey === 'name') return a.name.localeCompare(b.name, 'zh')
-      if (sortKey === 'first') return (a.firstParaNo ?? 1e9) - (b.firstParaNo ?? 1e9)
       return (b.occCount ?? 0) - (a.occCount ?? 0)
     })
   const sortAssets = (list: Asset[]) =>
-    [...list].sort((a, b) => {
-      if (sortKey === 'name') return a.name.localeCompare(b.name, 'zh')
-      const oa = usageIndex[a.id]?.shotCount ?? 0
-      const ob = usageIndex[b.id]?.shotCount ?? 0
-      return ob - oa
-    })
+    [...list].sort((a, b) => (usageIndex[b.id]?.shotCount ?? 0) - (usageIndex[a.id]?.shotCount ?? 0))
 
-  const visibleCands = sortCands(candOf(kind).filter(candMatches))
-  const visibleAssets = sortAssets(committedOf(kind).filter(assetMatches))
+  const visibleCands = sortCands(candOf(kind).filter(candMatches).filter((c) => inScope([c.name, ...(c.aliases ?? [])])))
+  const visibleAssets = sortAssets(committedOf(kind).filter(assetMatches).filter((a) => inScope([a.name, ...(a.aliases ?? [])])))
 
   return (
     <div className={s.page} ref={containerRef}>
@@ -174,7 +188,6 @@ export function AssetConfirm() {
           {project.episodes.map((ep) => (
             <div key={ep.id} className={s.sceneBlock}>
               <div className={s.epMast}>
-                <div className={s.epEyebrow}>EPISODE {String(ep.no).padStart(2, '0')}</div>
                 <div className={s.epTitle}>第 {ep.no} 集 · {ep.title}</div>
               </div>
               {toBeats(ep.rawText).map((line, i) => (
@@ -192,62 +205,58 @@ export function AssetConfirm() {
 
       {/* 右：候选清单 */}
       <div className={s.rcol}>
+        {/* 一条顶栏（v2.10）：左边四个类目 tab，右边「搜索 / 全集 / ＋新增」。
+            原来它们分占上下两条，中间还压一道分隔线——上一条说「在看哪一类」，
+            下一条说「看这一类里的哪些」，说的是同一件事的两半，没必要用掉两行高度和两道线。
+            右边一组按「先筛后做」排，动作压在整行的末端。 */}
         <div className={s.tabs}>
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              className={[s.tab, activeTab === t.key ? s.tabOn : ''].join(' ')}
-              onClick={() => setTab(t.key)}
-            >
-              {t.label}<i className={s.tabN}>{t.n}</i>
-            </button>
-          ))}
-        </div>
-
-        {/* 工具条：搜索 · 排序 · 新增（§3.4） */}
-        <div className={s.toolbar}>
+          <div className={s.tabList}>
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                className={[s.tab, activeTab === t.key ? s.tabOn : ''].join(' ')}
+                onClick={() => setTab(t.key)}
+              >
+                <span className={s.tabIcon}>{KIND_ICON[t.key as AssetKind]}</span>
+                {t.label}
+                <i className={s.tabN}>{t.n}</i>
+              </button>
+            ))}
+          </div>
+          <span className={s.toolSpacer} />
           <div className={s.search}>
-            <span className={s.searchIcon}>⌕</span>
+            <span className={s.searchIcon}>{ic.search}</span>
             <input
               className={s.searchInput}
-              placeholder="搜索名称、别名或提示词"
+              placeholder="搜索名称或提示词"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          <label className={s.sortWrap}>
-            排序
-            <select className={s.sortSel} value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)}>
-              {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => (
-                <option key={k} value={k}>{SORT_LABEL[k]}</option>
-              ))}
-            </select>
-          </label>
+          <select
+            className={s.epSel}
+            value={epFilter}
+            onChange={(e) => setEpFilter(e.target.value)}
+            title="只看某一集里出现的资产"
+          >
+            <option value="all">全集</option>
+            {project.episodes.map((e) => (
+              <option key={e.id} value={e.id}>第 {e.no} 集</option>
+            ))}
+          </select>
           {!committed && (
-            <button className={s.addBtn} onClick={() => setNewOpen(true)}>＋ 新增{KIND_LABEL[kind]}</button>
+            <button className={s.addBtn} onClick={() => setNewOpen(true)}>
+              {ic.add} 新增{KIND_LABEL[kind]}
+            </button>
           )}
         </div>
 
         <div className={s.listScroll}>
-          <div className={[s.colHead, committed ? s.gridDecide : ''].join(' ')}>
-            <span />
-            <span>名称</span>
-            <span>生成提示词</span>
-            <span>{committed ? '处理方式' : '状态'}</span>
-            <span>操作</span>
-          </div>
-
           {/* 待入库候选 */}
           {visibleCands.map((c) => (
             <CandidateGroup
               key={c.tempId}
               cand={c}
-              committed={committed}
-              assets={project.assets}
-              decision={decisions[c.tempId]}
-              onDecide={(dec, link) =>
-                setDecisions((m) => ({ ...m, [c.tempId]: { decision: dec, linkTargetId: link } }))
-              }
               onEnter={() => enter([c.name, ...(c.aliases ?? [])])}
               onLeave={leave}
               onRename={(v) => renameCandidate(c.tempId, v)}
@@ -255,59 +264,89 @@ export function AssetConfirm() {
             />
           ))}
 
-          {/* 已入库条目：只读灰显 */}
+          {/* 已入库条目：只读。不压暗整行，只在名字后面挂一枚锁（见 .lockMark 注释）。
+              角色照样带出它的造型子行——造型是角色的一部分，不因为已经入过库就不该看见了。 */}
           {visibleAssets.map((a) => {
             const names = [a.name, ...(a.aliases ?? [])]
-            const shotCount = usageIndex[a.id]?.shotCount ?? 0
-            const unref = refState(usageIndex, a.id) === 'unreferenced'
+            const looks = a.kind === 'character' ? looksOfCharacter(a.id, project.assets) : []
             return (
-              <div
-                key={a.id}
-                className={[s.row, s.rowLocked, committed ? s.gridDecide : ''].join(' ')}
-                onMouseEnter={() => enter(names)}
-                onMouseLeave={leave}
-              >
-                <i className={s.dot} style={{ background: KIND_DOT[a.kind] }} />
-                <div className={s.nameCell}><span className={s.name}>{a.name}</span></div>
-                <PromptCell title={a.name} text={a.imagePrompt} editable={false} onSave={() => {}} />
-                {shotCount > 0 ? (
-                  <span className={s.stSaved}>已入库</span>
-                ) : (
-                  <span className={s.stUnref} title="仍在项目资产库，只是当前剧本没有镜头引用它">
-                    {unref ? '未引用' : '已入库'}
-                  </span>
-                )}
-                <div className={s.ops}>
-                  <button className={s.iconBtn} disabled title="删除只有项目资产库一个出口">🗑</button>
+              <Fragment key={a.id}>
+                <div
+                  className={[s.row, s.rowLocked].join(' ')}
+                  onMouseEnter={() => enter(names)}
+                  onMouseLeave={leave}
+                >
+                  <div className={s.mainCell}>
+                    <div className={s.nameLine}>
+                      <span className={s.name}>{a.name}</span>
+                      <span className={s.lockMark} title="已入库，只读。改动的唯一入口是项目资产库">
+                        {ic.lock}
+                      </span>
+                      {a.kind === 'character' && <LooksCount n={looks.length} />}
+                    </div>
+                    <PromptCell title={a.name} text={a.imagePrompt} editable={false} onSave={() => {}} />
+                  </div>
+                  <div className={s.ops}>
+                    <button className={s.iconBtn} disabled title="删除只有项目资产库一个出口">
+                      {ic.trash}
+                    </button>
+                  </div>
+                  <CommittedStatus assetId={a.id} />
                 </div>
-              </div>
+                {looks.map((lk) => {
+                  const label = lookName(lk, project.assets)
+                  return (
+                    <div
+                      key={lk.id}
+                      className={[s.row, s.lookRow].join(' ')}
+                      onMouseEnter={() => enter(names)}
+                      onMouseLeave={leave}
+                    >
+                      <div className={s.lookNameCell}>
+                        <div className={s.lookMain}>
+                          <span className={s.lookName}>{label}</span>
+                          <PromptCell title={label} text={lk.imagePrompt} editable={false} onSave={() => {}} />
+                        </div>
+                      </div>
+                      {/* 操作列留空占位：造型的解除入口只在候选态有，已入库的绑定永久只读（决策 1b）。 */}
+                      <div className={s.ops} />
+                      <CommittedStatus assetId={lk.id} />
+                    </div>
+                  )
+                })}
+              </Fragment>
             )
           })}
 
           {visibleCands.length + visibleAssets.length === 0 && (
-            <div className={s.empty}>{q ? '没有匹配的资产' : '本类目暂无候选'}</div>
+            <div className={s.empty}>
+              {q ? '没有匹配的资产' : epFilter !== 'all' ? '这一集里没有本类目的资产' : '本类目暂无候选'}
+            </div>
           )}
         </div>
 
         {/* 页脚（v2.5 §6.1 / v2.7 §3.3）：只剩右对齐的一个主按钮。
             左边那串「N 项待入库 · 角色 3 / 服装 3…」删了——四个 tab 上各自的计数已经在说同一件事。
             没有「← 返回整理剧本」—— 要回去点步骤条 ①，那才是导航该待的地方。
-            主按钮不带价：价在节奏弹窗里选完档位才是确定值。 */}
-        <div className={s.foot}>
-          <span className={s.footSpacer} />
-          <button
-            className={[ui.btn, ui.btnPrimary].join(' ')}
-            onClick={() => setDensityOpen(true)}
-          >
-            {committed ? '确认新增资产并开始拆分' : '确认资产并开始拆分'}
-          </button>
-        </div>
+            主按钮不带价：价在节奏弹窗里选完档位才是确定值。
+
+            已入库、又没有新候选时整条不渲染（跟步骤① 的页脚同一条规矩）：
+            那时这一页是回来查看资产的，没有「新增资产」可确认，
+            留一颗「确认新增资产并开始拆分」在那儿只会让人以为还有什么没做完。 */}
+        {candidates.length > 0 && (
+          <div className={s.foot}>
+            <span className={s.footSpacer} />
+            <FlowButton onClick={() => setDensityOpen(true)}>
+              {committed ? '确认新增资产并开始拆分' : '确认资产并开始拆分'}
+            </FlowButton>
+          </div>
+        )}
       </div>
 
       {newOpen && <NewAssetDialog kind={kind} onClose={() => setNewOpen(false)} />}
       {densityOpen && (
         <SplitDensityDialog
-          decisions={committed ? decisions : undefined}
+          decisions={committed ? NO_DECISIONS : undefined}
           onClose={() => setDensityOpen(false)}
         />
       )}
@@ -315,7 +354,8 @@ export function AssetConfirm() {
   )
 }
 
-// 提示词单元格（§3.4）：预览一行，点击弹浮层编辑；底下的数据行完全不动。
+// 提示词单元格（§3.4）：预览，点击弹浮层编辑；底下的数据行完全不动。
+// 只有一种形态（v2.9 §1）：不管主条目还是造型子行，提示词都挂在名字**底下**，两行 clamp。
 function PromptCell({
   title, text, editable, onSave, onComplete,
 }: {
@@ -329,11 +369,15 @@ function PromptCell({
   const trimmed = text.trim()
   return (
     <>
-      <button className={s.promptCell} onClick={() => setOpen(true)} title="点击查看 / 编辑提示词">
+      <button
+        className={s.promptCell}
+        onClick={() => setOpen(true)}
+        title="点击查看 / 编辑提示词"
+      >
         {trimmed ? (
           <span className={s.promptPreview}>{trimmed}</span>
         ) : editable ? (
-          <span className={s.promptAdd}>✦ 点击补全提示词</span>
+          <span className={s.promptAdd}>{ic.spark} 点击补全提示词</span>
         ) : (
           <span className={s.promptEmpty}>—</span>
         )}
@@ -353,90 +397,72 @@ function PromptCell({
 }
 
 // 一条候选：主行 + （角色展开时）造型子行。子行是同一张网格的兄弟行，与主行的列对齐（§3.5）。
-// committed 只切换「状态」列的形态（待入库 ↔ 三选一下拉）——候选本身在两种形态下都可编辑，
+// 候选行只有一种形态，首次导入与追加集完全一样：状态列恒为「待确认」，内容一律可编辑。
+// 已入库之后曾经在这一列换出一个「新增到资产库 / 使用已有资产 / 本次不入库」三选一——撤了：
+// AI 拆出来什么就是什么，同名的在抽取时就已经被判重滤掉了，剩下的本来就都是要入库的新资产，
+// 再让用户对每一条表一次态，是把一个系统已经知道答案的问题摊给了用户。
 // 灰显只读的是已经入过库的老资产，不是这一批新候选。
 function CandidateGroup({
-  cand, committed, assets, decision, onDecide, onEnter, onLeave, onRename, onRemove,
+  cand, onEnter, onLeave, onRename, onRemove,
 }: {
   cand: CandidateAsset
-  committed: boolean
-  assets: Record<string, Asset>
-  decision?: Decision
-  onDecide: (decision: CandidateDecision, linkTargetId?: string) => void
   onEnter: () => void
   onLeave: () => void
   onRename: (v: string) => void
   onRemove: () => void
 }) {
-  const [open, setOpen] = useState(false)
+  // 造型常展开（v2.10）：一个角色配了几套造型、每套的提示词写了什么，
+  // 是这一步要确认的正事，不该藏在一次点击后面。折叠开关因此整个撤了——
+  // 默认就是展开，那枚 ⌄ 除了给人一次「点开才看得到」的错觉，不做别的事。
   const isChar = cand.kind === 'character'
+  // 组内 hover：主行和它底下的造型子行共用一个状态，鼠标在这一组里的任何一行，
+  // 名字后面的「＋ 造型」就现形。子行的高亮回调本来就已经接到这一组了，顺着用。
+  const [hot, setHot] = useState(false)
+  const enter = () => { setHot(true); onEnter() }
+  const leave = () => { setHot(false); onLeave() }
   return (
     <>
       <div
-        className={[s.row, committed ? s.gridDecide : ''].join(' ')}
-        onMouseEnter={onEnter}
-        onMouseLeave={onLeave}
+        className={s.row}
+        onMouseEnter={enter}
+        onMouseLeave={leave}
       >
-        <i className={s.dot} style={{ background: KIND_DOT[cand.kind] }} />
-        <div className={s.nameCell}>
-          <EditableName name={cand.name} editable onCommit={onRename} />
-          {isChar && <CandidateLooksToggle cand={cand} open={open} setOpen={setOpen} />}
+        {/* 名字与提示词竖着叠（v2.9 §1）：提示词是几十上百字的一段话，
+            塞进与名字并排的一格里，既截得难看，又把名字挤成了细细一条。 */}
+        <div className={s.mainCell}>
+          <div className={s.nameLine}>
+            <EditableName name={cand.name} editable onCommit={onRename} />
+            {isChar && <LooksCount n={(cand.costumeIds ?? []).length} />}
+            {/* 「＋ 造型」跟在计数标签后面（v2.10）：它原来独占一条子行，
+                每个角色白搭一行高度，且那一行永远是空的三格 + 一个按钮。
+                挂到名字这一行、悬浮这一组才现形，跟操作列的垃圾桶是同一套「用时才出现」。 */}
+            {isChar && <AddLookButton cand={cand} visible={hot} />}
+          </div>
+          <CandidateMainPrompt cand={cand} committed={false} />
         </div>
-        <CandidateMainPrompt cand={cand} committed={false} />
-        {committed ? (
-          <DecisionCell cand={cand} assets={assets} decision={decision} onDecide={onDecide} />
-        ) : (
-          <span className={s.stPending}>待入库</span>
-        )}
+        {/* 操作列在状态列**前面**（v2.10）：状态是这一行的结论，该压在最右端收尾；
+            垃圾桶平时是藏着的，放在结论左边不抢位置，鼠标到了才现形。 */}
         <div className={s.ops}>
-          <button className={s.iconBtn} title="移除此候选" onClick={onRemove}>🗑</button>
+          <button className={s.iconBtn} title="移除此候选" onClick={onRemove}>{ic.trash}</button>
         </div>
+        <span className={s.stPending}>待确认</span>
       </div>
-      {isChar && open && (
-        <CandidateLookRows cand={cand} committed={false} onEnter={onEnter} onLeave={onLeave} />
+      {isChar && (
+        <CandidateLookRows cand={cand} committed={false} onEnter={enter} onLeave={leave} />
       )}
     </>
   )
 }
 
-// 已入库之后，候选行的「状态」列不再显示「待入库」，而是这个三选一（v2.4 §4.3）。
-function DecisionCell({
-  cand, assets, decision, onDecide,
-}: {
-  cand: CandidateAsset
-  assets: Record<string, Asset>
-  decision?: Decision
-  onDecide: (decision: CandidateDecision, linkTargetId?: string) => void
-}) {
-  const d = decision ?? { decision: 'new' as CandidateDecision }
-  const pool = Object.values(assets).filter((a) => a.kind === cand.kind)
+// 已入库条目的「状态」列：主行与造型子行共用。
+// 「未引用」是这一页少数几个真话之一 —— 资产还在库里，只是当前剧本没有任何镜头挂着它。
+function CommittedStatus({ assetId }: { assetId: string }) {
+  const usageIndex = useStore((st) => st.usageIndex())
+  if ((usageIndex[assetId]?.shotCount ?? 0) > 0) return <span className={s.stSaved}>已入库</span>
   return (
-    <div className={s.decideCell}>
-      <select
-        className={s.decideSel}
-        value={d.decision}
-        onChange={(e) => {
-          const dec = e.target.value as CandidateDecision
-          onDecide(dec, dec === 'link' ? (d.linkTargetId ?? pool[0]?.id) : undefined)
-        }}
-      >
-        {DECISION_META.map((m) => (
-          <option key={m.key} value={m.key} disabled={m.key === 'link' && pool.length === 0}>
-            {m.label}
-          </option>
-        ))}
-      </select>
-      {d.decision === 'link' && (
-        <select
-          className={s.decideSel}
-          value={d.linkTargetId ?? pool[0]?.id ?? ''}
-          onChange={(e) => onDecide('link', e.target.value)}
-        >
-          {pool.length === 0 && <option value="">（无同类已入库资产）</option>}
-          {pool.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-        </select>
-      )}
-    </div>
+    <span className={s.stUnref} title="仍在项目资产库，只是当前剧本没有镜头引用它">
+      {refState(usageIndex, assetId) === 'unreferenced' ? '未引用' : '已入库'}
+    </span>
   )
 }
 
@@ -455,18 +481,16 @@ function CandidateMainPrompt({ cand, committed }: { cand: CandidateAsset; commit
   )
 }
 
-// 角色候选的造型开关（v2.7 §3.4）：只剩 `N 套造型 ⌄`。
-// 原来旁边还有个「＋ 服装」，它的下拉能输名字新建——用户分不清那是在建服装还是在建造型。
-// 新增造型改到展开后的子行末尾（那里上下文明确：这一条就是「这个角色的一套造型」）。
-function CandidateLooksToggle({
-  cand, open, setOpen,
-}: { cand: CandidateAsset; open: boolean; setOpen: (v: boolean) => void }) {
-  const count = (cand.costumeIds ?? []).length
+// 角色名后面的造型计数（v2.10）：`造型 ×2`。候选行与已入库行共用一个。
+// 试过两版都不对：紫底胶囊长得像颗点不动的按钮；「细竖线 + 数字 + 套造型」又太素，
+// 一行里多出一道竖线，反而像分栏线。这一版换成计量式写法——
+// 「造型」是小灰字的量词头，`×` 压到最淡，数字用衬线体带角色紫，重量全落在数上。
+// 不带底、不带框、不带线：它只是名字后面的一个计量，不假装自己是控件。
+function LooksCount({ n }: { n: number }) {
   return (
-    <span className={s.looksToggleWrap}>
-      <button className={s.looksToggle} onClick={() => setOpen(!open)}>
-        {count} 套造型 <span className={s.caret}>{open ? '⌃' : '⌄'}</span>
-      </button>
+    <span className={s.looksCount}>
+      造型<i className={s.looksX}>×</i>
+      <b className={s.looksNum}>{n}</b>
     </span>
   )
 }
@@ -483,22 +507,13 @@ function CandidateLookRows({
 }) {
   const project = useStore((st) => st.project)
   const candidates = useStore((st) => st.candidates)
-  const attachCandidateCostume = useStore((st) => st.attachCandidateCostume)
   const detachCandidateCostume = useStore((st) => st.detachCandidateCostume)
   const setCandidateLookPrompt = useStore((st) => st.setCandidateLookPrompt)
   const completeCandidateLookPrompt = useStore((st) => st.completeCandidateLookPrompt)
-  const [picking, setPicking] = useState(false)
   const ids = cand.costumeIds ?? []
 
   const costumeName = (id: string) =>
     candidates.find((c) => c.tempId === id)?.name ?? project.assets[id]?.name ?? id
-
-  // 可选服装：本批 costume 候选 + 已入库 costume，去掉本角色已挂的（v2.7 §3.4：只选，不建）。
-  const attached = new Set(ids)
-  const pool = [
-    ...candidates.filter((c) => c.kind === 'costume').map((c) => ({ id: c.tempId, name: c.name })),
-    ...Object.values(project.assets).filter((a) => a.kind === 'costume').map((a) => ({ id: a.id, name: a.name })),
-  ].filter((c) => !attached.has(c.id))
 
   return (
     <>
@@ -506,19 +521,22 @@ function CandidateLookRows({
         const cName = costumeName(cid)
         return (
           <div key={cid} className={[s.row, s.lookRow].join(' ')} onMouseEnter={onEnter} onMouseLeave={onLeave}>
-            <span />
+            {/* 子行是并排的一条（v2.10）：造型名在左定宽，提示词接着往右占满余下宽度。
+                主行才竖排——主行的名字大、提示词要摊两行；子行只是一套造型的一句话，
+                横着一条更省纵向空间，几套造型的提示词起点也对齐成一条竖线。
+                不缩进、不带连接轨：造型名起排跟角色名对齐，归属靠底色和字号说。 */}
             <div className={s.lookNameCell}>
-              <span className={s.rail} />
-              <span className={s.lookName}>{cand.name} · {cName}</span>
+              <div className={s.lookMain}>
+                <span className={s.lookName}>{cand.name} · {cName}</span>
+                <PromptCell
+                  title={`${cand.name} · ${cName}`}
+                  text={cand.lookPrompts?.[cid] ?? ''}
+                  editable={!committed}
+                  onSave={(v) => setCandidateLookPrompt(cand.tempId, cid, v)}
+                  onComplete={committed ? undefined : () => completeCandidateLookPrompt(cand.tempId, cid)}
+                />
+              </div>
             </div>
-            <PromptCell
-              title={`${cand.name} · ${cName}`}
-              text={cand.lookPrompts?.[cid] ?? ''}
-              editable={!committed}
-              onSave={(v) => setCandidateLookPrompt(cand.tempId, cid, v)}
-              onComplete={committed ? undefined : () => completeCandidateLookPrompt(cand.tempId, cid)}
-            />
-            <span className={s.stPending}>待入库</span>
             <div className={s.ops}>
               {/* 没有 ⇄ 换服装（v2.7 §3.4）：换 = 解除 + 再挂一套，两步都在这条子行上。 */}
               {!committed && (
@@ -527,37 +545,51 @@ function CandidateLookRows({
                   title="解除这套造型"
                   onClick={() => detachCandidateCostume(cand.tempId, cid)}
                 >
-                  🗑
+                  {ic.trash}
                 </button>
               )}
             </div>
+            <span className={s.stPending}>待确认</span>
           </div>
         )
       })}
-      {!committed && (
-        <div className={[s.row, s.lookRow].join(' ')}>
-          <span />
-          <div className={s.lookNameCell}>
-            <span className={[s.rail, s.railLast].join(' ')} />
-            <span className={s.addLookWrap}>
-              <button className={s.addLook} onClick={() => setPicking((v) => !v)}>
-                ＋ 增加一套造型
-              </button>
-              {picking && (
-                <CostumePicker
-                  pool={pool}
-                  onPick={(id) => { attachCandidateCostume(cand.tempId, id); setPicking(false) }}
-                  onClose={() => setPicking(false)}
-                />
-              )}
-            </span>
-          </div>
-          <span />
-          <span />
-          <span />
-        </div>
-      )}
     </>
+  )
+}
+
+// 「＋ 造型」（v2.10）：挂在角色名那一行，悬浮这一组才现形。
+// 它以前是造型子行末尾独占的一整条——造型改成常展开之后，每个角色都要为它白搭一行；
+// 而这个动作说的是「给**这个角色**再加一套」，本来就该待在角色名边上。
+function AddLookButton({ cand, visible }: { cand: CandidateAsset; visible: boolean }) {
+  const project = useStore((st) => st.project)
+  const candidates = useStore((st) => st.candidates)
+  const attachCandidateCostume = useStore((st) => st.attachCandidateCostume)
+  const [picking, setPicking] = useState(false)
+
+  // 可选服装：本批 costume 候选 + 已入库 costume，去掉本角色已挂的（v2.7 §3.4：只选，不建）。
+  const attached = new Set(cand.costumeIds ?? [])
+  const pool = [
+    ...candidates.filter((c) => c.kind === 'costume').map((c) => ({ id: c.tempId, name: c.name })),
+    ...Object.values(project.assets).filter((a) => a.kind === 'costume').map((a) => ({ id: a.id, name: a.name })),
+  ].filter((c) => !attached.has(c.id))
+
+  return (
+    <span className={s.addLookWrap}>
+      {/* 下拉开着的时候强制可见：否则鼠标一挪到弹层上就离开了这一组，按钮连同弹层一起消失。 */}
+      <button
+        className={[s.addLook, visible || picking ? s.addLookOn : ''].join(' ')}
+        onClick={() => setPicking((v) => !v)}
+      >
+        {ic.add} 造型
+      </button>
+      {picking && (
+        <CostumePicker
+          pool={pool}
+          onPick={(id) => { attachCandidateCostume(cand.tempId, id); setPicking(false) }}
+          onClose={() => setPicking(false)}
+        />
+      )}
+    </span>
   )
 }
 

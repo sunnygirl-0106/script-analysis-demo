@@ -1,7 +1,6 @@
 // 追加集与资产去重。纯函数。追加集的资产新增数由新集内容决定。
 // v2.0：新增着装角色的 characterId/costumeIds 也随去重重指（候选闸先入库角色后不悬空）。
-import type { Asset, MountRef, Project, Shot } from '../data/types'
-import type { EpisodePayload } from '../data/seedEpisode2'
+import type { Asset, EpisodePayload, MountRef, Project, Shot } from '../data/types'
 
 /** 归一化名称：去空格、统一小写，用于比对是否为同一资产。 */
 function normalize(name: string): string {

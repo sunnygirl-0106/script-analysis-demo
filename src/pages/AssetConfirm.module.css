@@ -22,23 +22,25 @@
   display: flex;
   align-items: baseline;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 12px 32px;
   border-bottom: 1px solid var(--line);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--t1);
 }
-.scriptMeta { font-size: 11px; font-weight: 400; color: var(--t4); }
-.scriptBody { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 20px 28px; }
-.sceneBlock { margin-bottom: 22px; }
-/* 集块报头：`E P I S O D E  0 1` + `第 1 集 · 外卖与尊严`（v2.7 §3.2，与步骤③ 同一套）。 */
+.scriptMeta { font-size: 12px; font-weight: 400; color: var(--t4); }
+.scriptBody { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 32px 32px; }
+/* 阅读栏宽度封顶：中缝可以一直往右拖到 820px，但一行摊到 700 多像素（近 50 个汉字）就没法读了。
+   超过这个宽度多出来的空间左右均分成留白，行长保持不变。 */
+.sceneBlock { max-width: 620px; margin: 0 auto 22px; }
+/* 集块报头：只剩 `第 1 集 · 外卖与尊严`（v2.7 §3.2，与步骤③ 同一套）。
+   上面那行拉开字距的 `E P I S O D E  0 1` 撤了——它不带任何标题里没有的信息。 */
 .epMast { composes: masthead from '../styles/script.module.css'; }
-.epEyebrow { composes: eyebrow from '../styles/script.module.css'; }
 .epTitle { composes: title from '../styles/script.module.css'; }
 /* 原文没有任何结构标记（v2.6 §二）：一行一段散文。排版与步骤③「本场剧本」同源（v2.7 §3.2）。 */
 .beat {
   composes: serif from '../styles/script.module.css';
-  font-size: 14px;
+  font-size: 15px;
   margin: 0 0 14px;
 }
 
@@ -59,112 +61,193 @@
 
 /* ── 右：候选清单 ── */
 .rcol { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.tabs { display: flex; gap: 28px; padding: 10px 16px 0; border-bottom: 1px solid var(--line); }
+/* 四个类目 tab（§3.3）。图标 + 名称 + 数字：光有文字时四个 tab 长得一样，
+   要读完字才知道自己在看哪一类；图标先到眼睛，未选中的整体压灰，选中的一档全亮 + 主色下划线。 */
+/* 顶栏一条（v2.10）：tab 在左、搜索/全集/＋新增在右，共用同一道下边线。
+   align-items:stretch + 右侧那组自己居中——这样 tab 的选中下划线仍然压在这道线上，
+   右边那几个控件在整行高度里居中，两边不用各调一遍 margin。 */
+.tabs {
+  display: flex; align-items: stretch; gap: 10px;
+  padding: 12px 28px 0; border-bottom: 1px solid var(--line);
+}
+.tabList { display: flex; gap: 26px; }
 .tab {
   appearance: none; border: none; background: transparent; cursor: pointer;
-  padding: 8px 0; font-size: 14px; color: var(--t2);
-  border-bottom: 2px solid transparent; display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 0 10px; font-size: 14px; color: var(--t4);
+  border-bottom: 2px solid transparent; display: inline-flex; align-items: center; gap: 7px;
+  transition: color 0.14s;
 }
-.tab:hover { color: var(--t1); }
+.tabIcon { display: inline-flex; color: currentColor; opacity: 0.85; }
+.tab:hover { color: var(--t2); }
 .tabOn { color: var(--t1); border-bottom-color: var(--acc); font-weight: 600; }
+.tabOn .tabIcon { color: var(--acc); opacity: 1; }
 .tabN {
-  font-style: normal; font-size: 11px; color: var(--t3);
-  background: var(--bg2); border-radius: 8px; padding: 0 6px; min-width: 16px; text-align: center;
+  font-style: normal; font-size: 12px; font-weight: 500; color: inherit;
+  font-variant-numeric: tabular-nums;
 }
 
-/* 工具条：搜索 · 排序 · 新增（§3.4） */
-.toolbar {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 16px; border-bottom: 1px solid var(--line2);
-}
+.toolSpacer { flex: 1; }
+/* 搜索框定宽（v2.9 §2）：它原来 flex:1 横贯一整条，看着像这一页的主控件，
+   可它只是个偶尔用一次的过滤器。收成一小条，聚焦时再展开到能看清整句查询。 */
 .search {
-  flex: 1; display: flex; align-items: center; gap: 6px;
+  flex: none; width: 200px; display: flex; align-items: center; gap: 6px;
+  align-self: center; margin-bottom: 10px;
   background: var(--bg2); border: 1px solid var(--line2); border-radius: var(--rpill);
   padding: 3px 12px; min-width: 0;
+  transition: width 0.18s ease, border-color 0.14s ease;
 }
-.searchIcon { color: var(--t4); font-size: 13px; }
+.search:focus-within { width: 280px; border-color: var(--acc-line); }
+.searchIcon { display: inline-flex; color: var(--t4); }
+.searchIcon svg { width: 14px; height: 14px; }
 .searchInput {
   flex: 1; min-width: 0; appearance: none; border: none; background: transparent;
-  color: var(--t1); font-size: 12.5px; outline: none;
+  color: var(--t1); font-size: 13px; outline: none;
 }
-.sortWrap { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--t4); }
-.sortSel {
-  appearance: none; background: var(--bg2); color: var(--t2);
-  border: 1px solid var(--line2); border-radius: var(--rsm); padding: 3px 8px; font-size: 12px; cursor: pointer;
+/* 集筛选：紧挨搜索框右边，默认「全集」。这是清单上唯一的范围开关。
+   箭头常驻（v2.9 §3）：原来 appearance:none 把系统箭头也抹了，它就成了一块看不出能点的灰字。 */
+.epSel {
+  appearance: none; background-color: var(--bg2); color: var(--t2); flex: none;
+  align-self: center; margin-bottom: 10px;
+  border: 1px solid var(--line2); border-radius: var(--rsm);
+  padding: 4px 26px 4px 10px; font-size: 13px; cursor: pointer; transition: 0.14s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23a2a2a2' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 9px center;
 }
+.epSel:hover { border-color: var(--edge); color: var(--t1); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23ffffff' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.epSel:focus-visible { outline: 2px solid var(--acc-line); outline-offset: 1px; }
+/* 新增按钮跟前面两个过滤器隔开一小段：它们挨在一起时看着像同一组控件，
+   可这一个是往清单里真加一条，跟「改变看到什么」不是一回事。 */
 .addBtn {
-  appearance: none; cursor: pointer; white-space: nowrap;
-  font-size: 12px; color: var(--acc); background: var(--acc-bg);
+  appearance: none; cursor: pointer; white-space: nowrap; margin-left: 6px;
+  display: inline-flex; align-items: center; gap: 5px;
+  align-self: center; margin-bottom: 10px;
+  font-size: 13px; color: var(--acc); background: var(--acc-bg);
   border: 1px solid var(--acc-line); border-radius: var(--rpill); padding: 4px 12px;
   transition: 0.16s;
 }
+.addBtn svg { width: 13px; height: 13px; }
 .addBtn:hover { color: var(--acc-hi); border-color: var(--acc); }
 
-.listScroll { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 0 4px; }
-/* 三类信息四列（§3.3）：色点 | 名称 | 生成提示词 | 状态 | 操作。列宽见 v2.6 §四。 */
-.colHead, .row {
+/* 表头撤掉之后第一条资产直接顶在顶栏底下，挤（v2.10）：补一段上留白，
+   让清单跟「在看哪一类」那一行明确分开——原先这段距离是表头顺带撑出来的。 */
+.listScroll { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 0 4px; }
+/* 三列（v2.10）：名称+提示词 | 状态 | 操作。
+   提示词从独立一列并回名字底下（v2.9 §1）——它是一整段话，跟名字并排时两边都不好过：
+   名字被挤成细条，提示词被截在第二行中间。
+   最左那枚类目色点撤了（v2.10）：一次只看一个 tab，整屏的点是同一个颜色，
+   它答的是「你在看角色」——而这句话 tab 已经说过了。名字因此顶到栏首起排。 */
+/* 表头那一行（`名称 · 生成提示词 / 状态`）撤了（v2.10）：三列各自长什么样，
+   看一眼内容就知道——一列专名、一列灰色长句、一列「待入库」。留着它只是多一道横线。 */
+.row {
   display: grid;
-  grid-template-columns: 36px minmax(92px, 1.1fr) minmax(160px, 2.4fr) 88px 56px;
-  align-items: center;
-  gap: 10px;
-  padding: 0 16px;
+  grid-template-columns: minmax(0, 1fr) 44px auto;
+  align-items: start;
+  gap: 12px;
+  padding: 0 28px;
 }
-.colHead {
-  height: 30px; font-size: 11px; color: var(--t4);
-  position: sticky; top: 0; background: var(--bg0); z-index: 1;
-  border-bottom: 1px solid var(--line);
-}
-/* 已入库后的增量形态：状态列换成三选一下拉，列宽跟着放宽（v2.4 §4.3）。 */
-.colHead.gridDecide, .row.gridDecide {
-  grid-template-columns: 36px minmax(92px, 1.1fr) minmax(120px, 1.6fr) 176px 56px;
-}
-.decideCell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.decideSel {
-  appearance: none; width: 100%; cursor: pointer;
-  font-size: 11.5px; color: var(--t2); background: var(--bg2);
-  border: 1px solid var(--line2); border-radius: var(--rsm); padding: 3px 8px;
-}
-.decideSel:hover { border-color: var(--edge); color: var(--t1); }
-
-.row { min-height: 64px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.row { min-height: 64px; padding: 14px 28px 16px; border-bottom: 1px solid var(--line); }
 .row:hover { background: var(--bg1); }
-.rowLocked { opacity: 0.7; }
-.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+/* 已入库行不再整行压暗（原来是 opacity: .7）。拆分走完之后这一页全是已入库资产，
+   一整屏 0.7 的透明度把 17px 的资产名连同提示词一起读糊了——
+   而「这条不能改」是一条规则，不是一种视觉噪音。规则交给名字后面那枚小锁去说，
+   内容该多清楚还是多清楚。 */
+/* 名字后面的小锁：只读的凭据。跟步骤① 集头那把锁是同一件事，
+   那边用的是 emoji 🔒，这里走描边 svg——这一页的图标都已经换成 currentColor 的线条图。 */
+.lockMark {
+  display: inline-flex;
+  flex: none;
+  color: var(--t4);
+  cursor: help;
+}
+.lockMark svg { width: 13px; height: 13px; }
 
-/* 名称列：名字 + （角色）造型开关，单行。 */
-.nameCell { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
-.name { font-size: 15px; font-weight: 600; color: var(--t1); cursor: default; }
+/* 名称格：名字一行 + （角色）造型开关，提示词接在底下。 */
+.mainCell { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.nameLine { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-width: 0; min-height: 26px; }
+/* 资产名走剧本正文那套衬线（--font-serif，与左栏原文、步骤条标题同源）：
+   这一列写的是从剧本里抽出来的专名，跟界面上的按钮、计数、状态不是一类东西。
+   换个字族之后，一眼就能把「剧本里的东西」和「界面上的控件」分开。 */
+.name {
+  font-family: var(--font-serif);
+  font-size: 17px; font-weight: 600; color: var(--t1);
+  cursor: default; letter-spacing: 0.02em;
+}
 .rowLocked .name { cursor: default; }
 
-/* 造型子行：名列缩进 + 连接轨。 */
-.lookRow { background: var(--bg1); }
-.lookNameCell { display: flex; align-items: center; gap: 8px; min-width: 0; padding-left: 4px; }
-.rail {
-  flex: none; width: 12px; height: 12px; margin-top: -6px;
-  border-left: 1px solid var(--line2); border-bottom: 1px solid var(--line2);
-  border-bottom-left-radius: 4px;
+/* 造型子行：名列缩进 + 连接轨。跟主行同一套竖排（v2.9 §1）——造型名一行，提示词接在底下。
+   字号整体比主行小一档：它是主行的附属，靠字号和缩进分层，不靠另起一种排布。 */
+/* 子行缩进一格（v2.10）：造型名比角色名往右让 22px，归属一眼可读。
+   只缩进，不加 L 形连接轨——那套是文件树的语言，一个角色底下三五套造型用不着；
+   缩进 + 这块底色 + 小一档的字号，三样已经把「挂在上面那条角色下」说清楚了。 */
+.lookRow { background: var(--bg1); min-height: 0; padding: 10px 28px 12px; }
+.lookNameCell { display: flex; align-items: flex-start; gap: 10px; min-width: 0; padding-left: 22px; }
+/* 子行内部横排（v2.10）：造型名定宽在左，提示词占满右边余下的宽度。
+   定宽是为了几套造型的提示词起点连成一条竖线——不然名字长短不一，右边就参差了。 */
+.lookMain { display: flex; align-items: baseline; gap: 14px; min-width: 0; flex: 1; }
+/* 造型名跟角色名一样是白的（v2.10）：角色色本来是拿来做「原文里的这个词 ↔ 清单里的这一条」
+   联动的，挂到这儿只是把一列名字染成了彩色，反倒像个状态标签。层级交给字号，不交给颜色。 */
+/* 定宽 160（原 200）：几套造型的提示词起点仍连成一条竖线，但整体往左收 40px。
+   200 是照最长的造型名留的余量，可实际最长的一条（「苏可 · 宽松连帽卫衣」）只要 ~132px，
+   多出来那截把每一行的提示词一起往右推，读起来像空了一栏。 */
+.lookName {
+  flex: none; width: 160px; font-family: var(--font-serif); letter-spacing: 0.02em;
+  font-size: 13.5px; line-height: 20px; color: var(--t1); font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.railLast { }
-.lookName { font-size: 12px; color: var(--role); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ops { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
-
-/* 造型开关（v2.7 §3.4：角色行只剩它，新增造型挪到子行末尾） */
-.looksToggleWrap { display: inline-flex; align-items: center; gap: 8px; }
-.looksToggle {
-  appearance: none; cursor: pointer; font-size: 12.5px; color: var(--role);
-  background: var(--role-bg); border: none; border-radius: var(--rpill);
-  height: 26px; padding: 0 11px;
+/* 子行提示词：接在造型名右边占满余下宽度，一行截断，字号比主行小半档。 */
+.lookMain .promptCell { flex: 1; min-width: 0; width: auto; }
+.lookMain .promptPreview {
+  display: block; white-space: nowrap; text-overflow: ellipsis;
+  font-size: 12.5px; line-height: 20px;
 }
-.caret { font-size: 9px; }
+/* 行内操作也只在悬浮时出现（v2.9 §3）：常驻一列垃圾桶，眼睛会先看见它们，而不是资产名。 */
+/* 操作列和状态列都在整行的垂直中线上（v2.10）：名称格是「名字 + 两行提示词」的一叠，
+   高度随内容变；那两列各只有一个元素，顶对齐会让它们吊在行的上沿，行越高越明显。
+   网格整体仍是 align-items:start（名称格必须从顶上起排），这两列各自 align-self:center。 */
+.ops {
+  display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+  align-self: center; opacity: 0; transition: opacity 0.14s ease;
+}
+.row:hover .ops, .row:focus-within .ops { opacity: 1; }
 
-/* 造型子行末尾的「＋ 增加一套造型」：虚线、灰，hover 变实。 */
+/* 造型计数（v2.10）：`造型 ×2`，计量式写法。没有底、没有框、没有分隔线——
+   前两版一个像点不动的按钮，一个多出一道像分栏线的竖线。这一版把重量全放到数字上。
+   数字用 Playfair Display 斜体（index.html 里引的那份，步骤条的三个编号也是它）：
+   这一版的规矩是「装饰性数字都归这套字」——高对比度的衬线斜体，一个数就自带分量，
+   不用靠底色或边框撑。量词头「造型」压成拉开字距的小灰字，`×` 再淡一档只做连接。 */
+.looksCount {
+  display: inline-flex; align-items: baseline; gap: 0;
+  font-size: 11px; color: var(--t4); letter-spacing: 0.1em;
+  transition: color 0.14s ease;
+}
+.looksX {
+  font-style: normal; color: var(--t5); font-size: 9px;
+  margin: 0 3px 0 4px; transform: translateY(-1px);
+}
+.looksNum {
+  font-family: 'Playfair Display', var(--font-serif), Georgia, serif;
+  font-style: italic; font-weight: 600; font-size: 18px; line-height: 1;
+  letter-spacing: 0; color: var(--role); font-variant-numeric: tabular-nums;
+}
+/* 悬浮这一行时量词头提亮半档——数字本来就够亮，动的是它旁边那两个弱元素。 */
+.row:hover .looksCount { color: var(--t3); }
+.row:hover .looksX { color: var(--t4); }
+
+/* 角色名那一行末尾的「＋ 造型」（v2.10）：平时收起来，悬浮这一组才现形。
+   跟操作列的垃圾桶是同一套「用时才出现」，所以不占常驻的视觉份量，也不占一整行高度。
+   visibility 而不是 display：留着位子，现形时名字后面那截不会被顶得跳一下。 */
 .addLookWrap { position: relative; display: inline-flex; }
 .addLook {
   appearance: none; font-size: 12px; color: var(--t3);
+  display: inline-flex; align-items: center; gap: 4px;
   background: transparent; border: 1px dashed var(--line); border-radius: var(--rpill);
-  height: 24px; padding: 0 10px; cursor: pointer;
+  height: 22px; padding: 0 9px; cursor: pointer; line-height: 20px;
+  opacity: 0; transition: opacity 0.14s ease, border-color 0.14s, color 0.14s;
 }
+.addLook svg { width: 11px; height: 11px; }
+.addLookOn { opacity: 1; }
 .addLook:hover { border-style: solid; border-color: var(--acc); color: var(--acc); }
+.addLook:focus-visible { opacity: 1; outline: 2px solid var(--acc-line); outline-offset: 1px; }
 
 /* 选服装下拉（v2.7 §3.4）：只列已有服装，底部一行去服装 tab 的灰链接。 */
 .pickerPop {
@@ -175,47 +258,78 @@
 .pickerList { display: flex; flex-direction: column; max-height: 160px; overflow-y: auto; }
 .pickerItem {
   appearance: none; border: none; background: transparent; cursor: pointer;
-  text-align: left; font-size: 12px; color: var(--t2); padding: 5px 8px; border-radius: 4px;
+  text-align: left; font-size: 13px; color: var(--t2); padding: 5px 8px; border-radius: 4px;
 }
 .pickerItem:hover { background: var(--raise); color: var(--t1); }
 .pickerGo {
   appearance: none; display: block; width: 100%; text-align: left; cursor: pointer;
-  font-size: 11.5px; color: var(--t4); background: transparent; border: none;
+  font-size: 13px; color: var(--t4); background: transparent; border: none;
   padding: 6px 8px 2px; margin-top: 4px; border-top: 1px solid var(--line2);
 }
 .pickerGo:hover { color: var(--acc); }
 
-/* 提示词单元格（§3.4）：一行预览按钮，点击弹浮层；底下的数据行完全不动。 */
+/* 提示词单元格（§3.4）：预览按钮，点击弹浮层；底下的数据行完全不动。 */
 .promptCell {
   appearance: none; border: none; background: transparent; cursor: pointer;
-  text-align: left; padding: 4px 0; min-width: 0; width: 100%;
+  text-align: left; padding: 0; min-width: 0; width: 100%;
 }
-/* 两行 clamp（v2.6 §四）：一行既挤又截得太狠，两行才看得出这条提示词在写什么。 */
+/* 两行 clamp（v2.6 §四）：一行既挤又截得太狠，两行才看得出这条提示词在写什么。
+   挂到名字底下之后行宽宽了一倍，这两行才真的装得下一句完整的话。 */
+/* 提示词的灰度（v2.10）：落在 --t5（#b4b4b4）——令牌表里那档「介于次要与弱之间」的灰
+   正是为这种情况留的。--t4（#a2a2a2）读着费劲，--t3（#c8c8c8）又白到跟名字抢，
+   一屏十几段长句全是亮灰，名字反而浮不出来。hover 再提一档到 --t3。 */
 .promptPreview {
-  font-size: 12px; color: var(--t4); line-height: 1.55; max-width: 100%;
+  font-size: 13px; color: var(--t5); line-height: 1.6; max-width: 100%;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .promptCell:hover .promptPreview { color: var(--t3); }
-.promptEmpty { font-size: 11.5px; color: var(--t5); }
-.promptAdd { font-size: 11.5px; color: var(--acc); }
+.promptEmpty { font-size: 13px; color: var(--t5); }
+.promptAdd { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--acc); }
+.promptAdd svg { width: 12px; height: 12px; }
 .promptCell:hover .promptAdd { color: var(--acc-hi); }
 
 .nmInput {
-  font-size: 13px; color: var(--t1); background: var(--bg2);
+  font-family: var(--font-serif); letter-spacing: 0.02em;
+  font-size: 17px; font-weight: 600; color: var(--t1); background: var(--bg2);
   border: 1px solid var(--acc-line); border-radius: 4px; padding: 3px 6px; width: 100%;
 }
-.stUnref { font-size: 13px; color: var(--unref-fg); }
-.stPending { font-size: 13px; color: var(--pending-fg); }
-.stSaved { font-size: 13px; color: var(--unref-fg); }
+/* 状态列（v2.10）：压在这一行最右端，右对齐收边，落在整行的垂直中线上；
+   字细一档、字距放开——它是这一行的结论而不是标签，不需要跟 17px 的名字抢重量。 */
+.stUnref, .stPending, .stSaved {
+  justify-self: end; align-self: center; text-align: right; white-space: nowrap;
+  font-size: 12px; font-weight: 400; letter-spacing: 0.08em;
+}
+/* 子行整体小一档。 */
+.lookRow .stPending { font-size: 11.5px; }
+.stUnref { color: var(--unref-fg); }
+/* 「待确认」前挂一颗 5px 的圆点：状态词是这一列的结论，一个同色圆点让它在
+   一屏候选里一眼可扫，又不必加边框、加底色去抢名字的重量。 */
+.stPending {
+  color: var(--pending-fg);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.stPending::before {
+  content: ''; flex: none;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor;
+}
+.stSaved { color: var(--unref-fg); }
+/* 行内图标按钮（v2.10）：从 emoji 🗑 换成描边 svg（ic.trash，与目录树 / 分镜表同一套）。
+   emoji 是彩色位图，字号、基线、粗细全跟着系统走——一行里它比旁边所有字都重，
+   还在 Mac / Windows 上长得不一样。描边图标走 currentColor，跟这一行的灰阶一起呼吸。
+   固定 26×26 的方形点击区：图标只有 16px，光靠 padding 撑出来的热区容易点空。 */
 .iconBtn {
   appearance: none; border: none; background: transparent; cursor: pointer;
-  color: var(--t4); font-size: 20px; line-height: 1; padding: 2px; border-radius: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; padding: 0; border-radius: var(--rsm);
+  color: var(--t4); transition: color 0.14s ease, background 0.14s ease;
 }
 .iconBtn:hover:not(:disabled) { color: var(--danger); background: var(--danger-bg); }
-.iconBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.iconBtn:focus-visible { outline: 2px solid var(--acc-line); outline-offset: 1px; }
+.iconBtn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-.empty { padding: 24px 16px; font-size: 12px; color: var(--t4); text-align: center; }
+.empty { padding: 24px 28px; font-size: 13px; color: var(--t4); text-align: center; }
 
 /* 新增资产小弹窗 */
 .newOverlay {
@@ -227,17 +341,18 @@
   border: 1px solid var(--edge); border-radius: var(--rlg);
   box-shadow: var(--sh-dialog); padding: 20px 22px;
 }
-.newTitle { font-size: 15px; font-weight: 700; color: var(--t1); margin-bottom: 14px; }
+.newTitle { font-size: 16px; font-weight: 700; color: var(--t1); margin-bottom: 14px; }
 .newInput {
-  width: 100%; font-size: 13px; color: var(--t1); background: var(--bg1);
+  width: 100%; font-size: 14px; color: var(--t1); background: var(--bg1);
   border: 1px solid var(--line2); border-radius: 6px; padding: 8px 10px; outline: none;
 }
 .newInput:focus { border-color: var(--acc-line); }
-.newWarn { margin-top: 10px; font-size: 11.5px; line-height: 1.6; color: var(--danger); }
+.newWarn { margin-top: 10px; font-size: 13px; line-height: 1.6; color: var(--danger); }
 .newActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
 .foot {
   display: flex; align-items: center; gap: 10px;
-  padding: 12px 16px; border-top: 1px solid var(--line); background: var(--bg1);
+  padding: 11px 28px; border-top: 1px solid var(--line); background: var(--bg1);
 }
 .footSpacer { flex: 1; }
+

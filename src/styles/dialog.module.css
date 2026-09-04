@@ -18,7 +18,7 @@
   padding: 20px 22px;
 }
 .title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--t1);
   margin-bottom: 14px;
@@ -29,7 +29,7 @@
   background: var(--prop-bg);
   border: 1px solid var(--prop);
   color: var(--prop);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.7;
 }
 

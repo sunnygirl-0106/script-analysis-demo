@@ -32,7 +32,7 @@
 
 .title {
   margin-top: 30px;
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 700;
   color: var(--t1);
   letter-spacing: 0.5px;
@@ -60,10 +60,10 @@
 /* 当前阶段灰字：换一句淡入一次 */
 .phase {
   margin-top: 14px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
   color: var(--t4);
-  min-height: 22px;
+  min-height: 24px;
   animation: fp-in 0.42s ease both;
 }
 

@@ -4,8 +4,8 @@
  * 待办一条更暗的），三条并排反而看不出谁是当前；现在整条里只有一道发光，指向唯一。
  * 已完成靠「主色编号 + ✓ 」自证，不再需要线。三组之间是一根倾斜 18° 的细斜杠。
  *
- * 编号是这一版唯一的装饰：Playfair Display 斜体，高对比度衬线，
- * 比等宽黑体有分量，也和中文标题的方正形成对比。字体在 index.html 里引。
+ * 编号是这一版唯一的装饰：Playfair Display 斜体，高对比度衬线，比等宽黑体有分量。字体在 index.html 里引。
+ * 三步的中文标题走剧本正文那套衬线（--font-serif）：这一条说的就是「这本剧本走到哪儿了」，跟正文同源。
  *
  * 下划线宽度不写死：.step 是 flex 列，下划线 align-self:stretch，
  * 列宽由上面那行文字撑出来，所以线永远和标题一样长。
@@ -19,10 +19,9 @@
   --step-todo-num: rgb(255 255 255 / 0.26); /* 待办编号（衬线笔画细，比稿子的 0.20 提一点才立得住） */
   --step-slash: rgb(255 255 255 / 0.12); /* 组间斜杠 */
 
+  /* 这条现在住在顶栏里（AppShell 的 .topSteps），自己不再画底、不再占一整行——
+     背景与分隔线由顶栏负责。 */
   flex: none;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--bg1);
 }
 
 .steps {
@@ -30,7 +29,7 @@
   align-items: center;
   justify-content: center;
   gap: 22px;
-  min-height: 30px;
+  min-height: 32px;
 }
 
 /* 组间斜杠：一根竖线歪 18°。 */
@@ -65,14 +64,15 @@
   font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
   font-style: italic;
   font-weight: 600;
-  font-size: 19px;
+  font-size: 20px;
   line-height: 1;
   letter-spacing: 0.02em;
   transition: color 0.3s;
   color: var(--step-todo-num);
 }
 .label {
-  font-size: 14px;
+  font-family: var(--font-serif);
+  font-size: 15px;
   line-height: 1.2;
   font-weight: 500;
   white-space: nowrap;

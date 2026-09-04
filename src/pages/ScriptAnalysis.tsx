@@ -6,8 +6,9 @@ import { Storyboard } from '../components/Storyboard'
 import { PanelResizer } from '../components/PanelResizer'
 import { ConfirmPromptDialog } from '../components/ConfirmPromptDialog'
 import { GoVisualDialog } from '../components/GoVisualDialog'
+import { FlowButton, FlowLink } from '../components/FlowButton'
 import { can } from '../services/capability'
-import { costShotPrompts, fmtCost } from '../services/cost'
+import { costShotPrompts } from '../services/cost'
 import { sceneDuration } from '../services/timeline'
 import { scopeScenes } from '../services/viewScope'
 import { ic } from '../components/icons'
@@ -25,11 +26,11 @@ import s from './ScriptAnalysis.module.css'
 // 
 //   左  全剧概览（不再报「N 项未引用」——那是资产库该操心的事，不是分镜页的）
 //   中  一条细进度条 + `3 / 25`，整组可点 = 打开全剧范围的生成弹窗
-//   右  `生成全部提示词 · ✦N`（全就绪后消失） + `去资产库生图 →`（永远在最右）
+//   右  `直接去资产库生图 →`（灰字链） + `生成全部提示词 · ✦N`（最右，全就绪后消失）
 //
-// 「去资产库生图」从此永远在同一个位置，只换轻重：未就绪是 ghost，点了弹软提醒；
-// 全就绪变主按钮直接进资产库。v2.6 那个文字链接「先去资产库生图 →」由它接管，删掉——
-// 同一件事有两个入口，用户就得先判断这两个有什么区别。
+// 最右那一颗永远是「这一步的出口」。「去资产库生图」是跳过这一步的岔路，
+// 所以它退成主按钮左边的一条灰字链——两颗按钮并排会让人以为这是两条平级的路。
+// 提示词全生完后主按钮消失，岔路成了唯一的路，这时它才接过流光站到最右。
 export function ScriptAnalysis() {
   const project = useStore((st) => st.project)
   const promptStates = useStore((st) => st.promptStates)
@@ -81,12 +82,16 @@ export function ScriptAnalysis() {
         </div>
 
         <div className={s.foot} id="genPromptsFooter">
+          {/* 导出分镜脚本。原来这里是个「下载」箭头，孤零零挂在页脚最左边，
+              没人看得出它导的是什么——换成导出图标，并配一条自己的悬浮说明，
+              不吃系统 title 那一秒多的延迟。 */}
           <button
             className={[ui.btn, s.iconBtn].join(' ')}
-            title="导出分镜脚本"
+            aria-label="导出分镜脚本"
             onClick={() => showToast('已导出分镜脚本（示例，不落盘）')}
           >
-            {ic.download}
+            {ic.exportOut}
+            <span className={s.tip}>导出分镜脚本</span>
           </button>
           {/* 集数 / 字数说的是「剧本体量」，场 / 镜 / 秒说的是「拆解产物」，前后各占一半。
               字数原先挂在步骤条第①步后面，步骤条改版后不留小字了，统一并到这里。 */}
@@ -120,21 +125,27 @@ export function ScriptAnalysis() {
             </button>
           )}
 
-          {!allReady && (
-            <button
-              className={[ui.btn, ui.btnPrimary].join(' ')}
-              disabled={busy || needIds.length === 0}
-              onClick={() => setPromptOpen(true)}
-            >
-              {busy ? '生成中…' : `生成全部提示词 · ${fmtCost(costShotPrompts(needIds))}`}
-            </button>
+          {/* 最右永远是这一步的出口。提示词没生全时，出口是「生成全部提示词」，
+              「直接去资产库生图」退成它左边的一条灰字链——那是跳过这一步的岔路，
+              跟主按钮并排成一对按钮会让人以为两条路平级。
+              全生完之后主按钮消失，这条岔路就是唯一的路，接过流光站到最右。 */}
+          {allReady ? (
+            <FlowButton icon="arrow" onClick={() => setStage('visual')}>
+              去资产库生图
+            </FlowButton>
+          ) : (
+            <>
+              <FlowLink onClick={() => setGoVisualOpen(true)}>直接去资产库生图</FlowLink>
+              <FlowButton
+                busy={busy}
+                disabled={needIds.length === 0}
+                cost={busy ? undefined : costShotPrompts(needIds)}
+                onClick={() => setPromptOpen(true)}
+              >
+                {busy ? '生成中…' : '生成全部提示词'}
+              </FlowButton>
+            </>
           )}
-          <button
-            className={[ui.btn, allReady ? ui.btnPrimary : ''].join(' ')}
-            onClick={() => (allReady ? setStage('visual') : setGoVisualOpen(true))}
-          >
-            去资产库生图 →
-          </button>
         </div>
       </div>
 

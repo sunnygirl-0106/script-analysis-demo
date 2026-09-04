@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useStore } from '../store/useStore'
 import type { Stage } from '../data/types'
 import { StepBar } from '../components/StepBar'
+import { ic } from '../components/icons'
 import s from './AppShell.module.css'
 
 // 左侧导航图标（内联 line icon，跟随 currentColor）
@@ -79,11 +80,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     activePage === 'analysis' && analysisView !== 'empty' ? (
       skip ? (
         <button className={s.demoPill} onClick={skip}>
-          跳过 ⏭
+          跳过<span className={s.pillIcon}>{ic.skipNext}</span>
         </button>
       ) : (
         <button className={[s.demoPill, s.demoPillReplay].join(' ')} onClick={replayDemo}>
-          ▶ 重新演示
+          <span className={s.pillIcon}>{ic.play}</span>重新演示
         </button>
       )
     ) : null
@@ -94,18 +95,28 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className={s.wrap}>
       <div className={s.app}>
-        {/* 顶栏：Logo + 账户区 */}
+        {/* 顶栏：Logo + 三步流程条 + 账户区。
+            流程条从内容区顶部搬上来了——顶栏中间本来就是空的，而流程条自己占一整行，
+            白白吃掉 39px 的表格高度。绝对居中钉在顶栏正中，不受左右两侧宽度变化影响。 */}
         <div className={s.topbar}>
           <div className={s.logo}>
             <img className={s.logoMark} src="/logo.svg" alt="PhanthyMovie" />
             PhanthyMovie
           </div>
+          {(activePage === 'analysis' || activePage === 'visual') && (
+            <div className={s.topSteps}>
+              <StepBar />
+            </div>
+          )}
           <div className={s.right}>
             {demoPill}
             <span className={s.recharge}>充值中心</span>
-            <span className={s.credits}>✦ 10</span>
+            <span className={s.credits}>
+              <i className={s.creditsMark}>{ic.spark}</i>10
+            </span>
             <span className={s.bell}>
-              🔔<i className={s.badge}>1</i>
+              {ic.bell}
+              <i className={s.badge}>1</i>
             </span>
             <span className={s.avatar} />
           </div>
@@ -160,7 +171,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           <div className={s.content}>
-            {(activePage === 'analysis' || activePage === 'visual') && <StepBar />}
             <div className={s.contentBody}>{children}</div>
           </div>
         </div>

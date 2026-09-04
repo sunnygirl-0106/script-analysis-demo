@@ -18,7 +18,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
   transition: opacity 0.25s ease;
 }
@@ -41,7 +41,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+}
+.mark svg {
+  width: 13px;
+  height: 13px;
 }
 .done .mark {
   color: var(--t4);
@@ -83,7 +86,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--acc-hi);
 }
 .compactLabel {

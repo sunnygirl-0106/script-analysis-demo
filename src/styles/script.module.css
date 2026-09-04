@@ -3,26 +3,20 @@
    这份是两边 composes 的唯一真相源，别在任一边复制这几条。
    字号留给使用方（步骤② 14px / 步骤③ 13px，栏宽不同），字族 / 行高 / 颜色统一。 */
 .serif {
-  font-family: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+  font-family: var(--font-serif);
   line-height: 2.05;
   color: var(--t2);
 }
 
-/* 报头：`E P I S O D E  0 1` / `S C E N E  0 3` 小字母距 + 大标题。 */
+/* 报头：一行大标题。原先它上面还有一行拉开字距的全大写小标签（`E P I S O D E  0 1`），
+   说的和标题里的「第 1 集」是同一件事，撤掉。 */
 .masthead {
-  padding: 14px 0 18px;
-}
-.eyebrow {
-  font-family: -apple-system, 'PingFang SC', sans-serif;
-  font-size: 11px;
-  letter-spacing: 4px;
-  color: var(--t4);
+  padding: 10px 0 12px;
 }
 .title {
-  margin-top: 8px;
-  font-size: 23px;
+  font-size: 19px;
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1.35;
   color: var(--t1);
   text-wrap: balance;
 }

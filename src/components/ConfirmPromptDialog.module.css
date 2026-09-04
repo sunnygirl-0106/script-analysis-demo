@@ -89,7 +89,7 @@
   background: var(--acc);
 }
 .title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--t1);
   white-space: nowrap;
@@ -101,7 +101,7 @@
   border: 1px solid var(--line);
   border-radius: 50%;
   color: var(--t4);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -127,7 +127,7 @@
   gap: 8px;
 }
 .headMeta {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--t3);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -135,14 +135,13 @@
 .headMeta b {
   color: var(--acc);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
 }
 .close {
   flex: none;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--rsm);
-  font-size: 17px;
   color: var(--t4);
   display: inline-flex;
   align-items: center;
@@ -193,7 +192,7 @@
 }
 .segBtn {
   padding: 5px 20px;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 400;
   color: var(--t3);
   border: none;
@@ -220,7 +219,7 @@
   gap: 12px;
 }
 .summary {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--t4);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -241,7 +240,7 @@
 /* 状态过滤：纯文字按钮，选中态 = 一条中性下划线。 */
 .filterBtn {
   padding: 2px 0;
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--t4);
   border-bottom: 1px solid transparent;
   cursor: pointer;
@@ -303,7 +302,7 @@
 .groupTitle {
   min-width: 0;
   flex: 1;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--t1);
   overflow: hidden;
@@ -312,18 +311,18 @@
 }
 .groupCount {
   flex: none;
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--t4);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .caret {
   flex: none;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--rsm);
   color: var(--t4);
-  font-size: 13px;
+  font-size: 14px;
   transition: 0.2s;
   display: inline-flex;
   align-items: center;
@@ -371,14 +370,14 @@
 }
 .mno {
   flex: none;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--t3);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .mdur {
   flex: none;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--t5);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -386,7 +385,7 @@
 .mprev {
   flex: 1;
   min-width: 0;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--t3);
   overflow: hidden;
@@ -410,7 +409,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--amber);
   white-space: nowrap;
   cursor: default;
@@ -420,7 +419,7 @@
   width: 22px;
   text-align: center;
   color: var(--t4);
-  font-size: 12px;
+  font-size: 13px;
   transition: 0.16s;
   display: inline-flex;
   align-items: center;
@@ -430,7 +429,7 @@
 .warnRow {
   margin: 0 12px 12px 40px;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.6;
   color: var(--amber);
   background: var(--amber-bg);
@@ -464,7 +463,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--t2);
   cursor: pointer;
   white-space: nowrap;
@@ -472,8 +471,16 @@
   flex: none;
 }
 /* 模型胶囊：位置由用户放在「全选」右侧，这里只对齐参考稿的中性配色。 */
+.model svg {
+  width: 12px;
+  height: 12px;
+  color: var(--t4);
+}
 .model {
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
   color: var(--t3);
   padding: 4px 10px;
   border: 1px solid var(--line);
@@ -484,7 +491,7 @@
   flex: none;
 }
 .hint {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--t4);
   white-space: nowrap;
   flex: none;
@@ -504,7 +511,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--t4);
   cursor: pointer;
   transition: color 0.16s;
@@ -519,7 +526,7 @@
   cursor: pointer;
 }
 .cost {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--acc);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -535,7 +542,7 @@
   background: transparent;
   padding: 6px 16px;
   border-radius: var(--rpill);
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
   cursor: pointer;
   transition: 0.24s cubic-bezier(0.22, 0.61, 0.36, 1);

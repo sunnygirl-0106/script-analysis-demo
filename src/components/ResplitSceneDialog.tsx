@@ -11,6 +11,7 @@ import { TaskProgress } from './TaskProgress'
 import ui from '../styles/ui.module.css'
 import d from '../styles/dialog.module.css'
 import s from './ResplitSceneDialog.module.css'
+import { ic } from './icons'
 
 type Choice = ShotDensity | 'custom'
 
@@ -120,11 +121,11 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
           </div>
 
           {longCount > 0 && (
-            <div className={s.warn}>⚠ 其中 {longCount} 个镜头时长较长，生成视频时可能需要拆成多段。</div>
+            <div className={s.warn}>{ic.warn} 其中 {longCount} 个镜头时长较长，生成视频时可能需要拆成多段。</div>
           )}
 
           <div className={s.assetNote}>
-            ✓ 本次将使用项目资产库中的现有资产，不新增。如需补充请到项目资产库添加。
+            {ic.check} 本次将使用项目资产库中的现有资产，不新增。如需补充请到项目资产库添加。
           </div>
 
           <div className={s.impact}>

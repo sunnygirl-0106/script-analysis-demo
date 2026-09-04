@@ -1,7 +1,7 @@
 /* 集 / 场列表。底色刻意与中间剧本栏、右侧分镜表行同为 --bg1：三栏一个色调，
    深浅只留给「框架」（表头 / 场次杠 / 页脚那几条 --bg2）。行的样式本身是原样，没动。 */
 .side {
-  width: 192px;
+  width: 208px;
   flex: none;
   background: var(--bg1);
   border-right: 1px solid var(--line);
@@ -27,7 +27,7 @@
 .allMeta {
   margin-left: auto;
   padding-left: 8px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--t4);
 }
@@ -66,38 +66,48 @@
 }
 .epTitle {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--t2);
 }
 .ep.on .epTitle {
   color: var(--acc);
 }
-/* ⋯ 菜单：hover 集行时显现 */
-.menuWrap {
-  position: relative;
+/* 删除本集：集行右侧一颗垃圾桶，hover 本行（或键盘聚焦）时才现形——
+   与场行 .scDots 同一套显隐，靠 opacity 切换，不进出布局，行内元素不跳位。 */
+.epDel {
   flex: none;
-}
-.dots {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--rsm);
   color: var(--t4);
-  font-size: 15px;
-  line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
+  cursor: pointer;
   opacity: 0;
   transition: opacity 0.16s, background 0.16s, color 0.16s;
 }
-.ep:hover .dots,
-.dots:focus-visible {
+.epDel svg {
+  width: 15px;
+  height: 15px;
+}
+.ep:hover .epDel,
+.epDel:focus-visible {
   opacity: 1;
 }
-.dots:hover {
-  background: var(--bg3);
-  color: var(--t1);
+.epDel:hover:not(:disabled) {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.epDel:disabled {
+  opacity: 0;
+  cursor: not-allowed;
+}
+/* 只剩一集时按钮禁用，但仍要能 hover 到、读到「至少保留 1 集」的原因。 */
+.ep:hover .epDel:disabled {
+  opacity: 0.35;
 }
 /* 固定定位：在光标/按钮的右下方弹出（left/top 由 JS 就地写入），
    脱离窄侧栏的 overflow 裁剪，符合右键菜单的习惯朝向。 */
@@ -129,7 +139,7 @@
   text-align: left;
   padding: 8px 12px 8px 9px;
   border-radius: var(--rsm);
-  font-size: 12.5px;
+  font-size: 13px;
   white-space: nowrap;
   color: var(--t2);
   background: transparent;
@@ -185,7 +195,7 @@
   margin: 2px 0 2px 18px;
   padding: 7px 11px;
   border-radius: var(--rpill);
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--t3);
   cursor: pointer;
   display: flex;
@@ -213,13 +223,13 @@
   border-radius: 6px;
   padding: 1px 6px;
   font: inherit;
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--t1);
   outline: none;
 }
 .sc .d {
   margin-left: auto;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--t4);
   transition: opacity 0.14s;
 }
@@ -231,11 +241,11 @@
   z-index: 20;
 }
 .scDots {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: var(--rsm);
   color: var(--t3);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1;
   display: inline-flex;
   align-items: center;

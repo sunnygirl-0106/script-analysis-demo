@@ -4,6 +4,7 @@ import { useStore } from '../store/useStore'
 import { computeTimeline, sceneDuration } from '../services/timeline'
 import { isLongShot } from '../services/duration'
 import s from './SceneTimeline.module.css'
+import { ic } from './icons'
 
 function fmt(sec: number): string {
   const m = Math.floor(sec / 60)
@@ -58,7 +59,7 @@ export function SceneTimeline({ scene, shots, activeId, onHover }: Props) {
           {scene.shotIds.length} 镜 · 全场 {fmt(total)}
         </span>
         <button className={s.settingsBtn} onClick={openSettings} title="情绪走向 / 配乐建议">
-          ⚙ 情绪与配乐
+          {ic.gear} 情绪与配乐
         </button>
         <span className={[s.readout, active ? s.on : ''].join(' ')}>
           <i className={s.dot} />

@@ -14,7 +14,9 @@
 
 /* ── 顶栏 ── */
 .topbar {
-  height: 48px;
+  position: relative;
+  /* 顶栏现在还装着三步流程条（编号 20px + 标题 15px + 下划线），要比原来高一点。 */
+  height: 54px;
   flex: none;
   display: flex;
   align-items: center;
@@ -23,19 +25,31 @@
   border-bottom: 1px solid var(--line);
   background: var(--bg2);
 }
+/* 三步流程条的位置：绝对居中于整条顶栏。
+   用绝对定位而不是 flex 居中，是因为左边 logo 与右边账户区宽度不等（右边还会多一颗演示 pill），
+   flex 居中会把它顶偏；这里要的是「钉在屏幕正中」。 */
+.topSteps {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+}
 .logo {
   display: flex;
   align-items: center;
   gap: 8px;
   font-weight: 700;
   font-style: italic;
-  font-size: 14px;
+  font-size: 15px;
   letter-spacing: 0.2px;
   color: var(--t1);
 }
 .logoMark {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   display: block;
 }
 /* ── 右上账户区 ── */
@@ -44,7 +58,7 @@
   display: flex;
   align-items: center;
   gap: 18px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--t2);
 }
 /* 演示控制 pill（跳过 / 重新演示） */
@@ -57,7 +71,7 @@
   border: 1px solid var(--line);
   background: var(--bg3);
   color: var(--t3);
-  font-size: 11px;
+  font-size: 12px;
   transition: 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 .demoPill:hover {
@@ -81,20 +95,47 @@
 .recharge:hover {
   filter: brightness(1.12);
 }
+/* 演示 pill 里的 ▶ / ⏭：svg 换掉了原来的字符，光学上比文字略大一点，压到 13px。 */
+.pillIcon {
+  display: inline-flex;
+  margin: 0 0 0 5px;
+}
+.demoPillReplay .pillIcon {
+  margin: 0 5px 0 0;
+}
+.pillIcon svg {
+  width: 13px;
+  height: 13px;
+}
 .credits {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   color: var(--t1);
 }
-.credits::first-letter {
+/* 星火本体是主色。原来靠 ::first-letter 给 ✦ 上色——换成 svg 之后那条选择器
+   会去染后面的数字，所以颜色改到图标自己身上。 */
+.creditsMark {
+  display: inline-flex;
   color: var(--acc);
+}
+.creditsMark svg {
+  width: 13px;
+  height: 13px;
 }
 .bell {
   position: relative;
-  font-size: 14px;
+  display: inline-flex;
+  color: var(--t2);
   cursor: pointer;
   line-height: 1;
+}
+.bell:hover {
+  color: var(--t1);
+}
+.bell svg {
+  width: 17px;
+  height: 17px;
 }
 .badge {
   position: absolute;
@@ -106,14 +147,14 @@
   border-radius: 8px;
   background: var(--danger);
   color: var(--on-solid);
-  font-size: 9px;
+  font-size: 11px;
   font-style: normal;
   line-height: 14px;
   text-align: center;
 }
 .avatar {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--acc), var(--role));
   border: 1px solid var(--edge);
@@ -127,7 +168,7 @@
 
 /* ── 左侧一级导航（宽栏） ── */
 .nav {
-  width: 232px;
+  width: 248px;
   flex: none;
   border-right: 1px solid var(--line);
   background: var(--bg2);
@@ -149,13 +190,13 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--t1);
 }
 .back {
   color: var(--t3);
-  font-size: 18px;
+  font-size: 19px;
   cursor: pointer;
 }
 .back:hover {
@@ -170,7 +211,7 @@
   border-radius: var(--rsm);
   background: var(--bg3);
   border: 1px solid var(--line2);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--t3);
 }
 
@@ -182,7 +223,7 @@
   border: 1px solid var(--line);
 }
 .modeLabel {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--t4);
   margin-bottom: 5px;
 }
@@ -192,11 +233,11 @@
   justify-content: space-between;
 }
 .modeRow b {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--t1);
 }
 .modeSwitch {
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--acc);
   cursor: pointer;
 }
@@ -215,10 +256,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 40px;
+  height: 42px;
   padding: 0 12px;
   border-radius: var(--rsm);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--t3);
   cursor: pointer;
   transition: 0.14s;
@@ -233,8 +274,8 @@
   font-weight: 600;
 }
 .navIcon {
-  width: 19px;
-  height: 19px;
+  width: 21px;
+  height: 21px;
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -250,7 +291,7 @@
   margin-top: auto;
   align-self: flex-end;
   width: 34px;
-  height: 30px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -258,7 +299,7 @@
   border-radius: var(--rsm);
   background: var(--bg3);
   color: var(--t3);
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1;
   transition: 0.14s;
 }
@@ -296,7 +337,7 @@
   flex-direction: column;
   min-width: 0;
 }
-/* 页面主体：StepBar 之下的横向布局区，沿用旧 .content 的 flex 行为。 */
+/* 页面主体：各页自己往里铺的横向布局区。（流程条已搬进顶栏，这里不再有它的位置。） */
 .contentBody {
   flex: 1;
   min-height: 0;

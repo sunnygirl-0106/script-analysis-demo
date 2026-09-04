@@ -4,16 +4,27 @@
   flex: 1;
   min-height: 0;
   flex-direction: column;
-  background: var(--bg1);
+  background: var(--sb-surface);
+  /* 整栏抬起一档后，ui.module.css 里那颗共用 chip 的底色跟着抬 —— 只在这一栏生效。 */
+  --chip-bg: var(--sb-chip);
 }
 
 .lockNote {
   flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 7px 22px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--prop);
   background: var(--prop-bg);
   border-bottom: 1px solid var(--line2);
+}
+
+.lockNote svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
 }
 
 .scroll {
@@ -77,13 +88,16 @@
   position: sticky;
   top: 0;
   z-index: 34;
-  /* 表头是这一页唯一需要「浮在内容之上」的横条，所以给它整页最亮的一档底 --bg3：
-     行底是 --bg1，两者差 13 级，扫一眼就分得出哪一行是列名。
+  /* 表头是这一页唯一需要「浮在内容之上」的横条，所以给它整页最亮的一档底 --sb-header：
+     行底是 --sb-surface，两者差 18 级，扫一眼就分得出哪一行是列名。
      再压一道向下的投影，滚动时表头压着行走，边界不会糊在一起。 */
-  background: var(--bg3);
-  border-bottom: 1px solid var(--edge);
+  background: var(--sb-header);
+  /* 下边线用 --line（#434343），不是 --edge（#737373）：--edge 是 hover 描边的亮度，
+     压在整页最上面横贯一整条时白得晃眼，比它要分隔的两块底色都抢戏。
+     表头与行底本来就差 17 级，边界靠底色差 + 下面那道投影就够，线只做收口。 */
+  border-bottom: 1px solid var(--line);
   box-shadow: 0 4px 10px -6px rgb(0 0 0 / 0.7);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--t1);
   letter-spacing: 0.6px;
@@ -106,7 +120,7 @@
   position: sticky;
   right: 46px;
   z-index: 35;
-  background: var(--bg3);
+  background: var(--sb-header);
   box-shadow: -8px 0 12px -8px rgb(0 0 0 / 0.55);
 }
 /* 删除列表头：钉在最右，无标题 */
@@ -115,7 +129,7 @@
   right: 0;
   z-index: 35;
   border-right: none;
-  background: var(--bg3);
+  background: var(--sb-header);
 }
 /* 滚到最右端：不再需要“悬浮遮挡”的投影 */
 .scrollAtEnd .hCellPrompt,
@@ -126,10 +140,11 @@
 /* ── 行：固定高度的「摘要行」。全文在下方展开的 ShotDetail 里，不在格内滚动 ── */
 .row {
   position: relative;
-  height: 128px;
+  /* 字号整体抬高一档后（正文 12→13、行内 clamp 4 行 ≈ 83px），128px 会切掉最后一行。 */
+  height: 142px;
   cursor: pointer;
   border-bottom: 1px solid var(--line2);
-  background: var(--bg1);
+  background: var(--sb-surface);
   cursor: default;
   transition: background 0.24s cubic-bezier(0.22, 0.61, 0.36, 1), height 0.24s ease,
     opacity 0.24s ease, transform 0.24s ease;
@@ -156,14 +171,14 @@
   justify-content: center;
 }
 .delBtn {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--t4);
-  background: var(--bg2);
+  background: var(--sb-band);
   border: 1px solid var(--line);
   opacity: 0;
   transition: opacity 0.15s ease, color 0.16s, border-color 0.16s, background 0.16s;
@@ -184,14 +199,13 @@
   min-height: 0;
   overflow: hidden;
 }
-/* 斑马纹已取消：三栏统一色调后，一深一浅的交替行是这一页最后一处色调噪音，
-   行与行之间靠 --line2 那道下边线分隔就够了。
-   类名保留（ShotRow 仍按奇偶传 alt），只是不再改底色 —— 哪天想要回来改这一处即可。 */
+/* 斑马纹恢复（一深一浅）：行高 142px、内容还要横向滚，只靠一道下边线时
+   眼睛顺着长行走容易串到隔壁那一行去。两档底只差 5 级——够读出行的边界，不成条纹。 */
 .rowAlt {
-  background: var(--bg1);
+  background: var(--sb-alt);
 }
 .rowOn {
-  background: var(--row-on-bg) !important;
+  background: var(--sb-row-on) !important;
 }
 /* 字段改动后落回 stale：左侧一道琥珀，提醒该镜提示词待重新生成。
    用淡描边色（--amber-line，0.5）+ 2px，弱提示即可，不必抢眼。 */
@@ -231,7 +245,7 @@
   gap: 5px;
 }
 .noNum {
-  font-size: 21px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.5px;
@@ -243,30 +257,30 @@
   color: var(--acc);
 }
 .noUnit {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--t5);
 }
 .stepper {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  height: 24px;
+  height: 26px;
   padding: 0 3px;
-  background: var(--bg3);
+  background: var(--sb-chip);
   border: 1px solid var(--line);
   border-radius: var(--rpill);
   transition: background 0.22s, border-color 0.22s;
 }
 .stepperOn {
-  background: var(--panel);
+  background: var(--sb-ctrl);
   border-color: var(--ctrl-hover);
 }
 .stepBtn {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   color: var(--t3);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -280,7 +294,7 @@
 .durVal {
   min-width: 28px;
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--t2);
   font-variant-numeric: tabular-nums;
@@ -289,43 +303,67 @@
   color: var(--t1);
 }
 .durStatic {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--t2);
   font-variant-numeric: tabular-nums;
 }
 /* 长镜头预警：非阻断，仅一行黄字 */
 .longWarn {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
   color: var(--gold);
   white-space: nowrap;
   cursor: help;
 }
+.longWarn svg,
+.badge svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
 .tcRange {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--t3);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.2px;
   white-space: nowrap;
 }
 
-/* ② 关联资产：极端情况下资产超过行高时独立滚动，不裁掉资产 */
+/* ② 关联资产：三组塞不进固定行高时，**整栏**作为一块上下滚动（滚动条见 .assetGroups）。
+   padding 从 15/12 拆成 9/6，另外 6px 交给 .assetGroups 自己带 —— 见那里的注释，
+   那 6px 是留给 chip 删除叉的，几何上两者相加与原来完全一致。 */
 .cAsset {
-  padding: 15px 12px;
+  padding: 9px 6px;
   overflow: hidden;
   border-right: 1px solid var(--line2);
-  /* 不再单栏上下滚动：三组内容在固定行高里垂直居中；真的超高才裁切（尽量少见）。
-     上下留出一点内边距，让角色顶上、道具底下都有一点点空隙，不至于贴边显挤。 */
+  /* 内容不满一行高时三组整体垂直居中；满了则由 .assetGroups 撑满并自己滚。 */
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
-/* 固定三组：角色 / 场景 / 道具。每组横排一行：左标签 + 右侧 chip/「+」，
-   三行竖排即可塞进固定行高，不必拉宽拉高表格。 */
+/* 固定三组：角色 / 场景 / 道具。每组横排一行：左标签 + 右侧 chip/「+」。
+   唯一的滚动容器：角色 / 场景 / 道具三组作为**一整块**上下滚，不是各组各滚一条。
+   各组各滚过一版：每组都成了一个独立的小视窗，角色滚到一半、场景和道具却纹丝不动，
+   读起来像三个互不相干的列表；而且每个小视窗都会把 chip 的删除叉裁掉（见下面 padding）。 */
 .assetGroups {
   display: flex;
   flex-direction: column;
   gap: 7px;
+  max-height: 100%;
+  min-height: 0;
+  /* 滚动条是全局的悬浮样式，静置时不占位、不显形。 */
+  overflow-y: auto;
+  /* 横向一律裁掉，不出横向滚动条：超长的角色名靠 .castCostume 的省略号自己收。
+     clip 与 hidden 一样裁在 padding 边，所以下面那圈 padding 对它同样有效。 */
+  overflow-x: clip;
+  /* ★ 这一圈 6px 是给 chip 的删除叉留的。叉是 chip 右上角的浮层（top/right: -5px，
+     见 .castX / .chipHoverX），滚动容器裁在 padding 边 —— 没有这圈内边距，
+     最上面一排和最右边那颗 chip 的叉会被整齐地削掉一半，hover 上去像是坏了。
+     .cAsset 的 padding 相应减了 6px，所以视觉位置与原来一模一样。 */
+  padding: 6px;
 }
 .assetGroup {
   display: grid;
@@ -333,13 +371,16 @@
   gap: 8px;
   /* 顶对齐：一组内 chip 换行成多行时，左标签仍贴第一行，不被拉到竖直居中 */
   align-items: start;
+  /* 不压缩：一组有几行就占几行，超出的高度由外面那一个滚动容器统一消化。
+     压缩过一版，结果是角色多的时候整组被挤成一条、中间的 chip 直接被裁掉半截。 */
+  flex: none;
 }
 .groupTitle {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--t3);
   letter-spacing: 0.4px;
   /* 行高对齐 chip（24px），使标签垂直居中于第一行 chip */
-  line-height: 24px;
+  line-height: 26px;
 }
 .groupItems {
   display: flex;
@@ -363,6 +404,21 @@
   max-width: 100%;
   min-width: 0;
 }
+/* 该类目的「+」始终占位（透明），鼠标移到本行、或它自己被聚焦 / 展开时才显形。
+   用透明度而非 display 切换：hover 时元素进出布局会让 chip 抖动、串行。 */
+.addSlot {
+  display: inline-flex;
+  flex: none;
+  opacity: 0;
+  transition: opacity 0.14s;
+}
+/* 悬停到哪一组才现哪一组的「+」：整行 hover 会同时点亮三个「+」，
+   用户得先分辨这三个分别往哪儿加，反而慢。 */
+.assetGroup:hover .addSlot,
+.addSlot:focus-within,
+.addSlot:has([data-mount-open]) {
+  opacity: 1;
+}
 /* 该类目的「+」始终占位（透明），鼠标移到本组这一行（或键盘聚焦）时才显形。
    用透明度而非 display 切换：避免 hover 时元素进出布局导致 chip 抖动 / 串行。 */
 /* 角色卡：头像 + 角色名 + 着装，装进一颗胶囊。标签宽度不含删除叉（叉是 hover 时的角标浮层）。 */
@@ -371,7 +427,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 24px;
+  height: 26px;
   flex: none;
   padding: 0 9px 0 10px;
   border-radius: var(--rpill);
@@ -388,7 +444,7 @@
 .castName {
   flex: none;
   white-space: nowrap;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--t1);
   line-height: 1.3;
@@ -396,7 +452,7 @@
 .castCostume {
   flex: none;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--t3);
   line-height: 1.3;
 }
@@ -411,7 +467,6 @@
   background: var(--ctrl);
   border: 1px solid var(--edge);
   color: var(--t2);
-  font-size: 8px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -425,6 +480,11 @@
 .castPill:focus-within .castX {
   opacity: 1;
   pointer-events: auto;
+}
+.castX svg {
+  width: 9px;
+  height: 9px;
+  stroke-width: 2.4;
 }
 .castX:hover {
   background: var(--ctrl-hover);
@@ -445,7 +505,7 @@
   background: var(--ctrl);
   border: 1px solid var(--edge);
   color: var(--t2);
-  font-size: 8px;
+  font-size: 11px;
   opacity: 0;
   pointer-events: none;
   z-index: 3;
@@ -471,12 +531,12 @@
 .issueAction {
   display: inline-flex;
   align-items: center;
-  height: 20px;
+  height: 22px;
   padding: 0 9px;
   border-radius: var(--rpill);
   background: rgb(var(--gold-rgb) / 0.16);
   border: 1px solid rgb(var(--gold-rgb) / 0.4);
-  font-size: 10px;
+  font-size: 12px;
   color: var(--gold);
   cursor: pointer;
   transition: 0.16s;
@@ -493,8 +553,8 @@
 .issueHint {
   display: inline-flex;
   align-items: center;
-  height: 20px;
-  font-size: 10px;
+  height: 22px;
+  font-size: 12px;
   color: var(--t5);
 }
 
@@ -522,11 +582,13 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  /* 这一列窄，胶囊里的字一律不折行——折了就把 142px 的行高吃掉一截。 */
+  white-space: nowrap;
   padding: 3px 9px;
   border-radius: var(--rpill);
-  font-size: 11px;
+  font-size: 12px;
   border: 1px solid var(--line);
-  background: var(--bg3);
+  background: var(--sb-chip);
   color: var(--t4);
 }
 .badgePending {
@@ -536,7 +598,7 @@
 .badgePending:hover {
   border-color: var(--edge);
   color: var(--t2);
-  background: var(--bg2);
+  background: var(--sb-band);
 }
 .badgeReady {
   background: var(--acc-bg);
@@ -583,21 +645,22 @@
    top 必须等于列头实高（.hCell 上下各 10px + 11px 字 + 1px 下边框），改列头内边距要跟着改这里。 */
 .sceneBar {
   position: sticky;
-  top: 34px;
+  top: 38px;
   z-index: 31;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 7px 16px;
-  background: var(--bg2);
+  background: var(--sb-band);
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line2);
+  transition: background 0.14s;
 }
 .sceneBarMain {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   padding: 0;
   background: transparent;
@@ -605,7 +668,7 @@
   cursor: pointer;
 }
 .sceneBarTitle {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--t2);
   white-space: nowrap;
@@ -618,9 +681,42 @@
 }
 .sceneBarMeta {
   flex: none;
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--t4);
   font-variant-numeric: tabular-nums;
+}
+/* 「只看这一场」：常驻占位（margin-left:auto 顶到右端），悬停才现形——
+   位置固定，所以出现时不推动上面两段文字，杠不抖。 */
+.sceneBarPeek {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px 2px 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--acc);
+  background: var(--acc-bg);
+  border: 1px solid var(--acc-line);
+  border-radius: var(--rpill);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.14s;
+}
+.sceneBarPeekIcon {
+  display: inline-flex;
+}
+.sceneBarPeekIcon svg {
+  width: 12px;
+  height: 12px;
+}
+.sceneBar:hover {
+  background: var(--sb-chip);
+}
+.sceneBar:hover .sceneBarPeek,
+.sceneBarMain:focus-visible .sceneBarPeek {
+  opacity: 1;
 }
 
 /* 收尾行 */
@@ -635,7 +731,7 @@
   left: 0;
   top: -11px;
   width: 100%;
-  height: 22px;
+  height: 24px;
   z-index: 38;
   cursor: pointer;
   display: flex;
@@ -661,29 +757,32 @@
 /* 居中的淡「＋」：无描边、无填充胶囊，仅一个 accent 字符 */
 .insRowPlus {
   flex: none;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  font-size: 13px;
   line-height: 1;
   color: var(--acc);
   transition: background 0.14s;
+}
+.insRowPlus svg {
+  width: 13px;
+  height: 13px;
 }
 .insRow:hover .insRowPlus {
   background: var(--acc-bg);
 }
 .tailNo {
   padding: 12px 10px 14px 16px;
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--t4);
   font-variant-numeric: tabular-nums;
 }
 .tailText {
   padding: 12px 16px;
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--t4);
 }
 
@@ -740,6 +839,6 @@
 .emptyScene {
   padding: 26px 16px;
   text-align: center;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--t4);
 }

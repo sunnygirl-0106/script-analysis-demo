@@ -5,6 +5,7 @@ import { PHASES, taskDuration } from '../services/taskRun'
 import { costAssetPrompt, fmtCost } from '../services/cost'
 import ui from '../styles/ui.module.css'
 import s from './CandidatePromptDialog.module.css'
+import { ic } from './icons'
 
 // 阶段② 生成提示词的浮层（v2.3 §3.4）：点提示词 → 弹这个浮层盖在数据区上方，固定尺寸，
 // 底下的数据行完全不动。取消 / 保存即走，Esc 关闭。空提示词给「✦ AI 结合剧本补全」。
@@ -50,7 +51,7 @@ export function CandidatePromptDialog({
     >
       <div className={s.head}>
         <span className={s.headName}>{title} · 生成提示词</span>
-        <button className={s.close} onClick={onClose} title="关闭">✕</button>
+        <button className={s.close} onClick={onClose} title="关闭">{ic.close}</button>
       </div>
 
       <textarea
@@ -78,7 +79,7 @@ export function CandidatePromptDialog({
               />
             ) : (
               <button className={s.completeBtn} onClick={() => setRunning(true)}>
-                ✦ AI 结合剧本补全 · {fmtCost(costAssetPrompt())}
+                {ic.spark} AI 结合剧本补全 · {fmtCost(costAssetPrompt())}
               </button>
             ))}
         </span>

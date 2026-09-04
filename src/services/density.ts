@@ -29,7 +29,7 @@ export function applyDensity(scene: Scene, density: ShotDensity): string[] {
 
 /**
  * 按指定颗粒度重拆某场：替换本场镜、写入 scene.density，其他场一律不动（shotIds 引用保持）。
- * 供 store.resplit / resplitEpisode 复用；纯函数。
+ * 供 store.applyResplitScene 复用；纯函数。
  */
 export function resplitSceneDensity(project: Project, sceneId: string, density: ShotDensity): Project {
   const scene = project.scenes[sceneId]

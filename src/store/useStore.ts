@@ -1,16 +1,17 @@
 // Zustand：一个 project + 所有动作。不做持久化，刷新回到初始状态。
 import { create } from 'zustand'
 import type {
-  AnalysisView, Asset, AssetKind, CandidateAsset, Episode, Look, MountRef,
+  AnalysisView, Asset, AssetKind, CandidateAsset, Episode, EpisodePayload, Look, MountRef,
   Project, PromptState, Scene, Shot, ShotDensity, Stage,
 } from '../data/types'
 import { seedProject, seedFreshProject, seedCandidates, emptyProject } from '../data/seed'
 import {
+  candidateTempId,
   commitCandidates as commitCandidatesSvc,
   extractCandidates,
   type ScannedAsset,
 } from '../services/candidates'
-import { episode2Payload, ep2Episode, type EpisodePayload } from '../data/seedEpisode2'
+import { episode3Payload, ep3Episode, SUPPLEMENT_EP_ID } from '../data/seedEpisode3'
 import { fillEpisode } from '../services/incremental'
 import { DENSITY_LABEL, densityShots, hasDensityPresets, resplitSceneDensity } from '../services/density'
 import { deleteEpisode as deleteEpisodeSvc, resplitScene } from '../services/lock'
@@ -48,10 +49,34 @@ export interface Toast {
   action?: ToastAction
 }
 
-// 追加/替换第 2 集时「本次范围内 AI 抽到的资产」。着装角色由 appendEpisode 处理，不进候选闸。
-const EP2_SCANNED: ScannedAsset[] = episode2Payload.assets
+// 追加集「本次范围内 AI 抽到的资产」。着装角色（look）不作为独立一条进候选闸——
+// 它是「角色 × 服装」的乘积，由 commitCandidates 在角色入库时顺带建出来。
+// 所以这里把 look 拆回它的两个因子：服装照常单列一条，角色则带上 costumeIds + lookPrompts，
+// 资产确认页才会在这个角色底下显出那一行造型。少了这一步，新角色会是个没有任何造型的光杆，
+// 而一个角色至少得有一套造型才画得出图（决策 1b）。
+const EP3_SCANNED: ScannedAsset[] = episode3Payload.assets
   .filter((a) => a.kind !== 'look')
-  .map((a) => ({ kind: a.kind, name: a.name, imagePrompt: a.imagePrompt, aliases: a.aliases }))
+  .map((a) => {
+    const scanned: ScannedAsset = {
+      kind: a.kind, name: a.name, imagePrompt: a.imagePrompt, aliases: a.aliases,
+    }
+    if (a.kind !== 'character') return scanned
+    // 本集里这个角色穿的服装。key 用服装候选的 tempId —— 造型子行与入库时的交叉引用都按它对。
+    const costumes = episode3Payload.assets
+      .filter((l): l is Look => l.kind === 'look' && l.characterId === a.id)
+      .flatMap((l) => l.costumeIds)
+      .map((cid) => episode3Payload.assets.find((c) => c.id === cid))
+      .filter((c): c is Asset => c != null)
+    if (costumes.length === 0) return scanned
+    scanned.costumeIds = costumes.map((c) => candidateTempId(c.kind, c.name))
+    scanned.lookPrompts = Object.fromEntries(
+      costumes.map((c) => [
+        candidateTempId(c.kind, c.name),
+        `${a.name}素模 + ${c.name}的融合造型：以角色素模为人物一致性基准，服装款式与颜色以「${c.name}」资产为准，合成一张穿好衣服的定妆图。背景中性、写实电影质感。`,
+      ]),
+    )
+    return scanned
+  })
 
 // 手动新建的集（v2.5 §5.3）没有任何 seed 数据可对照。拆分时给它建**一个**空场：
 // 场名 = 集名，原文 = 集正文，镜头留空——分镜表里那一场是空态，用「插入镜头」手动补。
@@ -196,8 +221,6 @@ export interface StoreState extends UIState {
   setShotDuration: (shotId: string, duration: number) => void
   // 在某场的第 index 个位置（0-based，插在该位置之前）插入一个空镜头，并顺延重编号。
   insertShot: (sceneId: string, index: number) => void
-  // 在某集的第 index 个位置插入一个空场，并顺延重编号。
-  insertScene: (episodeId: string, index: number) => void
   // 改场名（双击场名就地编辑，失焦/回车自动保存）。清空则回落到「（未命名）」。
   renameScene: (sceneId: string, name: string) => void
   // 删除一个场（级联删镜 + 清理只在本场出现的孤儿资产 + 顺延重编号）。调用方需先做二次确认。
@@ -239,10 +262,9 @@ export interface StoreState extends UIState {
   previewCandidates: (scanned: ScannedAsset[]) => CandidateAsset[]
   /** 结算一组已定好处理方式的候选到项目资产库（link 写别名）。不挂任务、不发 toast。 */
   commitScanned: (cands: CandidateAsset[]) => void
-  scannedForEp2: () => ScannedAsset[]
+  scannedForSupplement: () => ScannedAsset[]
   /** 直接执行任务（不走闸；候选已由弹窗内联结算）。带各自的结果 toast。 */
   runResplitScene: (sceneId: string, opts: { density?: ShotDensity; targetShots?: number }) => void
-  runResplitEpisode: (episodeId: string, opts: { density: ShotDensity; sceneCount?: number }) => void
 
   /** 「确认并保存到项目资产库」：结算候选 + 写 libraryCommittedAt。 */
   commitLibrary: () => void
@@ -307,12 +329,12 @@ export const useStore = create<StoreState>((set, get) => {
   //   · 有候选：入口动作 → 开闸 → 用户确认 → commitCandidates → runPendingTask → apply*
   // 这样「先确认后续跑」与「无候选不打断」用同一份续跑逻辑，不分叉。
 
-  // 第 2 集的镜头挂载写的是 seed 资产 id（A.suke / A.living…）。
+  // 追加集（第 3 集）的镜头挂载写的是 seed 资产 id（A.suke / A.living…）。
   // 但走过「首次导入」的项目里，那些资产是从候选入的库，id 已经变成 committed 形态
   //（`as_${seedId}`，着装角色 `lk_as_${characterId}`）——直接并进来会挂到不存在的 id 上，
   // 分镜表里就是一排「已失效」。所以并集之前按库里**实际存在**的 id 就近解析一次；
   // 从 seedProject 起步（资产还是 seed id）的演示路径下这一步是恒等映射，不改变任何东西。
-  const ep2PayloadFor = (project: Project): EpisodePayload => {
+  const supplementPayloadFor = (project: Project): EpisodePayload => {
     const resolve = (assetId: string): string => {
       if (project.assets[assetId]) return assetId
       const a = seedProject.assets[assetId]
@@ -321,25 +343,25 @@ export const useStore = create<StoreState>((set, get) => {
       return project.assets[committed] ? committed : assetId
     }
     const shots: Record<string, Shot> = {}
-    for (const [id, sh] of Object.entries(episode2Payload.shots)) {
+    for (const [id, sh] of Object.entries(episode3Payload.shots)) {
       shots[id] = { ...sh, mounts: sh.mounts.map((m) => ({ kind: m.kind, assetId: resolve(m.assetId) })) }
     }
-    return { ...episode2Payload, shots }
+    return { ...episode3Payload, shots }
   }
 
   // 给「已有原文、还没有场镜」的草稿集补上场与镜。
   // 走 fillEpisode 的「只补场镜」分支，集的标题 / 原文 / 字数 / 锁一个字节都不动。
   const fillDraftEpisodes = () => {
     const s = get()
-    const hasEp2Draft = s.project.episodes.some((e) => e.sceneIds.length === 0 && e.id === 'e2')
+    const hasSupplementDraft = s.project.episodes.some((e) => e.sceneIds.length === 0 && e.id === SUPPLEMENT_EP_ID)
     const hasManual = s.project.episodes.some((e) => e.sceneIds.length === 0 && isManualEpisode(e.id))
-    if (!hasEp2Draft && !hasManual) return
-    const filled = hasEp2Draft ? fillEpisode(s.project, ep2PayloadFor(s.project)) : s.project
+    if (!hasSupplementDraft && !hasManual) return
+    const filled = hasSupplementDraft ? fillEpisode(s.project, supplementPayloadFor(s.project)) : s.project
     const next = withManualScenes(filled)
-    // 选中刚补完场的那一集的第一场（e2 优先，否则取本次新得到场的那一集）。
+    // 选中刚补完场的那一集的第一场（追加集优先，否则取本次新得到场的那一集）。
     const had = new Set(s.project.episodes.filter((e) => e.sceneIds.length > 0).map((e) => e.id))
     const first =
-      next.episodes.find((e) => e.id === 'e2' && e.sceneIds.length > 0)?.sceneIds[0] ??
+      next.episodes.find((e) => e.id === SUPPLEMENT_EP_ID && e.sceneIds.length > 0)?.sceneIds[0] ??
       next.episodes.find((e) => e.sceneIds.length > 0 && !had.has(e.id))?.sceneIds[0] ??
       s.selectedSceneId
     set({
@@ -384,41 +406,6 @@ export const useStore = create<StoreState>((set, get) => {
     get().showToast(`「${scene.name}」已按${DENSITY_LABEL[density]}节奏重新拆分为 ${densityShots(sceneId, density).length} 个镜头，其他场景没有改变。`)
   }
 
-  const applyResplitEpisode = (episodeId: string, opts: { density: ShotDensity; sceneCount?: number }) => {
-    const s = get()
-    let proj = s.project
-    const ep = proj.episodes.find((e) => e.id === episodeId)
-    if (!ep) return
-
-    const applied: string[] = []
-    const kept: number[] = []
-    for (const sid of ep.sceneIds) {
-      const scene = proj.scenes[sid]
-      if (!scene) continue
-      if (hasDensityPresets(sid)) {
-        proj = resplitSceneDensity(proj, sid, opts.density)
-        applied.push(`第 ${scene.no} 场按${DENSITY_LABEL[opts.density]}节奏重新拆分为 ${proj.scenes[sid]!.shotIds.length} 个镜头`)
-      } else {
-        const reset = resplitScene(proj, sid)
-        const rscene = reset.scenes[sid]!
-        proj = withScene(reset, sid, { ...rscene, density: 'standard' as ShotDensity })
-        kept.push(scene.no)
-      }
-    }
-    set({
-      project: proj,
-      selectedSceneId: ep.sceneIds[0] ?? s.selectedSceneId,
-      sceneSettingsOpen: false,
-    })
-
-    let msg = applied.length
-      ? `已重新拆分第 ${ep.no} 集：${applied.join('，')}`
-      : `已重新拆分第 ${ep.no} 集`
-    if (kept.length) msg += `，第 ${kept.join(' / ')} 场当前演示无多套方案，保持原方式`
-    if (opts.sceneCount != null) msg += '；当前版本暂不支持调整场景数量'
-    get().showToast(msg)
-  }
-
   return {
   // 进站起点是**空项目**（v2.6 §1.2）：没有集、没有场镜、没有资产、未入库。
   // 从前这里是 seedProject（一个「全做完了」的项目），步骤条据此把 ② ③ 打上 ✓，
@@ -438,8 +425,8 @@ export const useStore = create<StoreState>((set, get) => {
   analysisView: 'empty',
   pendingDensity: null,
   pendingDecisions: null,
-  episodeW: 192,
-  scriptW: 308,
+  episodeW: 208,
+  scriptW: 324,
   flashShotIds: [],
   hoverMention: null,
   hoverAssetTerm: null,
@@ -500,9 +487,9 @@ export const useStore = create<StoreState>((set, get) => {
 
   supplementScript: () => {
     const s = get()
-    if (s.project.episodes.some((e) => e.id === 'e2')) return
+    if (s.project.episodes.some((e) => e.id === SUPPLEMENT_EP_ID)) return
     // 草稿集：只有原文与字数，没有场镜、没有锁。场镜要等它自己那一轮提取 + 拆分。
-    const draft = { ...structuredClone(ep2Episode), sceneIds: [] }
+    const draft = { ...structuredClone(ep3Episode), sceneIds: [] }
     delete draft.extractedAt
     set({ project: { ...s.project, episodes: [...s.project.episodes, draft] } })
   },
@@ -579,7 +566,7 @@ export const useStore = create<StoreState>((set, get) => {
     const committed = s.project.libraryCommittedAt != null
     // 已入库（补充剧本之后）走判重：库里有的自动滤掉；首次则整份候选清单都要确认。
     const candidates = committed
-      ? get().previewCandidates(get().scannedForEp2())
+      ? get().previewCandidates(get().scannedForSupplement())
       : structuredClone(seedCandidates)
     const at = Date.now()
     const draftNos = s.project.episodes.filter((e) => !e.extractedAt).map((e) => e.no)
@@ -631,10 +618,10 @@ export const useStore = create<StoreState>((set, get) => {
     const before = Object.keys(get().project.shots).length
     fillDraftEpisodes()
     const after = get().project.shots
-    const draft = get().project.episodes.find((e) => e.id === 'e2')
+    const draft = get().project.episodes.find((e) => e.id === SUPPLEMENT_EP_ID)
     const added = Object.keys(after).length - before
     set({ viewScope: { kind: 'project' } })
-    get().showToast(`第 ${draft?.no ?? 2} 集已拆分为 ${added} 个镜头。`)
+    get().showToast(`第 ${draft?.no ?? ep3Episode.no} 集已拆分为 ${added} 个镜头。`)
   },
   setAnalysisView: (analysisView) => set({ analysisView }),
   setPanelW: (which, width) => {
@@ -769,31 +756,6 @@ export const useStore = create<StoreState>((set, get) => {
     })
     const n = get().project.scenes[sceneId]?.shotIds.length ?? 0
     get().showToast(`已插入 1 个空镜头，本场共 ${n} 镜。填写内容后可生成提示词。`)
-  },
-
-  insertScene: (episodeId, index) => {
-    if (!can(get().project, 'editScript')) return
-    set((s) => {
-      const ep = s.project.episodes.find((e) => e.id === episodeId)
-      if (!ep) return s
-      const id = `ins_sc${++insSeq}`
-      const blank: Scene = {
-        id, episodeId, no: 0, name: '（未命名）', location: '', timeOfDay: '',
-        rawText: '', shotIds: [], density: s.project.defaultDensity, track: { mood: '', bgm: '' },
-      }
-      const at = Math.max(0, Math.min(index, ep.sceneIds.length))
-      const sceneIds = [...ep.sceneIds]
-      sceneIds.splice(at, 0, id)
-      const episodes = s.project.episodes.map((e) => (e.id === episodeId ? { ...e, sceneIds } : e))
-      const scenes = { ...s.project.scenes, [id]: blank }
-      // 顺延重编号：本集场号 = 位置 + 1。
-      sceneIds.forEach((sid, i) => {
-        const sc = scenes[sid]
-        if (sc && sc.no !== i + 1) scenes[sid] = { ...sc, no: i + 1 }
-      })
-      return { project: { ...s.project, episodes, scenes }, selectedSceneId: id, sceneSettingsOpen: false }
-    })
-    get().showToast('已插入 1 个新场，可导入剧本或重新拆分补充镜头。')
   },
 
   renameScene: (sceneId, name) => {
@@ -1159,15 +1121,11 @@ export const useStore = create<StoreState>((set, get) => {
     set({ project })
   },
 
-  scannedForEp2: () => EP2_SCANNED,
+  scannedForSupplement: () => EP3_SCANNED,
 
   runResplitScene: (sceneId, opts) => {
     if (!can(get().project, 'editScript')) return
     applyResplitScene(sceneId, opts)
-  },
-  runResplitEpisode: (episodeId, opts) => {
-    if (!can(get().project, 'editScript')) return
-    applyResplitEpisode(episodeId, opts)
   },
 
 

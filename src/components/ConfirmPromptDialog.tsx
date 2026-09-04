@@ -13,6 +13,7 @@ import { costShotPrompts, fmtCost } from '../services/cost'
 import { PHASES, taskDuration } from '../services/taskRun'
 import { TaskProgress } from './TaskProgress'
 import c from './ConfirmPromptDialog.module.css'
+import { ic } from './icons'
 
 // 「生成镜头提示词」前置确认。范围由组件自己按 scope 求解（本场 / 本集 / 全剧），
 // 按场分组勾选，逐镜带四状态 + 手动编辑角标。模型下拉与「智能合成/自动拼接」为演示视觉控件，
@@ -177,7 +178,7 @@ export function ConfirmPromptDialog({
               已选 <b>{selCount}</b> / {total} 镜
             </span>
             <button className={c.close} onClick={onClose} title="关闭">
-              ×
+              {ic.close}
             </button>
           </div>
           <span className={c.progress}>
@@ -316,7 +317,7 @@ export function ConfirmPromptDialog({
           <input ref={allRef} type="checkbox" className={c.check} checked={allOn} onChange={toggleAll} />
           全选镜头
         </label>
-        <span className={c.model}>GVLM 3.1 ⌄</span>
+        <span className={c.model}>GVLM 3.1 {ic.caretDown}</span>
         <span className={c.hint}>内容修改后自动保存为最新版本</span>
 
         <div className={c.footRight}>

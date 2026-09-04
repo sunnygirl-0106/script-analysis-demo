@@ -3,6 +3,9 @@ import { describe, it, expect } from 'vitest'
 import { seedProject, seedFreshProject, A } from '../data/seed'
 import type { CandidateAsset, Look } from '../data/types'
 import { extractCandidates, commitCandidates, nameConflict, type ScannedAsset } from '../services/candidates'
+import { fillEpisode } from '../services/incremental'
+import { episode3Payload, ep3Episode } from '../data/seedEpisode3'
+import { useStore } from '../store/useStore'
 
 const fresh = () => structuredClone(seedProject)
 
@@ -46,6 +49,8 @@ describe('R15 候选抽取与入库', () => {
     expect(look).toBeTruthy()
     expect(look!.characterId).toBe(charId)
     expect(look!.costumeIds).toEqual([cosId])
+    // 名字必须当场落定：空名会一路漏到 @ 引用选择器，「角色」一组每条都是空白。
+    expect(look!.name).toBe('角色A · 服装C')
   })
 
   it('④ 三选一：link 不新建只记引用，skip 什么都不做', () => {
@@ -78,6 +83,73 @@ describe('R15 候选抽取与入库', () => {
     const { project } = commitCandidates(p, [cand])
     for (const id of Object.keys(p.assets)) {
       expect(project.assets[id]).toBe(p.assets[id])
+    }
+  })
+})
+
+// 追加集（第 3 集）走的是「已入库之后的增量」这条路：没有三选一，AI 拆出什么就入什么。
+// 这一组盯住那条最容易断的线——新角色带出来的**造型**。
+// 角色候选是靠 `candidateTempId(kind, name)` 去引用同一批里那件服装候选的，
+// 两边各算各的、约定不在类型里，改一处不改另一处 tsc 一声不响，
+// 结果就是新角色在确认页上是个没有造型的光杆、入库后也没有 look 可挂。
+describe('追加集：新角色必须带出至少一套造型', () => {
+  const supplement = () => {
+    const p = fresh()
+    const cands = extractCandidates(p, useStore.getState().scannedForSupplement())
+    return { p, cands }
+  }
+
+  it('① 房东带出一套造型，指向同一批里的服装候选', () => {
+    const { cands } = supplement()
+    const landlord = cands.find((c) => c.kind === 'character' && c.name === '房东')
+    expect(landlord).toBeDefined()
+    expect(landlord!.costumeIds).toHaveLength(1)
+
+    // 指的必须是这一批里那件服装候选，不是一个悬空 id。
+    const costumeId = landlord!.costumeIds![0]!
+    const costume = cands.find((c) => c.tempId === costumeId)
+    expect(costume?.name).toBe('碎花围裙')
+    // 这套造型自带融合提示词，确认页上不是一行空白。
+    expect(landlord!.lookPrompts?.[costumeId]).toContain('碎花围裙')
+  })
+
+  it('② 入库后造型带着它的融合提示词，不是一条空的', () => {
+    const { p, cands } = supplement()
+    const landlord = cands.find((c) => c.name === '房东')!
+    const written = landlord.lookPrompts![landlord.costumeIds![0]!]!
+    const { project } = commitCandidates(p, cands)
+    const look = Object.values(project.assets).find(
+      (a): a is Look => a.kind === 'look' && a.characterId === `as_${landlord.tempId}`,
+    )
+    // 阶段② 用户看过、还能改的那段话，必须原样进库 —— 丢了的话资产库里只剩一个「—」。
+    expect(look!.imagePrompt).toBe(written)
+  })
+
+  it('③ 结算后角色 / 服装 / look 都入库，且 look 的绑定不悬空', () => {
+    const { p, cands } = supplement()
+    const { project } = commitCandidates(p, cands)
+    const look = Object.values(project.assets).find(
+      (a): a is Look => a.kind === 'look' && a.name === '房东 · 碎花围裙',
+    )
+    expect(look).toBeDefined()
+    expect(project.assets[look!.characterId]?.name).toBe('房东')
+    expect(look!.costumeIds.map((id) => project.assets[id]?.name)).toEqual(['碎花围裙'])
+  })
+
+  it('④ 第 3 集的镜头挂载能落到刚入库的那套造型上', () => {
+    const { p, cands } = supplement()
+    const { project } = commitCandidates(p, cands)
+    const merged = fillEpisode(
+      { ...project, episodes: [...project.episodes, { ...ep3Episode, sceneIds: [] }] },
+      episode3Payload,
+    )
+    // 挂了 look 的镜头，其 look 挂载必须指向库里真实存在的 look。
+    const lookMounts = Object.values(merged.shots)
+      .flatMap((sh) => sh.mounts)
+      .filter((m) => m.kind === 'look')
+    expect(lookMounts.length).toBeGreaterThan(0)
+    for (const m of lookMounts) {
+      expect(merged.assets[m.assetId]?.kind).toBe('look')
     }
   })
 })

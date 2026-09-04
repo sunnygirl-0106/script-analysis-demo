@@ -3,9 +3,10 @@
   display: flex;
   min-width: 0;
 }
+/* 右栏整体抬起一档，与左边的目录 / 本场剧本（--bg1）拉开。 */
 .rcol {
   flex: 1;
-  background: var(--bg1);
+  background: var(--sb-surface);
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -22,23 +23,50 @@
 .foot {
   flex: none;
   border-top: 1px solid var(--line);
-  padding: 12px 18px;
+  padding: 11px 18px;
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--bg2);
-  font-size: 11.5px;
+  background: var(--sb-band);
+  font-size: 13px;
   color: var(--t4);
 }
-/* 导出分镜脚本：页脚最左边的 28×28 图标按钮，tooltip 交代它是什么（v2.8 §4）。 */
+/* 导出分镜脚本：页脚最左边的 28×28 图标按钮，自带悬浮说明交代它是什么（v2.8 §4）。 */
 .iconBtn {
+  position: relative;
   flex: none;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+/* 不上浮：气泡钉在按钮上方，按钮一动气泡跟着抖。 */
+.iconBtn:hover {
+  transform: none;
+}
+/* 悬浮说明。系统 title 要等一秒多才出来，一个光秃秃的图标等不起这一秒。 */
+.tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 20;
+  padding: 4px 9px;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--t1);
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: var(--rsm);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s;
+}
+.iconBtn:hover .tip,
+.iconBtn:focus-visible .tip {
+  opacity: 1;
 }
 .foot .info {
   min-width: 0;
@@ -69,7 +97,7 @@
   cursor: default;
 }
 .progLabel {
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--t4);
 }
 .progTrack {
@@ -87,16 +115,16 @@
   transition: width 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 .progNum {
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--t2);
   font-variant-numeric: tabular-nums;
 }
 .progNote {
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--t4);
 }
 /* 待更新用琥珀：它跟「还没生成」不是一回事，得看得出来。 */
 .progStale {
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--amber);
 }

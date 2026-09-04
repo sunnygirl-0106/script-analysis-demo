@@ -31,10 +31,6 @@ export const PHASES = {
     { label: '正在重新拆分本场', weight: 4 },
     { label: '正在更新镜头引用', weight: 2 },
   ],
-  resplitEp: [
-    { label: '正在重新拆分本集各场', weight: 4 },
-    { label: '正在更新镜头引用', weight: 2 },
-  ],
   // 「上传文件 · 解析新集」弹窗里的整理（v2.5 §5.1）：只读原文、切集，不提取资产（那是页脚那一步）。
   appendParse: [
     { label: '正在读取续集原文', weight: 3 },

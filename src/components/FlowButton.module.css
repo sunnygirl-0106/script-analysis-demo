@@ -1,0 +1,192 @@
+/* 流光描边按钮（三步页脚共用的终点 CTA）。
+   形态取自设计稿「流光描边 1b」：深色玻璃本体 + 一道主色光沿 1.5px 描边以 3s 周期绕行。
+   色值全部走 --acc-rgb 令牌而非设计稿里的薄荷绿硬编码——主色换一次，这颗按钮跟着换。
+
+   为什么要这么一颗：这三个页脚各自只有一个「走完这一步」的出口，
+   而它原来跟同页的「取消 / 新建资产」共用 .btnPrimary，一眼看不出轻重。 */
+
+/* 描边槽：1.5px 的内边距就是那圈边框本身，光环在它底下转，本体盖在上面只露出边缘一圈。 */
+.rim {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--rpill);
+  padding: 1.5px;
+  background: var(--edge);
+}
+/* 绕行的光。conic 一圈里只有 250°→360° 这一段有颜色，转起来就是「一道」而不是「一环」。
+   尺寸取 max(300px, 200%)：光斑必须大过按钮对角线，否则四个角会扫空。 */
+.orbit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(300px, 200%);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 250deg,
+    rgb(var(--acc-rgb)) 320deg,
+    var(--acc-hi) 350deg,
+    transparent 360deg
+  );
+  animation: fbSpin 3s linear infinite;
+}
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--rpill);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--acc-hi);
+  /* 主色染过的深玻璃：两层叠在页面底色上，不引入第二套硬编码色。 */
+  background: linear-gradient(180deg, rgb(var(--acc-rgb) / 0.12), rgb(var(--acc-rgb) / 0.04)), var(--bg0);
+  transition: color 0.18s ease, background 0.18s ease;
+}
+.btn:hover {
+  color: #fff;
+  background: linear-gradient(180deg, rgb(var(--acc-rgb) / 0.2), rgb(var(--acc-rgb) / 0.08)), var(--bg0);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--acc-hi);
+  outline-offset: 3px;
+}
+
+/* ✦ 星火：全站的 AI 动作符号，这里让它慢慢一明一暗，替按钮点着那盏灯。 */
+.spark {
+  display: inline-flex;
+  color: var(--acc);
+  animation: fbTwinkle 3s ease-in-out infinite;
+}
+.spark svg {
+  width: 13px;
+  height: 13px;
+}
+/* → 推一下：4s 里只在 82% 处轻轻前探 4px。常驻位移会变成噪音，隔几秒一次才是「催」。 */
+.arrow {
+  display: inline-block;
+  animation: fbNudge 4s ease-in-out infinite;
+}
+
+/* 星钻价：一条细分隔线把数字隔在右侧。左边那颗 ✦ 已经是单位符号，数字不再重复它。 */
+.sep {
+  width: 1px;
+  height: 13px;
+  background: rgb(var(--acc-rgb) / 0.28);
+}
+.cost {
+  font-weight: 700;
+  color: var(--acc);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 处理中：光环停转、本体压暗，转圈接替 ✦ —— 动效只留一处，别让人以为还能点 ── */
+.rim.still .orbit {
+  animation: none;
+  opacity: 0;
+}
+.rim.still {
+  background: var(--line);
+}
+.btn.busy {
+  cursor: progress;
+  color: var(--t3);
+}
+.spin {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid rgb(var(--acc-rgb) / 0.25);
+  border-top-color: var(--acc);
+  animation: fbSpin 0.8s linear infinite;
+}
+
+/* ── 禁用：整颗熄灭，退回一枚普通的灰按钮 ── */
+.rim.off {
+  background: var(--line);
+}
+.rim.off .orbit {
+  display: none;
+}
+.btn:disabled {
+  cursor: not-allowed;
+  color: var(--t5);
+  background: var(--bg2);
+}
+
+/* ── 旁路出口：同一根条上的文字链（步骤③ 的「直接去资产库生图 →」）──
+   它是「跳过这一步」的岔路，不是这一步的出口。做成带描边的次按钮会跟主按钮排成一对，
+   看着像两个平级选择；退成一条灰字链，形态上就不跟按钮同级了。
+   箭头也不再轻推——催促留给主按钮一处就够。 */
+.link {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 2px;
+  margin-right: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--t4);
+  transition: color 0.16s ease;
+}
+.link:hover {
+  color: var(--acc);
+}
+.linkArrow {
+  display: inline-block;
+  transition: transform 0.16s ease;
+}
+.link:hover .linkArrow {
+  transform: translateX(3px);
+}
+
+@keyframes fbSpin {
+  to {
+    rotate: 360deg;
+  }
+}
+@keyframes fbTwinkle {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.85) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1) rotate(90deg);
+  }
+}
+@keyframes fbNudge {
+  0%,
+  72%,
+  100% {
+    transform: translateX(0);
+  }
+  82% {
+    transform: translateX(4px);
+  }
+}
+
+/* 关掉动效的用户只留静态按钮：描边、分量、层次都还在，光不再绕。 */
+@media (prefers-reduced-motion: reduce) {
+  .orbit,
+  .spark,
+  .arrow,
+  .spin {
+    animation: none;
+  }
+}

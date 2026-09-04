@@ -6,7 +6,7 @@
   color: var(--t3);
   padding: 5px 13px;
   border-radius: var(--rpill);
-  font-size: 12.5px;
+  font-size: 13px;
   transition: 0.24s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 .btn:hover {
@@ -50,12 +50,14 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 24px;
+  height: 26px;
   padding: 0 6px 0 9px;
-  background: var(--bg3);
+  /* 底色留一个可覆盖的口子：分镜表格把整栏抬高一档后，会在 .pane 上把
+     --chip-bg 换成 --sb-chip，chip 才不会糊进行底。其余地方仍是 --bg3。 */
+  background: var(--chip-bg, var(--bg3));
   border: 1px solid var(--line);
   border-radius: var(--rpill);
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--t2);
   white-space: nowrap;
   transition: border-color 0.2s cubic-bezier(0.22, 0.61, 0.36, 1), background 0.2s;
@@ -85,13 +87,17 @@
   height: 15px;
   border-radius: 50%;
   color: var(--t5);
-  font-size: 9px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-left: 1px;
   transition: all 0.18s;
+}
+.chipX svg {
+  width: 9px;
+  height: 9px;
+  stroke-width: 2.4;
 }
 .chipX:hover {
   background: var(--ctrl-hover);

@@ -4,17 +4,18 @@ import { useStore } from '../store/useStore'
 import { clampToViewport } from '../services/popover'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { can } from '../services/capability'
-import { ResplitEpisodeDialog } from './ResplitEpisodeDialog'
 import { ResplitSceneDialog } from './ResplitSceneDialog'
 import { ic } from './icons'
 import ui from '../styles/ui.module.css'
 import di from '../styles/dialog.module.css'
 import s from './EpisodeTree.module.css'
 
-// 集级菜单只剩「重新拆分本集镜头 / 删除本集」——
-// 追加剧集与替换本集剧本都退役了，补充剧本的唯一入口在步骤① 整理剧本页的 ⋯ 里。
+// 集行右侧不再挂 ⋯ 菜单：追加剧集、替换本集剧本、重新拆分本集镜头都退役了，
+// 只剩「删除本集」一项——一个只有一项的菜单不如直接给那一项，所以换成一颗垃圾桶，
+// 与整理剧本页的集头、场行 ⋯ 一样悬停才现形。
+// 重拆的粒度回到「场」：整集一键重拆改动面太大，用户判断不了结果对不对。
+// 补充剧本的唯一入口在步骤① 整理剧本页的 ⋯ 里。
 type Dialog =
-  | { type: 'resplit'; epId: string }
   | { type: 'delete'; epId: string }
   | { type: 'deleteScene'; sceneId: string }
   | { type: 'resplitScene'; sceneId: string }
@@ -25,7 +26,6 @@ export function EpisodeTree() {
   const viewScope = useStore((st) => st.viewScope)
   const setViewScope = useStore((st) => st.setViewScope)
   const selectScene = useStore((st) => st.selectScene)
-  const insertScene = useStore((st) => st.insertScene)
   const renameScene = useStore((st) => st.renameScene)
   const deleteScene = useStore((st) => st.deleteScene)
   const deleteEpisode = useStore((st) => st.deleteEpisode)
@@ -33,7 +33,6 @@ export function EpisodeTree() {
   const episodeW = useStore((st) => st.episodeW)
   const readOnly = !useStore((st) => can(st.project, 'editScript'))
 
-  const [menuEp, setMenuEp] = useState<string | null>(null)
   const [menuScene, setMenuScene] = useState<string | null>(null)
   // 菜单固定定位：在光标/按钮的右下方弹出，脱离窄侧栏的 overflow 裁剪，并夹在视口内。
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
@@ -58,8 +57,6 @@ export function EpisodeTree() {
     if (editScene) renameScene(editScene, nameDraft)
     setEditScene(null)
   }
-  const menuRef = useRef<HTMLDivElement>(null)
-  useClickOutside(menuRef, () => setMenuEp(null), menuEp !== null)
   const menuSceneRef = useRef<HTMLDivElement>(null)
   useClickOutside(menuSceneRef, () => setMenuScene(null), menuScene !== null)
 
@@ -114,54 +111,25 @@ export function EpisodeTree() {
             <div key={ep.id}>
               {ei > 0 && <div className={s.epgap} />}
               <div className={[s.ep, viewScope.kind === 'episode' && viewScope.episodeId === ep.id ? s.on : ''].join(' ')}>
-                {/* 点集标题文字 = 本集视图；⋯ 菜单（重拆 / 删除）不变（v2.7 §5.3）。 */}
+                {/* 点集标题文字 = 本集视图；右侧一颗垃圾桶 = 删除本集（悬停本行才现形）。 */}
                 <button className={s.epMain} onClick={() => setViewScope({ kind: 'episode', episodeId: ep.id })}>
                   <span className={s.epTitle}>
                     第 {ep.no} 集 · {ep.title}
                   </span>
                 </button>
                 {!readOnly && (
-                  <div className={s.menuWrap} ref={menuEp === ep.id ? menuRef : undefined}>
-                    <button
-                      className={s.dots}
-                      title="本集操作"
-                      onClick={(e) => {
-                        openMenuFromBtn(e)
-                        setMenuEp((m) => (m === ep.id ? null : ep.id))
-                      }}
-                    >
-                      ⋯
-                    </button>
-                    {menuEp === ep.id && menuPos && (
-                      <div className={s.menu} style={{ left: menuPos.x, top: menuPos.y }}>
-                        <button
-                          className={s.menuItem}
-                          onClick={() => {
-                            setDialog({ type: 'resplit', epId: ep.id })
-                            setMenuEp(null)
-                          }}
-                        >
-                          <i className={s.mIcon}>{ic.resplit}</i>重新拆分本集镜头
-                        </button>
-                        <div className={s.menuSep} />
-                        <button
-                          className={[s.menuItem, s.menuDanger].join(' ')}
-                          disabled={onlyOne}
-                          title={onlyOne ? '项目中至少需要保留 1 集，暂时无法删除' : undefined}
-                          onClick={() => {
-                            if (onlyOne) return
-                            setDialog({ type: 'delete', epId: ep.id })
-                            setMenuEp(null)
-                          }}
-                        >
-                          <i className={s.mIcon}>{ic.trash}</i>删除本集
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  <button
+                    className={s.epDel}
+                    disabled={onlyOne}
+                    title={onlyOne ? '项目中至少需要保留 1 集，暂时无法删除' : '删除本集'}
+                    aria-label="删除本集"
+                    onClick={() => setDialog({ type: 'delete', epId: ep.id })}
+                  >
+                    {ic.trash}
+                  </button>
                 )}
               </div>
-              {scenes.map((sc, si) => (
+              {scenes.map((sc) => (
                 <div className={s.scWrap} key={sc.id}>
                   <div
                     className={[s.sc, viewScope.kind === 'scene' && viewScope.sceneId === sc.id ? s.on : ''].join(' ')}
@@ -226,15 +194,6 @@ export function EpisodeTree() {
                           <button
                             className={s.menuItem}
                             onClick={() => {
-                              insertScene(ep.id, si + 1)
-                              setMenuScene(null)
-                            }}
-                          >
-                            <i className={s.mIcon}>{ic.insert}</i>在下方插入一场
-                          </button>
-                          <button
-                            className={s.menuItem}
-                            onClick={() => {
                               selectScene(sc.id)
                               setDialog({ type: 'resplitScene', sceneId: sc.id })
                               setMenuScene(null)
@@ -266,10 +225,6 @@ export function EpisodeTree() {
       </div>
 
       {/* 集级弹窗 */}
-      {dialog?.type === 'resplit' && (
-        <ResplitEpisodeDialog episodeId={dialog.epId} onClose={() => setDialog(null)} />
-      )}
-
       {dialog?.type === 'delete' && delEp && delStat && (
         <Dialog onClose={() => setDialog(null)} className={di.dialog}>
           <div className={di.title}>删除第 {delEp.no} 集？</div>

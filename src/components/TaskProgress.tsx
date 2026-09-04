@@ -6,6 +6,7 @@
 import { useTaskTimeline } from '../hooks/useTaskTimeline'
 import type { Phase } from '../services/taskRun'
 import s from './TaskProgress.module.css'
+import { ic } from './icons'
 
 interface Props {
   phases: Phase[]
@@ -34,7 +35,7 @@ export function TaskProgress({ phases, durationMs, onDone, compact }: Props) {
           return (
             <li key={i} className={`${s.item} ${s[state]}`}>
               <span className={s.mark} aria-hidden>
-                {state === 'done' ? '✓' : state === 'active' ? <span className={s.spinner} /> : ''}
+                {state === 'done' ? ic.check : state === 'active' ? <span className={s.spinner} /> : null}
               </span>
               <span className={s.label}>{p.label}</span>
             </li>

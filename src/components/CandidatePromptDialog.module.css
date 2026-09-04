@@ -29,7 +29,7 @@
 .headName {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--t1);
   overflow: hidden;
@@ -42,9 +42,13 @@
   background: transparent;
   cursor: pointer;
   color: var(--t4);
-  font-size: 14px;
-  padding: 2px 6px;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: var(--rsm);
 }
 .close:hover {
   color: var(--t1);
@@ -55,7 +59,7 @@
   margin: 14px 16px 4px;
   height: 200px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
   color: var(--t1);
   background: var(--bg1);
@@ -92,13 +96,20 @@
 .completeBtn {
   appearance: none;
   cursor: pointer;
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
   color: var(--acc);
   background: var(--acc-bg);
   border: 1px solid var(--acc-line);
   border-radius: var(--rpill);
   padding: 4px 12px;
   transition: 0.16s;
+}
+.completeBtn svg {
+  width: 12px;
+  height: 12px;
 }
 .completeBtn:hover {
   color: var(--acc-hi);

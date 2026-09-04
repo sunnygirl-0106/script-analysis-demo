@@ -217,7 +217,7 @@ export interface CandidateAsset {
 /** 增量确认被打断时挂起的任务，确认完自动续跑（v3 §6.2）。 */
 export interface PendingTask {
   kind: 'firstImport' | 'appendEpisode' | 'newScene'
-      | 'replaceEpisode' | 'replaceScene' | 'resplitEpisode' | 'resplitScene'
+      | 'replaceEpisode' | 'replaceScene' | 'resplitScene'
   label: string       // 弹窗标题用，如「追加第 2 集」
   scopeText: string   // 「仅第 2 集原文」
   /** 续跑所需的参数。各 kind 自定，store 里用判别联合取出。 */
@@ -230,3 +230,12 @@ export const CAMERA_MOVES = [
   '定镜', '慢推', '快速推近', '拉远', '跟随', '低角度跟随',
   '手持', '摇摄', 'Rack Focus', '跳切',
 ] as const
+
+/** 一集的完整内容包：集 + 它的场 + 它的镜 + 它带来的资产。
+ *  「追加一集」（appendEpisode）与「给草稿集补场镜」（fillEpisode）的统一入参。 */
+export interface EpisodePayload {
+  episode: Episode
+  scenes: Record<string, Scene>
+  shots: Record<string, Shot>
+  assets: Asset[]
+}

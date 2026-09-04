@@ -6,6 +6,7 @@
 //   待确认新候选    = CandidateAsset[]（本模块）
 import type { Asset, CandidateAsset, Look, Project } from '../data/types'
 import { assetKey } from './incremental'
+import { lookName } from './looks'
 
 const normalize = (s: string) => s.replace(/\s+/g, '').toLowerCase()
 
@@ -15,11 +16,18 @@ export interface ScannedAsset {
   name: string
   imagePrompt?: string
   aliases?: string[]
+  /** 角色扫描项带出的造型：元素是**同一批里那件服装的候选 tempId**（用 candidateTempId 算）。 */
   costumeIds?: string[]
+  /** 每套造型（按 costumeIds 的同一把 key 索引）的融合式生图提示词。 */
+  lookPrompts?: Record<string, string>
   characterId?: string
   firstParaNo?: number
   occCount?: number
 }
+
+/** 候选的临时 id。角色扫描项要引用同一批里的服装候选，两边得算出同一个 id，所以单独导出。 */
+export const candidateTempId = (kind: CandidateAsset['kind'], name: string) =>
+  `cand_${kind}_${normalize(name)}`
 
 /** 一条资产/候选的全部判重 key：名称 + 所有别名（都归一化，都带 kind 前缀）。
  *  别名参与判重是「使用已有资产」能真正落地的地基：把候选名写进目标别名后，
@@ -39,12 +47,13 @@ export function extractCandidates(project: Project, scanned: ScannedAsset[]): Ca
     if (itemKeys.some((k) => existing.has(k) || seen.has(k))) continue
     itemKeys.forEach((k) => seen.add(k))
     out.push({
-      tempId: `cand_${item.kind}_${normalize(item.name)}`,
+      tempId: candidateTempId(item.kind, item.name),
       kind: item.kind,
       name: item.name,
       imagePrompt: item.imagePrompt ?? '',
       aliases: item.aliases,
       costumeIds: item.costumeIds,
+      lookPrompts: item.lookPrompts,
       characterId: item.characterId,
       firstParaNo: item.firstParaNo,
       occCount: item.occCount,
@@ -126,6 +135,10 @@ export function commitCandidates(
   // 否则去重是 kind+名称精确匹配，下次同名会被再当新资产问一遍（§4.3）。
   const aliasAdds = new Map<string, Set<string>>()
   const newAssets: Record<string, Asset> = {}
+  // look 要等所有角色 / 服装都入库完才能定名（名字取自它们），所以先攒着，循环结束再建。
+  const pendingLooks: {
+    lookId: string; characterId: string; costumeIds: string[]; imagePrompt: string
+  }[] = []
   for (const c of effective) {
     if (c.decision === 'link') {
       if (c.linkTargetId) {
@@ -148,15 +161,30 @@ export function commitCandidates(
     newAssets[id] = buildAsset(c, id, resolve)
     added.push(id)
     // 角色候选带 costumeIds → 一并生成对应的着装角色（look），characterId 指向刚入库的角色。
+    // 融合提示词跟着一起进来：它在阶段② 就已经写好了（AI 产出，用户还能行内改），
+    // 在这儿丢掉的话，库里躺的就是一条空提示词的造型 —— 页面上只剩一个「—」，
+    // 用户在上一屏亲手确认过的那段话凭空消失了。
+    // 键取**未 resolve 的** costumeId：lookPrompts 是阶段② 按候选 tempId 存的。
     if (c.kind === 'character' && c.costumeIds?.length) {
-      const lookId = `lk_${id}`
-      const look: Look = {
-        id: lookId, kind: 'look', name: '', characterId: id,
-        costumeIds: c.costumeIds.map(resolve), imagePrompt: '', promptRevision: 0,
-      }
-      newAssets[lookId] = look
-      added.push(lookId)
+      pendingLooks.push({
+        lookId: `lk_${id}`,
+        characterId: id,
+        costumeIds: c.costumeIds.map(resolve),
+        imagePrompt: c.costumeIds.map((cid) => c.lookPrompts?.[cid]?.trim()).filter(Boolean).join('\n'),
+      })
     }
+  }
+
+  // 建 look。名字必须在这里就落定：`name: ''` 曾经一路漏到 @ 引用选择器里，
+  // 那份列表拿 asset.name 当标签，于是「角色」一组每条都是空白（只剩右侧灰色的角色名）。
+  for (const p of pendingLooks) {
+    const look: Look = {
+      id: p.lookId, kind: 'look', name: '', characterId: p.characterId,
+      costumeIds: p.costumeIds, imagePrompt: p.imagePrompt, promptRevision: 0,
+    }
+    look.name = lookName(look, { ...project.assets, ...newAssets })
+    newAssets[p.lookId] = look
+    added.push(p.lookId)
   }
 
   // 把 link 的别名并进目标资产（去重、只增）。

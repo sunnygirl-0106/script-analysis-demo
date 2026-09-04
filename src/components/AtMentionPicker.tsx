@@ -4,6 +4,7 @@ import { useStore } from '../store/useStore'
 import { placeFlip } from '../services/popover'
 import type { Asset, Look, MountableKind } from '../data/types'
 import { KIND_COLOR, KIND_LABEL, MOUNT_KINDS } from './entity'
+import { lookName } from '../services/looks'
 import s from './AtMentionPicker.module.css'
 
 // 挂在受控 <textarea> 上的「@ 引用选择器」。
@@ -146,7 +147,9 @@ export function AtMentionPicker({ textareaRef, value, onChange, shotId }: Props)
     const entryOf = (a: Asset): Entry => {
       if (a.kind === 'look') {
         const chName = assets[(a as Look).characterId]?.name ?? a.name
-        return { asset: a, kind: 'look', label: a.name, note: chName, insertName: chName }
+        // 走 lookName 而不是裸 a.name：look.name 允许为空（决策 5b 的兜底就在那儿），
+        // 直接拿 a.name 当标签，空名的造型在列表里就是一行看不见的字。
+        return { asset: a, kind: 'look', label: lookName(a as Look, assets), note: chName, insertName: chName }
       }
       if (a.kind === 'location') {
         // 场景不显示「日/内」时段标签：@ 框只需名字，时段是另一维度信息，这里是噪音。

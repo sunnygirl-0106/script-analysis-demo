@@ -3,6 +3,7 @@ import { Dialog } from './Dialog'
 import { costShotPrompts, fmtCost } from '../services/cost'
 import ui from '../styles/ui.module.css'
 import s from './GoVisualDialog.module.css'
+import { ic } from './icons'
 
 // 「现在去生图？」软提醒（v2.6 §6.2）。
 //
@@ -38,7 +39,7 @@ export function GoVisualDialog({
         角色和场景的一致性会更好，也省得回头补。
       </div>
       <div className={s.est}>
-        ✦ 生成剩余 {n} 镜提示词约 {fmtCost(cost)} · 约 {estMinutes(n)} 分钟
+        {ic.spark} 生成剩余 {n} 镜提示词约 {fmtCost(cost)} · 约 {estMinutes(n)} 分钟
       </div>
       <div className={s.actions}>
         <button className={ui.btn} onClick={() => { setStage('visual'); onClose() }}>

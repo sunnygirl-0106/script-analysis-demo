@@ -7,6 +7,7 @@ import { computeTimeline, sceneDuration } from '../services/timeline'
 import { SceneTimeline } from './SceneTimeline'
 import { SceneSettingsDrawer } from './SceneSettingsDrawer'
 import { ShotRow } from './ShotRow'
+import { ic } from './icons'
 import s from './Storyboard.module.css'
 
 function fmt(sec: number): string {
@@ -15,8 +16,14 @@ function fmt(sec: number): string {
 
 // 九列脚本表，全部像素宽、可整列任意高度拖拽（对齐设计稿）。最后一列「最终提示词」钉在右侧不参与拖拽。
 const HEAD = ['镜号 · 时长', '景别', '镜头设计', '出场的人和物', '主要内容', '光影氛围', '对白 · 旁白', '音效', '最终提示词']
-const DEFAULT_WIDTHS = [112, 96, 136, 252, 320, 150, 220, 130, 150]
-const MIN_WIDTHS = [96, 76, 100, 170, 240, 100, 140, 96, 130]
+// 列宽随字号一起放大约 8%：正文从 12px 抬到 13px，同样的一句话要多占这么多横向空间，
+// 列宽不跟着放，多出来的字只会挤成更多行。
+// 末列「最终提示词」162 → 126：它装的只是一枚状态胶囊，不是内容。
+// 胶囊上原来写「待生成提示词」，可这一列的表头就叫「最终提示词」——
+// 一列里每一行都把表头重念一遍，念出来的那三个字全部换算成了横向空间。
+// 去掉之后最宽的一枚是「查看提示词」（约 102px），126 给它留了余量。
+const DEFAULT_WIDTHS = [120, 104, 148, 272, 346, 162, 238, 140, 126]
+const MIN_WIDTHS = [104, 82, 108, 184, 260, 108, 152, 104, 112]
 // 最右侧固定的删除列宽（钉在「最终提示词」右边，不参与拖拽）。需与 CSS 中 .cPromptStat 的 right 偏移一致。
 const DEL_W = 46
 
@@ -131,7 +138,7 @@ export function Storyboard({
       {showTimeline && only && (
         <SceneTimeline scene={only} shots={shots} activeId={hoverId} onHover={setHoverId} />
       )}
-      {readOnly && <div className={s.lockNote}>🔒 已进入项目资产库，剧本分析只读</div>}
+      {readOnly && <div className={s.lockNote}>{ic.lock} 已进入项目资产库，剧本分析只读</div>}
 
       <div className={[s.scroll, atRight ? s.scrollAtEnd : ''].join(' ')} ref={scrollRef}>
         <div className={s.grid} style={gridStyle}>
@@ -231,15 +238,21 @@ function SceneBlock({
     <>
       {!oneSceneOnly && (
         <div className={s.sceneBar}>
+          {/* 整条杠可点 = 只看这一场。这件事以前只靠一个系统 title 说，等一秒才冒出来、
+              还落在鼠标底下——换成杠上自己的一块提示：悬停时整条底色抬起、右端浮出
+              「只看这一场」，一眼就知道点下去会发生什么。 */}
           <button
             className={s.sceneBarMain}
-            title="只看这一场"
             onClick={() => setViewScope({ kind: 'scene', sceneId: scene.id })}
           >
             <span className={s.sceneBarTitle}>
               {epNo != null && <>第 {epNo} 集 · </>}第 {scene.no} 场 · {scene.name}
             </span>
             <span className={s.sceneBarMeta}>{scene.shotIds.length} 镜 · {total} 秒</span>
+            <span className={s.sceneBarPeek}>
+              <span className={s.sceneBarPeekIcon}>{ic.focus}</span>
+              只看这一场
+            </span>
           </button>
         </div>
       )}
@@ -285,7 +298,7 @@ function SceneBlock({
             }}
           >
             <span className={s.insRowBar} />
-            <span className={s.insRowPlus}>＋</span>
+            <span className={s.insRowPlus}>{ic.add}</span>
             <span className={s.insRowBar} />
           </div>
         )}

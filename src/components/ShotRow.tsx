@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { Dialog } from './Dialog'
 import { useStore } from '../store/useStore'
 import {
@@ -16,6 +16,7 @@ import { useEntityLit } from './EntityText'
 import { mountIssues } from '../services/completeness'
 import { isLongShot } from '../services/duration'
 import { useAutoHideHover } from '../hooks/useAutoHideHover'
+import { MountPicker } from './MountPicker'
 import { ShotFieldCell } from './ShotFieldCell'
 import { DialogueCell } from './DialogueCell'
 import { ShotPromptDialog } from './ShotPromptDialog'
@@ -43,7 +44,7 @@ function CastPill({
   m: MountRef
   shotId: string
   chName: string
-  costume: string
+  costume: ReactNode
   costumeWarn?: boolean
   readOnly: boolean
   onRemove: (e: MouseEvent) => void
@@ -62,7 +63,7 @@ function CastPill({
       </span>
       {!readOnly && (
         <button className={s.castX} onClick={onRemove} title="从本镜头移除">
-          ✕
+          {ic.close}
         </button>
       )}
     </span>
@@ -90,7 +91,7 @@ function MountChip({
       {name}
       {!readOnly && (
         <button className={[ui.chipX, s.chipHoverX].join(' ')} onClick={onRemove} title="从本镜头移除">
-          ✕
+          {ic.close}
         </button>
       )}
     </span>
@@ -188,7 +189,7 @@ export const ShotRow = memo(function ShotRow({ shot, startAt, endAt, active, alt
         m={m}
         shotId={shot.id}
         chName={nameOf(m)}
-        costume="⚠ 请选择角色造型"
+        costume={<>{ic.warn} 请选择角色造型</>}
         costumeWarn
         readOnly={readOnly}
         onRemove={remove(m.assetId)}
@@ -200,7 +201,7 @@ export const ShotRow = memo(function ShotRow({ shot, startAt, endAt, active, alt
   const long = isLongShot(shot.duration)
   const longWarn = (
     <div className={s.longWarn} title="该镜时长较长，部分视频模型可能需要分段生成。">
-      ⚠ 较长
+      {ic.warn} 较长
     </div>
   )
 
@@ -230,7 +231,7 @@ export const ShotRow = memo(function ShotRow({ shot, startAt, endAt, active, alt
       return (
         <div className={s.pstat}>
           <button className={[s.badge, s.badgeStale].join(' ')} onClick={() => setEditing('image')}>
-            ⚠ 待更新
+            {ic.warn} 待更新
           </button>
         </div>
       )
@@ -242,7 +243,7 @@ export const ShotRow = memo(function ShotRow({ shot, startAt, endAt, active, alt
           onClick={() => setEditing('image')}
           title="点击打开提示词，可手动填写或一键生成"
         >
-          待生成提示词
+          待生成
         </button>
       </div>
     )
@@ -275,7 +276,7 @@ export const ShotRow = memo(function ShotRow({ shot, startAt, endAt, active, alt
           }}
         >
           <span className={s.insRowBar} />
-          <span className={s.insRowPlus}>＋</span>
+          <span className={s.insRowPlus}>{ic.add}</span>
           <span className={s.insRowBar} />
         </div>
       )}
@@ -329,20 +330,35 @@ export const ShotRow = memo(function ShotRow({ shot, startAt, endAt, active, alt
         presets={CAMERA_MOVES}
       />
 
-      {/* ④ 出场的人和物：固定三组。这一列不再有手动挂载的口（v2.8 §6）——
-          它展示的是 AI 解析出来的结果，加人加物走「主要内容」里 @ 一下，
-          写进正文的同时自动挂载；chip 上的 × 保留，解析错了还是能摘掉。 */}
+      {/* ④ 出场的人和物：固定三组，每组末尾一颗「+」。
+          「+」平时透明占位，悬停本行才显形——不悬停时这一列仍是干净的解析结果。
+          它跟「主要内容」里 @ 一下是两条并行的路：@ 是写正文顺带挂，「+」是照着清单补。
+          chip 上的 × 保留，解析错了还是能摘掉。 */}
       <div className={s.cAsset}>
         <div className={s.assetGroups}>
           {/* 角色（着装角色 + 角色兜底）：每行一个角色，长角色不换行 */}
           <div className={s.assetGroup}>
             <div className={s.groupTitle}>{KIND_LABEL.character}</div>
             <div className={[s.groupItems, s.groupItemsRole].join(' ')}>
-              {roleEntries.map((m) => (
+              {roleEntries.map((m, i) => (
                 <div className={s.roleRow} key={m.assetId}>
                   {roleCard(m)}
+                  {/* 「+」跟在最后一个角色右边，不另起一行：这一列的行高是固定的
+                      （三组塞进 128px），多一行就要裁掉底下的道具。 */}
+                  {!readOnly && i === roleEntries.length - 1 && (
+                    <span className={s.addSlot}>
+                      <MountPicker shotId={shot.id} mounts={shot.mounts} kind="look" />
+                    </span>
+                  )}
                 </div>
               ))}
+              {!readOnly && roleEntries.length === 0 && (
+                <div className={s.roleRow}>
+                  <span className={s.addSlot}>
+                    <MountPicker shotId={shot.id} mounts={shot.mounts} kind="look" />
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -366,6 +382,11 @@ export const ShotRow = memo(function ShotRow({ shot, startAt, endAt, active, alt
                     onRemove={remove(m.assetId)}
                   />
                 ))}
+                {!readOnly && (
+                  <span className={s.addSlot}>
+                    <MountPicker shotId={shot.id} mounts={shot.mounts} kind={g.kind} />
+                  </span>
+                )}
               </div>
             </div>
           ))}

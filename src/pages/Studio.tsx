@@ -1,4 +1,5 @@
 import { useStore } from '../store/useStore'
+import { icLg } from '../components/icons'
 
 // 阶段③ 占位页。
 export function Studio() {
@@ -18,9 +19,10 @@ export function Studio() {
         padding: 40,
       }}
     >
-      <div style={{ fontSize: 40 }}>🎬</div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--t1)' }}>拍摄台</div>
-      <div style={{ fontSize: 12.5, lineHeight: 1.8, maxWidth: 420 }}>
+      {/* 场记板：原来是 🎬（彩色位图，各系统字形不一），换成同一套描边 svg。 */}
+      <div style={{ display: 'flex', color: 'var(--t4)' }}>{icLg.clapper}</div>
+      <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--t1)' }}>拍摄台</div>
+      <div style={{ fontSize: 13, lineHeight: 1.8, maxWidth: 420 }}>
         拍摄台暂未开放。这里将用于生成关键帧、视频和同期声。
       </div>
       <button
@@ -30,7 +32,7 @@ export function Studio() {
           color: 'var(--t2)',
           padding: '6px 14px',
           borderRadius: 'var(--rsm)',
-          fontSize: 12,
+          fontSize: 13,
         }}
       >
         ← 返回项目资产库

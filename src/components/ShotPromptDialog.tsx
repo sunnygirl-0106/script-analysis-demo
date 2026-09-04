@@ -9,6 +9,7 @@ import { PHASES, taskDuration } from '../services/taskRun'
 import { TaskProgress } from './TaskProgress'
 import ui from '../styles/ui.module.css'
 import s from './ShotPromptDialog.module.css'
+import { ic } from './icons'
 
 // 镜头提示词弹窗：画面 / 视频两段提示词的唯一出入口。
 // 待生成态：两个框留空、只给小灰字引导，右下「立即生成提示词」一键生成；
@@ -129,7 +130,7 @@ export function ShotPromptDialog({
           第 {shot.no} 镜 · {shot.title}
         </div>
         <button className={s.close} onClick={close} title="关闭">
-          ✕
+          {ic.close}
         </button>
       </div>
 
