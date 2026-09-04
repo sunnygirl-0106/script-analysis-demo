@@ -1,12 +1,9 @@
-/* 节奏弹窗（v2.5 §6.2）。宽 720，三张卡并排。色值只用 theme 变量。 */
+/* 节奏弹窗（v2.5 §6.2 / 弹窗 v3）。宽 800，三张卡并排。
+   壳 / 标题 / 说明 / 脚栏走公共 dialog.module.css，这里只写三张卡和摘要条。 */
 .dialog {
-  width: 720px;
-  max-width: calc(100vw - 40px);
-  background: var(--bg2);
-  border: 1px solid var(--edge);
-  border-radius: var(--rlg);
-  box-shadow: var(--sh-dialog);
-  padding: 20px 22px;
+  composes: dialog from '../styles/dialog.module.css';
+  --dlg-w: 800px;
+  --dlg-p: 34px 36px 28px;
 }
 
 .head {
@@ -20,137 +17,225 @@
   background: transparent;
   cursor: pointer;
   margin-left: auto;
-  color: var(--t4);
+  color: var(--dlg-t5);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 26px;
   height: 26px;
   padding: 0;
-  border-radius: var(--rsm);
   transition: 0.14s;
 }
-.close:hover { color: var(--t1); }
-
-.sub {
-  margin: -6px 0 16px;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--t3);
+.close:hover {
+  color: var(--dlg-t1);
 }
 
 .secTitle {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--t2);
-  margin-bottom: 10px;
+  margin-top: 26px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--dlg-t2);
 }
 
+/* minmax(0, 1fr) 而不是 1fr：`1fr` 的下限是 min-content，而卡里有好几行
+   white-space: nowrap 的文字（「镜头量较多」「预计约 350–380 镜 · ✦68」），
+   min-content 一撑，三条轨道加起来就超过弹窗宽度，整排卡直接捅到弹窗外面去。
+   下限压到 0 之后，轨道恒等分容器，挤不下就在卡内部折行，不再溢出容器。 */
 .cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+  margin-top: 14px;
 }
+/* 卡片选中态只换描边/底色，不换尺寸：描边从 1px 变 1.5px，内边距同步减 0.5px
+   把这半像素吃回去，否则三张卡在切换时会各自抖一下。 */
 .card {
   appearance: none;
   cursor: pointer;
-  padding: 14px 14px 13px;
+  display: flex;
+  flex-direction: column;
   text-align: left;
-  background: var(--bg1);
-  border: 1px solid var(--line);
-  border-radius: var(--rlg);
+  padding: 20px 20px 18px;
+  background: var(--dlg-card);
+  border: 1px solid var(--dlg-card-line);
+  border-radius: var(--dlg-r-card);
   transition: 0.18s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-.card:hover { border-color: var(--edge); }
+.card:hover:not(.cardOn) {
+  border-color: var(--edge);
+}
 .cardOn {
-  border-width: 2px;
-  border-color: var(--acc);
-  background: var(--bg2);
-  padding: 13px 13px 12px;
+  padding: 19.5px 19.5px 17.5px;
+  border: 1.5px solid var(--acc);
+  background: var(--dlg-card-on);
+  box-shadow: 0 0 0 3px var(--dlg-card-on-ring);
 }
 
 .cardHead {
   display: flex;
   align-items: center;
-  gap: 7px;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 22px;
 }
 .cardName {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--t1);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--dlg-t2);
 }
+.cardOn .cardName {
+  color: #fff;
+}
+/* 「推荐」是主色实心小胶囊——整个弹窗里唯一一处不是按钮却用主色实心的地方，
+   因为它要在三张卡里一眼被挑出来。 */
 .rec {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--t4);
-  border: 1px solid var(--line2);
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--on-acc);
+  background: var(--acc);
   border-radius: var(--rpill);
-  padding: 0.5px 7px;
+  padding: 2.5px 9px;
+  white-space: nowrap;
 }
+/* min-height 锁两行：三张卡的分隔线要横平，不能被文案长短拽歪。 */
 .cardDesc {
   margin-top: 8px;
   font-size: 13px;
   line-height: 1.65;
-  color: var(--t3);
-  min-height: 42px;
+  color: var(--dlg-t5);
+  min-height: 44px;
+  text-wrap: pretty;
+}
+.cardOn .cardDesc {
+  color: var(--dlg-acc-dim);
 }
 
-/* 三格小条：亮几格由档位定 */
+.cardLine {
+  height: 1px;
+  margin: 16px 0 14px;
+  background: var(--dlg-inset-line);
+}
+.cardOn .cardLine {
+  background: var(--dlg-card-on-line);
+}
+
+/* 三格小条：亮几格由档位定，放在标签左边——先看到量，再读到字。
+   允许折行：窄容器下让标签掉到第二行，而不是把卡片顶宽。 */
 .bars {
-  margin-top: 10px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 4px 9px;
+}
+.barsBox {
+  display: flex;
+  gap: 3px;
+  flex: none;
+}
+/* 四条规则的先后是有讲究的：亮格同时挂着 .bar 和 .barOn，两者优先级一样，
+   所以「亮」必须排在「暗」后面才盖得住。写反过一次——.cardOn .bar 排在
+   .cardOn .barOn 后面，把选中卡里刚点亮的格子又整排刷回了暗色，
+   于是点中哪张卡，那张卡的三格反而全灭。顺序即语义，别调。 */
+.bar {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--dlg-dash);
+}
+.cardOn .bar {
+  background: var(--dlg-bar-off);
+}
+.barOn {
+  background: var(--dlg-t6);
+}
+.cardOn .barOn {
+  background: var(--acc);
 }
 .barsLabel {
-  font-size: 13px;
-  color: var(--t4);
-  margin-right: 4px;
+  font-size: 12.5px;
+  color: var(--dlg-t5);
+  white-space: nowrap;
 }
-.bar {
-  width: 12px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--line2);
+.cardOn .barsLabel {
+  color: var(--dlg-acc-dim);
 }
-.barOn { background: var(--acc); }
 
 .cardSec {
-  margin-top: 8px;
+  margin-top: 11px;
   font-size: 13px;
-  color: var(--t4);
+  color: var(--dlg-t5);
 }
-.cardEst {
-  margin-top: 5px;
-  font-size: 13px;
-  color: var(--t2);
-}
-.cardEst b {
-  color: var(--acc);
-  font-weight: 700;
+.cardOn .cardSec {
+  color: var(--dlg-acc-dim);
 }
 
-/* 已选摘要 */
-.summary {
-  margin-top: 14px;
-  padding: 11px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--rlg);
-  background: var(--bg1);
-}
-.summaryTop {
+/* 估算行：「预计约」和单位压到最弱，中间那个数抬到 17px —— 三张卡对比的就是这个数。 */
+.cardEst {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 2px 7px;
+  margin-top: 13px;
+  font-size: 12.5px;
+  color: var(--dlg-t6);
+  white-space: nowrap;
+}
+.cardOn .cardEst {
+  color: var(--dlg-acc-dim);
+}
+.estNum {
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--dlg-t3);
+  font-variant-numeric: tabular-nums;
+}
+.cardOn .estNum {
+  color: #fff;
+}
+.cardOn .estUnit {
+  color: var(--acc);
+}
+
+/* 已选摘要：把三张卡里被选中的那一张的结论重复一遍，落在按钮正上方——
+   手要按「确认」之前，眼睛最后扫到的就是这一条。 */
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 16px;
+  padding: 16px 22px;
+  background: var(--dlg-inset);
+  border: 1px solid var(--dlg-inset-line);
+  border-radius: 18px;
 }
 .summaryTitle {
   font-size: 14px;
-  font-weight: 600;
-  color: var(--t1);
+  color: var(--dlg-t2);
+  white-space: nowrap;
+  flex: none;
+}
+.summaryTitle b {
+  color: #fff;
+  font-weight: 500;
 }
 .summaryVal {
-  margin-left: auto;
-  font-size: 14px;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+  flex: none;
+  font-size: 13.5px;
+  color: var(--dlg-t5);
+}
+.summaryVal b {
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.summaryCost {
   color: var(--acc);
 }

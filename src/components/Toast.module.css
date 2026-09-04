@@ -1,3 +1,6 @@
+/* 提示条（弹窗 v3）。原来整圈是主色描边——那是老习惯里「重要的东西就发青」，
+   可它飘在屏幕底部，无所谓焦点，一圈青边只是在喊。改成中性面 + 中性边，
+   主色只留给左边那颗点和右边的「撤销」：那两个才是这条提示的语义。 */
 .toast {
   position: fixed;
   left: 50%;
@@ -5,17 +8,17 @@
   transform: translateX(-50%);
   z-index: var(--z-toast);
   max-width: 640px;
-  padding: 11px 18px;
-  border-radius: var(--rlg);
-  background: var(--bg3);
-  border: 1px solid var(--acc-line);
-  color: var(--t1);
-  font-size: 13px;
+  padding: 12px 14px 12px 20px;
+  border-radius: var(--rpill);
+  background: var(--dlg-surface);
+  border: 1px solid var(--dlg-line);
+  color: var(--dlg-t2);
+  font-size: 13.5px;
   line-height: 1.5;
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+  box-shadow: var(--pop-sh);
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   animation: rise 0.18s ease-out;
 }
 .dot {
@@ -25,22 +28,23 @@
   background: var(--acc);
   flex: none;
 }
-/* 撤销按钮：紧贴文案右侧的天青胶囊 */
+/* 撤销：紧贴文案右侧的实心主色小胶囊。整条提示里唯一能按的东西，
+   所以它是唯一一处主色实心——跟弹窗脚栏里那颗确认按钮同一套语言，尺寸压两档。 */
 .action {
   flex: none;
-  margin-left: 3px;
-  padding: 3px 11px;
+  margin-left: 4px;
+  padding: 6px 14px;
   border-radius: var(--rpill);
-  border: 1px solid var(--acc-line);
-  background: var(--acc-bg);
-  color: var(--acc);
+  border: 1px solid transparent;
+  background: var(--acc);
+  color: var(--on-acc);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
+  line-height: 1;
   transition: 0.16s;
 }
 .action:hover {
-  background: rgb(var(--acc-rgb) / 0.2);
-  color: var(--acc-hi);
+  filter: brightness(1.06);
 }
 @keyframes rise {
   from {

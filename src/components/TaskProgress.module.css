@@ -1,8 +1,8 @@
 .wrap {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 8px 2px;
+  gap: 16px;
+  padding: 0;
 }
 
 .list {
@@ -18,22 +18,24 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: 13.5px;
+  line-height: 1.5;
   transition: opacity 0.25s ease;
 }
 
+/* 三态只用灰阶分：做完的压到最弱，正在做的抬到正文白，没开始的再淡下去。
+   以前当前项是主色 + 加粗——一屏三四个任务同时跑，满屏青字反而看不出哪个在动。 */
 .done {
-  color: var(--t4);
+  color: var(--dlg-t6);
   opacity: 1;
 }
 .active {
-  color: var(--acc-hi);
-  font-weight: 600;
+  color: var(--dlg-t1);
+  font-weight: 500;
 }
 .pending {
-  color: var(--t3);
-  opacity: 0.3;
+  color: var(--dlg-t5);
+  opacity: 0.42;
 }
 
 .mark {
@@ -47,18 +49,18 @@
   height: 13px;
 }
 .done .mark {
-  color: var(--t4);
+  color: var(--dlg-t6);
 }
 
 .label {
   flex: 1;
 }
 
-/* 细进度条 */
+/* 细进度条：3px 胶囊轨，只有一根线的厚度——它是「还在跑」的凭据，不是主角。 */
 .track {
   height: 3px;
   border-radius: var(--rpill);
-  background: var(--line2);
+  background: var(--dlg-seg-on);
   overflow: hidden;
 }
 .fill {
@@ -72,12 +74,12 @@
 
 /* 转圈 */
 .spinner {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
-  border: 2px solid var(--acc-line);
+  border: 1.5px solid var(--dlg-input-line);
   border-top-color: var(--acc);
-  animation: tp-spin 0.7s linear infinite;
+  animation: tp-spin 0.9s linear infinite;
   display: inline-block;
 }
 
@@ -86,8 +88,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: var(--acc-hi);
+  font-size: 13.5px;
+  color: var(--dlg-t3);
 }
 .compactLabel {
   white-space: nowrap;

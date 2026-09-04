@@ -20,6 +20,13 @@
   pointer-events: none;
 }
 
+/* 解析动效本体。素材自带发光圆底，尺寸压到 180 与原插画视觉体量对齐。 */
+.anim {
+  width: 180px;
+  height: 180px;
+  display: block;
+}
+
 .center {
   position: relative;
   display: flex;

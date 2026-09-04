@@ -47,10 +47,12 @@ export function SplitDensityDialog({
       className={s.dialog}
     >
       <div className={s.head}>
-        <div className={d.title}>{incremental ? '确认新增资产并开始拆分' : '确认资产并开始拆分'}</div>
+        <div className={[d.title, d.titleLg].join(' ')}>
+          {incremental ? '确认新增资产并开始拆分' : '确认资产并开始拆分'}
+        </div>
         <button className={s.close} onClick={onClose} title="关闭" aria-label="关闭">{ic.close}</button>
       </div>
-      <div className={s.sub}>
+      <div className={d.desc}>
         {scope} · 预计约 {scenes} 场。
       </div>
 
@@ -70,17 +72,22 @@ export function SplitDensityDialog({
                 {m.key === 'standard' && <span className={s.rec}>推荐</span>}
               </div>
               <div className={s.cardDesc}>{m.desc}</div>
+              <div className={s.cardLine} />
               <div className={s.bars}>
+                <span className={s.barsBox}>
+                  {[0, 1, 2].map((i) => (
+                    <span key={i} className={[s.bar, i < m.bars ? s.barOn : ''].join(' ')} />
+                  ))}
+                </span>
                 <span className={s.barsLabel}>
                   镜头量{m.bars === 3 ? '较多' : m.bars === 2 ? '适中' : '较少'}
                 </span>
-                {[0, 1, 2].map((i) => (
-                  <span key={i} className={[s.bar, i < m.bars ? s.barOn : ''].join(' ')} />
-                ))}
               </div>
               <div className={s.cardSec}>约 {EST.secPerShot[m.key]} 秒 / 镜</div>
               <div className={s.cardEst}>
-                预计约 {l}–{h} 镜 · <b>{fmtCost(costOf(m.key))}</b>
+                <span>预计约</span>
+                <span className={s.estNum}>{l}–{h}</span>
+                <span className={s.estUnit}>镜 · {fmtCost(costOf(m.key))}</span>
               </div>
             </button>
           )
@@ -88,10 +95,11 @@ export function SplitDensityDialog({
       </div>
 
       <div className={s.summary}>
-        <div className={s.summaryTop}>
-          <span className={s.summaryTitle}>已选{label}节奏</span>
-          <span className={s.summaryVal}>预计 {lo}–{hi} 镜 · {fmtCost(cost)}</span>
-        </div>
+        <span className={s.summaryTitle}>已选<b>{label}</b>节奏</span>
+        <span className={s.summaryVal}>
+          预计 <b>{lo}–{hi} 镜</b>
+          <span className={s.summaryCost}>· {fmtCost(cost)}</span>
+        </span>
       </div>
 
       <div className={d.actions}>

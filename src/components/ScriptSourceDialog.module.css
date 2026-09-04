@@ -1,100 +1,74 @@
-/* 选文件类弹窗的公共样式：容器 / tab / 拖拽上传区 / 粘贴框 / 底部灰字。
-   遮罩 / 标题 / 操作栏沿用 styles/dialog.module.css 的类。
-   这里只补「选剧本来源」弹窗特有的 tab / 拖放区 / 粘贴框。 */
+/* 「选剧本来源」弹窗特有的部分：拖放区 / 粘贴框 / 脚注。
+   壳、标题、说明、段控、脚栏都在 styles/dialog.module.css，这里不再抄一遍。 */
 .dialog {
-  width: 480px;
-  max-width: calc(100vw - 40px);
-  background: var(--bg2);
-  border: 1px solid var(--edge);
-  border-radius: var(--rlg);
-  box-shadow: var(--sh-dialog);
-  padding: 20px 22px;
+  composes: dialog from '../styles/dialog.module.css';
+  --dlg-w: 480px;
 }
 
-/* tab 切换 */
-.tabs {
-  display: inline-flex;
-  padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: var(--rpill);
-  background: var(--bg1);
-  margin-bottom: 12px;
-}
-.tab {
-  padding: 5px 16px;
-  font-size: 13px;
-  color: var(--t3);
-  border-radius: var(--rpill);
-  cursor: pointer;
-  transition: 0.14s;
-}
-.tab:hover {
-  color: var(--t1);
-}
-.tabOn {
-  background: var(--bg3);
-  color: var(--t1);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
-}
-
-/* 上传拖拽区 */
+/* 拖放区：虚线框 + 深底，是弹窗里唯一一块「等着你放东西进来」的地方，
+   所以给到 38px 的上下留白——比任何一个内嵌块都空，一眼认得出。 */
 .drop {
   display: block;
   width: 100%;
-  padding: 30px 16px;
-  border: 1.5px dashed var(--line);
-  border-radius: var(--rlg);
-  background: var(--bg1);
+  margin-top: 16px;
+  padding: 38px 20px;
+  border: 1px dashed var(--dlg-dash);
+  border-radius: var(--dlg-r-box);
+  background: var(--dlg-inset);
   text-align: center;
   cursor: pointer;
-  transition: 0.14s;
+  transition: 0.16s;
 }
 .drop:hover {
   border-color: var(--edge);
-  background: var(--bg3);
 }
 .dropOn {
   border-style: solid;
   border-color: var(--acc-line);
-  background: var(--acc-bg);
 }
 .dropName {
-  font-size: 14px;
-  color: var(--t1);
+  font-size: 14.5px;
+  color: var(--dlg-t3);
+}
+/* 「选择文件」这四个字是这块区域里唯一可点的东西，用主色 + 一道贴底下划线标出来。 */
+.pick {
+  color: var(--acc);
+  font-weight: 500;
+  box-shadow: inset 0 -1px 0 var(--dlg-underline);
 }
 .dropHint {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 13px;
-  color: var(--t4);
+  color: var(--dlg-t6);
 }
 
-/* 粘贴文本 */
+/* 粘贴文本：和拖放区同宽同圆角，切过去时框不跳。 */
 .paste {
   width: 100%;
-  height: 118px;
-  padding: 10px 12px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--t1);
-  background: var(--bg1);
-  border: 1px solid var(--line);
-  border-radius: var(--rlg);
+  height: 152px;
+  margin-top: 16px;
+  padding: 18px 20px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--dlg-t3);
+  background: var(--dlg-inset);
+  border: 1px solid var(--dlg-input-line);
+  border-radius: var(--dlg-r-box);
   resize: none;
+  outline: none;
+  transition: border-color 0.16s;
+}
+.paste::placeholder {
+  color: var(--dlg-ph);
 }
 .paste:focus {
-  outline: none;
   border-color: var(--acc-line);
 }
 
-/* 底部灰字提示 */
 .foot {
-  margin-top: 12px;
-  font-size: 12px;
+  margin-top: 14px;
+  font-size: 13px;
   line-height: 1.7;
-  color: var(--t4);
-}
-@keyframes reSpin {
-  to {
-    transform: rotate(360deg);
-  }
+  color: var(--dlg-t6);
 }

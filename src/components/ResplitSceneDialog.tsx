@@ -1,32 +1,28 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Dialog } from './Dialog'
 import { useStore } from '../store/useStore'
 import type { ShotDensity } from '../data/types'
 import { densityShots, hasDensityPresets } from '../services/density'
-import { isLongShot } from '../services/duration'
-import { sceneDuration } from '../services/timeline'
 import { costSplit, fmtCost } from '../services/cost'
 import { PHASES, taskDuration } from '../services/taskRun'
 import { TaskProgress } from './TaskProgress'
 import ui from '../styles/ui.module.css'
 import d from '../styles/dialog.module.css'
 import s from './ResplitSceneDialog.module.css'
-import { ic } from './icons'
 
 type Choice = ShotDensity | 'custom'
 
-const DENSITY_META: { key: ShotDensity; label: string; hint: string }[] = [
-  { key: 'compact', label: '紧凑', hint: '镜头更多，节奏更快' },
-  { key: 'standard', label: '标准', hint: '镜头数量与节奏较均衡' },
-  { key: 'loose', label: '舒缓', hint: '镜头更长，节奏更慢' },
+const DENSITY_META: { key: ShotDensity; label: string }[] = [
+  { key: 'compact', label: '紧凑' },
+  { key: 'standard', label: '标准' },
+  { key: 'loose', label: '舒缓' },
 ]
 
 // ★ 重拆本场：节奏设置 + 消耗汇总，一次确认到底。点确认后弹窗原地跑进度，跑完关闭。
-// 重拆保留，但**不再提取资产**——资产检查区换成一行静态灰字。
+// 重拆保留，但**不再提取资产**——资产口径降成估算行下面的一句灰字。
 // 重拆是「换一种拆法」，不是「再读一遍剧本」；要补资产请去项目资产库加。
 export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onClose: () => void }) {
   const scene = useStore((st) => st.project.scenes[sceneId])
-  const shots = useStore((st) => st.project.shots)
   const runResplitScene = useStore((st) => st.runResplitScene)
 
   const hasPresets = hasDensityPresets(sceneId)
@@ -38,21 +34,7 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
   const countOf = (dn: ShotDensity) =>
     hasPresets ? densityShots(sceneId, dn).length : dn === scene?.density ? curCount : 0
 
-  const longCount = useMemo(() => {
-    if (!hasPresets) return 0
-    let dn: ShotDensity
-    if (choice === 'custom') {
-      const list: ShotDensity[] = ['compact', 'standard', 'loose']
-      dn = list.reduce((best, c) =>
-        Math.abs(densityShots(sceneId, c).length - customN) <
-        Math.abs(densityShots(sceneId, best).length - customN) ? c : best,
-      )
-    } else dn = choice
-    return densityShots(sceneId, dn).filter((sh) => isLongShot(sh.duration)).length
-  }, [choice, customN, hasPresets, sceneId])
-
   if (!scene) return null
-  const total = sceneDuration(scene, shots)
 
   const density: ShotDensity = choice === 'custom' ? 'standard' : choice
   const estShots = choice === 'custom' ? customN : countOf(density) || curCount
@@ -67,77 +49,71 @@ export function ResplitSceneDialog({ sceneId, onClose }: { sceneId: string; onCl
   }
 
   return (
-    <Dialog
-      onClose={onClose}
-      dismissible={!running}
-      className={d.dialog}
-    >
-      <div className={d.title}>重新拆分第 {scene.no} 场 · {scene.name}</div>
+    <Dialog onClose={onClose} dismissible={!running} className={s.dialog}>
+      <div className={d.title}>重新拆分「第 {scene.no} 场 {scene.name}」</div>
 
       {running ? (
-        <div style={{ marginTop: 8 }}>
+        <div style={{ marginTop: 16 }}>
           <TaskProgress phases={PHASES.resplitScene} durationMs={taskDuration(cost)} onDone={runDone} />
         </div>
       ) : (
         <>
-          <div className={s.sub}>当前为 {curCount} 个镜头，共 {total} 秒</div>
+          <div className={d.desc}>
+            本场现有 {curCount} 镜将被替换，已生成的提示词会一并清除。
+          </div>
 
-          <div className={s.groupTitle}>镜头节奏</div>
-          <div className={s.opts}>
+          <div className={[d.seg, s.seg].join(' ')}>
             {DENSITY_META.map((m) => {
-              const on = choice === m.key
-              const isCurrent = scene.density === m.key
-              const disabled = !hasPresets && !isCurrent
+              // 没有预设方案的场只能重跑当前档：其余档没有可拆的结果，按了也没有意义。
+              const disabled = !hasPresets && scene.density !== m.key
               return (
-                <label key={m.key} className={[s.opt, on ? s.optOn : '', disabled ? s.optDisabled : ''].join(' ')}>
-                  <input type="radio" checked={on} disabled={disabled} onChange={() => setChoice(m.key)} />
-                  <span className={s.optLabel}>{m.label}</span>
-                  <span className={s.optCount}>{countOf(m.key)} 镜</span>
-                  <span className={s.optHint}>
-                    {isCurrent ? '当前方案' : m.hint}
-                    {isCurrent && <span className={s.badge}>当前</span>}
-                  </span>
-                </label>
+                <button
+                  key={m.key}
+                  className={[d.segBtn, choice === m.key ? d.segOn : ''].join(' ')}
+                  disabled={disabled}
+                  onClick={() => setChoice(m.key)}
+                >
+                  {m.label}
+                </button>
               )
             })}
-
-            <label className={[s.opt, choice === 'custom' ? s.optOn : '', !hasPresets ? s.optDisabled : ''].join(' ')}>
-              <input type="radio" checked={choice === 'custom'} disabled={!hasPresets} onChange={() => setChoice('custom')} />
-              <span className={s.optLabel}>期望镜头数</span>
-              <span className={s.optCount}>
-                <input
-                  className={s.countInput}
-                  type="number"
-                  min={3}
-                  max={20}
-                  value={customN}
-                  disabled={choice !== 'custom'}
-                  onChange={(e) => setCustomN(Math.max(3, Math.min(20, Number(e.target.value) || 3)))}
-                />
-                镜
-              </span>
-              <span className={s.optHint}>系统会尽量接近这个数量</span>
-            </label>
+            <button
+              className={[d.segBtn, choice === 'custom' ? d.segOn : ''].join(' ')}
+              disabled={!hasPresets}
+              onClick={() => setChoice('custom')}
+            >
+              指定镜头数
+            </button>
           </div>
 
-          {longCount > 0 && (
-            <div className={s.warn}>{ic.warn} 其中 {longCount} 个镜头时长较长，生成视频时可能需要拆成多段。</div>
+          {choice === 'custom' && (
+            <div className={s.customRow}>
+              <input
+                className={s.countInput}
+                type="number"
+                min={3}
+                max={20}
+                value={customN}
+                aria-label="期望镜头数"
+                onChange={(e) => setCustomN(Math.max(3, Math.min(20, Number(e.target.value) || 3)))}
+              />
+              <span>镜（3–20），系统会尽量接近这个数量</span>
+            </div>
           )}
 
-          <div className={s.assetNote}>
-            {ic.check} 本次将使用项目资产库中的现有资产，不新增。如需补充请到项目资产库添加。
+          <div className={s.est}>预计 {estShots} 镜</div>
+          <div className={s.note}>
+            使用项目资产库中的现有资产，不新增；本场原有分镜与人工修改不可恢复。
           </div>
 
-          <div className={s.impact}>
-            <div className={s.impactTitle}>预计消耗</div>
-            预计生成 {estShots} 个镜头 · 预计消耗 {fmtCost(cost)}。本场原有分镜、人工修改和镜头提示词将被新结果替换；此操作不可撤销。
-          </div>
-
-          <div className={d.actions}>
-            <button className={ui.btn} onClick={onClose}>取消</button>
-            <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={confirm}>
-              确认并重新拆分 · {fmtCost(cost)}
-            </button>
+          <div className={d.footRow}>
+            <span className={d.footNote}>消耗 {fmtCost(cost)}</span>
+            <span className={d.footBtns}>
+              <button className={ui.btn} onClick={onClose}>取消</button>
+              <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={confirm}>
+                重新拆分
+              </button>
+            </span>
           </div>
         </>
       )}

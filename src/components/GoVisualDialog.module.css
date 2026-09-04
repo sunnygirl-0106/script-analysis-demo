@@ -1,44 +1,8 @@
-
+/* 「现在去生图？」软提醒（v2.6 §6.2 / 弹窗 v3）。
+   壳 / 标题 / 说明 / 脚栏全在 dialog.module.css：这个弹窗除了一句话什么都没有，
+   本来也不该有自己的样式。原来那条主色描边的估算框已经并进脚栏左边的灰字——
+   它是「顺带告诉你要花多少」，不是要被强调的结论。 */
 .dialog {
-  width: 420px;
-  max-width: calc(100vw - 40px);
-  background: var(--bg2);
-  border: 1px solid var(--edge);
-  border-radius: var(--rlg);
-  box-shadow: var(--sh-dialog);
-  padding: 22px 24px 20px;
-}
-.title {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--t1);
-}
-.body {
-  margin-top: 12px;
-  font-size: 14px;
-  line-height: 1.85;
-  color: var(--t3);
-}
-.est {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 16px;
-  padding: 9px 13px;
-  font-size: 13px;
-  color: var(--acc);
-  background: var(--acc-bg);
-  border: 1px solid var(--acc-line);
-  border-radius: var(--rsm);
-}
-.est svg {
-  flex: none;
-  width: 13px;
-  height: 13px;
-}
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
+  composes: dialog from '../styles/dialog.module.css';
+  --dlg-w: 460px;
 }

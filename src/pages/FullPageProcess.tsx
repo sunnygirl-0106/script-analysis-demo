@@ -1,6 +1,5 @@
 import { useStore } from '../store/useStore'
 import { isRunningView, type RunningView } from '../data/types'
-import { ScriptIllustration } from '../components/ScriptIllustration'
 import { useTaskTimeline } from '../hooks/useTaskTimeline'
 import { PHASES, splitPhases, type Phase } from '../services/taskRun'
 import { DENSITY_LABEL } from '../services/density'
@@ -56,7 +55,12 @@ function Process({
     <div className={s.wrap} role="status" aria-live="polite">
       <div className={s.glow} />
       <div className={s.center}>
-        <ScriptIllustration active />
+        {/* 解析动效：设计给的 200×200 循环 webp（自带柔光与扫描框），
+            静态帧 png 作为 webp 解码前 / 不支持时的兜底。 */}
+        <picture>
+          <source srcSet="/analyzing.webp" type="image/webp" />
+          <img className={s.anim} src="/analyzing.png" alt="" aria-hidden />
+        </picture>
         <div className={s.title}>
           {heading}
           <span className={s.dots} aria-hidden>

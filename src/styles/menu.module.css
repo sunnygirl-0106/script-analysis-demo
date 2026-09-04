@@ -1,0 +1,115 @@
+/* 菜单 / 下拉的公共件（弹窗 v3 · 第三批）。
+ *
+ * 收的是三处「点一下弹出来一列可选项」：左侧目录的场/集操作菜单、整理剧本页的
+ * 「更多操作」、候选角色行的「＋造型」选服装。它们此前各写一遍，长出了三张脸——
+ * 圆角 12 / 8 / 8，描边 --line / --edge / --edge，hover 底 --bg3 / --raise / --raise，
+ * 菜单项圆角 --rsm / 5px / 4px。三处功能完全同构，没有一处差异是有理由的。
+ *
+ * 这里只管长相；「长在哪儿」（fixed 跟随光标 / absolute 贴着触发钮）留给各调用方，
+ * 因为那确实是三处真正不同的地方。
+ */
+
+/* 宽度走「变量 + 兜底」：壳自己不声明 width，调用方按需给 --menu-w。
+   写成 `min-width: 168px` 再让各文件覆盖，胜负就交给了 CSS Modules 的产出顺序，
+   而那个顺序跟着模块图走——这个坑上一轮踩过一次，不再踩第二次。 */
+.menu {
+  composes: pop from './dialog.module.css';
+  z-index: var(--z-pop);
+  min-width: var(--menu-w, 168px);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  animation: menuIn 0.14s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transform-origin: top left;
+}
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+/* 菜单项：13.5px 对齐段控里的字号，圆角吃 --dlg-r-input，
+   hover 只抬一层中性底（--dlg-seg-on），不给主色——菜单是「挑一件事做」，
+   主色留给做完之后要按的那颗按钮。 */
+.item {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: var(--dlg-r-input);
+  font-size: 13.5px;
+  color: var(--dlg-t2);
+  white-space: nowrap;
+  transition: background 0.14s, color 0.14s;
+}
+.item:hover:not(:disabled) {
+  background: var(--dlg-seg-on);
+  color: #fff;
+}
+.item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 图标压一档灰，hover 跟着文字一起提亮——它是文字的附属，不该自己先亮。 */
+.icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dlg-t5);
+  transition: color 0.14s;
+}
+.item:hover:not(:disabled) .icon {
+  color: var(--dlg-t2);
+}
+
+.sep {
+  height: 1px;
+  margin: 5px 6px;
+  background: var(--dlg-inset-line);
+}
+
+/* 危险项只把文字染红，hover 底仍是中性抬起。
+   给它一块红底会让整个菜单的重心被这一条拽过去——而它只是选项之一，
+   不是这个菜单的主张。（原来 EpisodeTree 用的是 --prop 道具黄，纯属笔误。） */
+.danger {
+  color: var(--dlg-danger-fg);
+}
+.danger .icon {
+  color: var(--dlg-danger-fg);
+  opacity: 0.75;
+}
+.danger:hover:not(:disabled) {
+  background: var(--dlg-seg-on);
+  color: var(--dlg-danger-fg);
+}
+.danger:hover:not(:disabled) .icon {
+  color: var(--dlg-danger-fg);
+  opacity: 1;
+}
+
+/* 弱化项：菜单底部那条「没有合适的服装？去『服装』新增 →」一类的出口。
+   不是一个并列选项，所以压到最弱的一档，hover 才提到主色。 */
+.exit {
+  composes: item;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--dlg-t6);
+  white-space: normal;
+  padding: 7px 12px;
+}
+.exit:hover:not(:disabled) {
+  background: transparent;
+  color: var(--acc);
+}

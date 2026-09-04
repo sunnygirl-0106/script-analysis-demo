@@ -9,6 +9,7 @@ import { FlowButton } from '../components/FlowButton'
 import { ic } from '../components/icons'
 import ui from '../styles/ui.module.css'
 import d from '../styles/dialog.module.css'
+import m from '../styles/menu.module.css'
 import s from './EpisodeOrganize.module.css'
 
 // 步骤① 整理剧本（v2.4 §3.2 + v2.5 §五）。单栏手风琴：一个集一块，展开看正文、直接改正文。
@@ -153,28 +154,28 @@ export function EpisodeOrganize() {
                 </button>
                 {/* 没有「重新上传剧本」（v2.5 §2.5）：换剧本 = 新建项目，演示里走顶栏「▶ 重新演示」。 */}
                 {pageMenu && (
-                  <div className={s.menu}>
+                  <div className={s.menuAt}>
                     <button
-                      className={s.menuItem}
+                      className={m.item}
                       disabled={hasSupplement}
                       title={hasSupplement ? '当前演示只有一份续集数据，已解析过' : undefined}
                       onClick={() => { setPageMenu(false); setSupplementOpen(true) }}
                     >
-                      <span className={s.menuIcon}>{ic.upload}</span>
+                      <span className={m.icon}>{ic.upload}</span>
                       上传文件 · 解析新集
                     </button>
                     <button
-                      className={s.menuItem}
+                      className={m.item}
                       onClick={() => { setPageMenu(false); createBlankEpisode() }}
                     >
-                      <span className={s.menuIcon}>{ic.add}</span>
+                      <span className={m.icon}>{ic.add}</span>
                       新建一集
                     </button>
                     <button
-                      className={s.menuItem}
+                      className={m.item}
                       onClick={() => { setPageMenu(false); showToast('已导出剧本（示例，不落盘）') }}
                     >
-                      <span className={s.menuIcon}>{ic.download}</span>
+                      <span className={m.icon}>{ic.download}</span>
                       下载剧本
                     </button>
                   </div>
@@ -254,20 +255,23 @@ export function EpisodeOrganize() {
       {/* 进下一步的确认：这一步要花星钻，而且提取完这些集就锁成只读、正文不能再改。
           两件事都得在点之前说清楚，所以这里停一下。 */}
       {confirmExtract && (
-        <Dialog onClose={() => setConfirmExtract(false)} className={s.confirm}>
-          <div className={s.confirmTitle}>确定进入下一步？</div>
-          <div className={s.confirmBody}>
-            下一步将对 {drafts.length} 集 · {draftWords.toLocaleString()} 字提取角色、服装、场景、道具四类资产，
-            消耗 {fmtCost(extractCost)}。提取后这些集的正文将不可再编辑。
+        <Dialog onClose={() => setConfirmExtract(false)} className={d.dialog}>
+          <div className={d.title}>提取资产</div>
+          <div className={d.desc}>
+            将对 {drafts.length} 集 · {draftWords.toLocaleString()} 字提取角色、服装、场景、道具。
+            提取后这些集的正文不可再编辑。
           </div>
-          <div className={s.confirmActions}>
-            <button className={ui.btn} onClick={() => setConfirmExtract(false)}>取消</button>
-            <button
-              className={[ui.btn, ui.btnPrimary].join(' ')}
-              onClick={() => { setConfirmExtract(false); startExtract() }}
-            >
-              确认
-            </button>
+          <div className={d.footRow}>
+            <span className={d.footNote}>消耗 {fmtCost(extractCost)}</span>
+            <span className={d.footBtns}>
+              <button className={ui.btn} onClick={() => setConfirmExtract(false)}>取消</button>
+              <button
+                className={[ui.btn, ui.btnPrimary].join(' ')}
+                onClick={() => { setConfirmExtract(false); startExtract() }}
+              >
+                开始提取
+              </button>
+            </span>
           </div>
         </Dialog>
       )}
@@ -275,8 +279,8 @@ export function EpisodeOrganize() {
       {/* 删除本集：不可逆，走一次确认。 */}
       {del && (
         <Dialog onClose={() => setConfirmDelete(null)} className={d.dialog}>
-          <div className={d.title}>删除第 {del.no} 集？</div>
-          <div className={d.danger}>
+          <div className={d.title}>删除第 {del.no} 集</div>
+          <div className={d.desc}>
             这一集的 {del.wordCount.toLocaleString()} 字原文将从项目中移除，后续集号顺延。
             本集还没提取过资产，删除不影响项目资产库。此操作不可撤销。
           </div>
@@ -286,7 +290,7 @@ export function EpisodeOrganize() {
               className={[ui.btn, ui.btnDanger].join(' ')}
               onClick={() => { deleteDraftEpisode(del.id); setConfirmDelete(null) }}
             >
-              删除
+              删除本集
             </button>
           </div>
         </Dialog>

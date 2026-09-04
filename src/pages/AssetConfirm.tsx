@@ -11,7 +11,10 @@ import { PanelResizer } from '../components/PanelResizer'
 import { CandidatePromptDialog } from '../components/CandidatePromptDialog'
 import { SplitDensityDialog } from '../components/SplitDensityDialog'
 import { FlowButton } from '../components/FlowButton'
+import { Dialog } from '../components/Dialog'
 import ui from '../styles/ui.module.css'
+import d from '../styles/dialog.module.css'
+import m from '../styles/menu.module.css'
 import s from './AssetConfirm.module.css'
 
 // 步骤② 确认资产清单（v2.0 + v2.3 §三 + v2.4 §四）：提取结果先落 candidates，用户确认后才入库。
@@ -188,7 +191,9 @@ export function AssetConfirm() {
           {project.episodes.map((ep) => (
             <div key={ep.id} className={s.sceneBlock}>
               <div className={s.epMast}>
-                <div className={s.epTitle}>第 {ep.no} 集 · {ep.title}</div>
+                {/* 集头只报「第 N 集」：AI 起的那个标题在这一步没有用处，
+                    跟步骤① 的集头保持同一口径。 */}
+                <div className={s.epTitle}>第 {ep.no} 集</div>
               </div>
               {toBeats(ep.rawText).map((line, i) => (
                 <p key={i} className={s.beat}>{highlight(line, matcher, hotSet)}</p>
@@ -609,11 +614,12 @@ function CostumePicker({
       {pool.length > 0 && (
         <div className={s.pickerList}>
           {pool.map((c) => (
-            <button key={c.id} className={s.pickerItem} onClick={() => onPick(c.id)}>{c.name}</button>
+            <button key={c.id} className={m.item} onClick={() => onPick(c.id)}>{c.name}</button>
           ))}
         </div>
       )}
-      <button className={s.pickerGo} onClick={() => { setTab('costume'); onClose() }}>
+      {pool.length > 0 && <div className={m.sep} />}
+      <button className={m.exit} onClick={() => { setTab('costume'); onClose() }}>
         没有合适的服装？去「服装」新增 →
       </button>
     </div>
@@ -670,28 +676,39 @@ function NewAssetDialog({ kind, onClose }: { kind: AssetKind; onClose: () => voi
     onClose()
   }
 
+  const label = KIND_LABEL[kind]
+
   return (
-    <div className={s.newOverlay} onClick={onClose}>
-      <div className={s.newDialog} onClick={(e) => e.stopPropagation()}>
-        <div className={s.newTitle}>新增{KIND_LABEL[kind]}</div>
+    <Dialog onClose={onClose} className={s.newDialog}>
+      <div className={d.title}>新增{label}</div>
+      <div className={d.desc}>先填名字，提示词稍后可以再补。</div>
+      <div className={d.field}>
+        <div className={d.label}>{label}名</div>
         <input
-          className={s.newInput}
+          className={[d.input, dup ? d.inputErr : ''].join(' ')}
           autoFocus
-          placeholder={`${KIND_LABEL[kind]}名称`}
+          placeholder={`例如：${NEW_ASSET_EG[kind]}`}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') submit() }}
         />
-        {dup && (
-          <div className={s.newWarn}>已存在同名{KIND_LABEL[kind]}「{trimmed}」，名称不能重复。</div>
-        )}
-        <div className={s.newActions}>
-          <button className={ui.btn} onClick={onClose}>取消</button>
-          <button className={[ui.btn, ui.btnPrimary].join(' ')} disabled={!trimmed || dup} onClick={submit}>
-            新增
-          </button>
-        </div>
+        {dup && <div className={d.errText}>已有同名{label}，换一个名字。</div>}
       </div>
-    </div>
+      <div className={d.actions}>
+        <button className={ui.btn} onClick={onClose}>取消</button>
+        <button className={[ui.btn, ui.btnPrimary].join(' ')} disabled={!trimmed || dup} onClick={submit}>
+          添加
+        </button>
+      </div>
+    </Dialog>
   )
+}
+
+/** 占位符里的举例。四类各给一个，比「角色名称」这种同义反复更能说明该填什么。 */
+const NEW_ASSET_EG: Record<AssetKind, string> = {
+  character: '外卖员',
+  costume: '外卖工装',
+  location: '楼道',
+  prop: '外卖箱',
+  look: '外卖员 · 工装',
 }

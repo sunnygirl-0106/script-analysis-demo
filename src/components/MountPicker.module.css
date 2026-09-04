@@ -36,34 +36,35 @@
   outline-offset: 1px;
 }
 
+/* ── 挂载弹层 · 浮层 v3 ⑭ ──
+   壳走 dialog.module.css 的 .pop。380 宽（原来 260）：这一列的候选是
+   「苏可 · 宽松连帽卫衣」这种带造型后缀的长名字，260 里十条有八条要省略号，
+   等于把「选哪个」变成「猜哪个」。 */
 .pop {
+  composes: pop from '../styles/dialog.module.css';
   position: fixed;
   z-index: 70;
-  max-height: 340px;
+  max-height: 420px;
   display: flex;
   flex-direction: column;
-  background: var(--panel);
-  border: 1px solid var(--ctrl);
-  border-radius: 12px;
-  box-shadow: 0 18px 44px rgb(0 0 0 / 0.65);
+  padding: 18px 18px 16px;
   overflow: hidden;
 }
-.searchBox {
-  flex: none;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--line2);
-}
 .search {
+  flex: none;
   width: 100%;
-  height: 30px;
-  padding: 0 10px;
-  border-radius: var(--rsm);
-  border: 1px solid var(--line);
-  background: var(--bg3);
-  color: var(--t1);
-  font-size: 13px;
+  padding: 11px 14px;
+  border-radius: var(--dlg-r-input);
+  border: 1px solid var(--dlg-btn-line);
+  background: var(--dlg-inset);
+  color: var(--dlg-t1);
+  font: inherit;
+  font-size: 13.5px;
   outline: none;
   transition: border-color 0.14s;
+}
+.search::placeholder {
+  color: var(--dlg-ph);
 }
 .search:focus {
   border-color: var(--acc-line);
@@ -72,46 +73,53 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 6px;
 }
+/* 组名用主色，不用类目实体色（导出稿 ⑭ 写的是 #8ce7e8）。
+   一个挂载弹层只挑一类东西（点角色的 ＋ 就只列角色），所以这行是「当前这一组」的
+   小标题，不是一枚类目色卡——底下每条都同类，用紫/绿/黄区分谁跟谁没有意义。
+   要认类目，标题文字本身就写着「角色」。 */
 .groupLabel {
-  padding: 5px 8px;
-  font-size: 12px;
-  letter-spacing: 0.6px;
+  padding: 0 4px;
+  margin: 16px 0 6px;
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  color: var(--acc);
 }
+/* 候选行不给底色也不给圆角：勾没勾由左边那个圆圈说。hover 才浮一层浅底。 */
 .opt {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 9px;
-  border-radius: var(--rsm);
+  gap: 12px;
+  padding: 11px 6px;
+  border-radius: var(--dlg-r-input);
   cursor: pointer;
-  font-size: 13px;
-  color: var(--t3);
+  font-size: 14px;
+  color: var(--dlg-t2);
   transition: background 0.14s, color 0.14s;
 }
 .opt:hover {
-  background: var(--bg3);
-  color: var(--t1);
+  background: var(--dlg-inset);
+  color: var(--dlg-t1);
 }
 .optOn {
-  color: var(--t1);
+  color: #fff;
 }
 .optName {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .check {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--edge);
+  border: 1px solid var(--dlg-check-line);
   background: transparent;
   color: var(--on-acc);
 }
@@ -129,21 +137,14 @@
   opacity: 1;
 }
 .note {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--t4);
+  flex: none;
+  font-size: 12.5px;
+  color: var(--dlg-t6);
   white-space: nowrap;
 }
 .empty {
-  padding: 14px 12px;
-  font-size: 13px;
-  color: var(--t5);
+  padding: 18px 6px;
+  font-size: 13.5px;
+  color: var(--dlg-t5);
   text-align: center;
-}
-.foot {
-  flex: none;
-  padding: 8px 12px;
-  border-top: 1px solid var(--line2);
-  font-size: 12px;
-  color: var(--t4);
 }

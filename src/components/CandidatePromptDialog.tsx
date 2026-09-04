@@ -4,6 +4,7 @@ import { TaskProgress } from './TaskProgress'
 import { PHASES, taskDuration } from '../services/taskRun'
 import { costAssetPrompt, fmtCost } from '../services/cost'
 import ui from '../styles/ui.module.css'
+import d from '../styles/dialog.module.css'
 import s from './CandidatePromptDialog.module.css'
 import { ic } from './icons'
 
@@ -50,22 +51,11 @@ export function CandidatePromptDialog({
       className={s.pop}
     >
       <div className={s.head}>
-        <span className={s.headName}>{title} · 生成提示词</span>
-        <button className={s.close} onClick={onClose} title="关闭">{ic.close}</button>
-      </div>
-
-      <textarea
-        className={s.textarea}
-        value={draft}
-        autoFocus
-        readOnly={!editable}
-        spellCheck={false}
-        placeholder={editable ? '在此填入详细提示词' : ''}
-        onChange={(e) => setDraft(e.target.value)}
-      />
-
-      <div className={s.foot}>
-        <span className={s.footLeft}>
+        <span className={s.headLeft}>
+          <span className={[d.title, s.headName].join(' ')}>{title} · 生成提示词</span>
+          {!editable && <span className={s.roTag}>已入库 · 只读</span>}
+        </span>
+        <span className={s.headSlot}>
           {showComplete &&
             (running ? (
               <TaskProgress
@@ -78,12 +68,38 @@ export function CandidatePromptDialog({
                 }}
               />
             ) : (
-              <button className={s.completeBtn} onClick={() => setRunning(true)}>
-                {ic.spark} AI 结合剧本补全 · {fmtCost(costAssetPrompt())}
+              <button
+                className={[ui.btn, ui.btnSm, s.completeBtn].join(' ')}
+                onClick={() => setRunning(true)}
+              >
+                {ic.spark} AI 补全 · {fmtCost(costAssetPrompt())}
               </button>
             ))}
+          <button className={d.close} onClick={onClose} title="关闭">
+            {ic.close}
+          </button>
         </span>
-        <span className={s.footRight}>
+      </div>
+      {/* 可编辑时不写说明：标题已经说了这是什么，脚栏已经说了会自动保存，
+          中间再插一句「改完记得保存」是在说一件界面本身已经做到的事。
+          只读态才需要一句——「为什么不能改」和「那要改怎么办」不写出来没人猜得到。 */}
+      {!editable && (
+        <div className={d.desc}>资产已入库，提示词不再可改。需要调整请新增造型。</div>
+      )}
+
+      <textarea
+        className={s.textarea}
+        value={draft}
+        autoFocus
+        readOnly={!editable}
+        spellCheck={false}
+        placeholder={editable ? '在此填入详细提示词' : ''}
+        onChange={(e) => setDraft(e.target.value)}
+      />
+
+      <div className={s.foot}>
+        {editable && <span className={d.footNote}>自动保存为最新版本</span>}
+        <span className={d.footBtns}>
           <button className={ui.btn} onClick={onClose}>取消</button>
           {editable && (
             <button

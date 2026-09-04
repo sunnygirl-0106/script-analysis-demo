@@ -8,6 +8,7 @@ import { costShotPrompts, fmtCost } from '../services/cost'
 import { PHASES, taskDuration } from '../services/taskRun'
 import { TaskProgress } from './TaskProgress'
 import ui from '../styles/ui.module.css'
+import d from '../styles/dialog.module.css'
 import s from './ShotPromptDialog.module.css'
 import { ic } from './icons'
 
@@ -126,10 +127,10 @@ export function ShotPromptDialog({
       className={s.dialog}
     >
       <div className={s.titleRow}>
-        <div className={s.title}>
+        <div className={[d.title, d.titleLg].join(' ')}>
           第 {shot.no} 镜 · {shot.title}
         </div>
-        <button className={s.close} onClick={close} title="关闭">
+        <button className={d.close} onClick={close} title="关闭">
           {ic.close}
         </button>
       </div>
@@ -179,7 +180,7 @@ export function ShotPromptDialog({
         ))}
       </div>
 
-      {!readOnly && <div className={s.foot}>输入 @ 选择资产 · 自动保存</div>}
+      {!readOnly && <div className={s.hint}>输入 @ 选择资产 · 自动保存</div>}
 
       <div className={s.actions}>
         <label className={s.modelPick}>
@@ -197,11 +198,12 @@ export function ShotPromptDialog({
             ))}
           </select>
         </label>
-        <span className={s.spacer} />
         {readOnly ? (
-          <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={close}>
-            关闭
-          </button>
+          <span className={s.footBtns}>
+            <button className={[ui.btn, ui.btnPrimary].join(' ')} onClick={close}>
+              关闭
+            </button>
+          </span>
         ) : running ? (
           <span style={{ flex: 1, minWidth: 0 }}>
             <TaskProgress
@@ -212,14 +214,24 @@ export function ShotPromptDialog({
             />
           </span>
         ) : (
-          <button
-            className={[ui.btn, ui.btnPrimary].join(' ')}
-            disabled={generating}
-            onClick={() => setRunning(true)}
-          >
-            {generating && <span className={s.spin} />}
-            {revealed ? `确认并重新生成 · ${fmtCost(GEN_COST)}` : `生成 · ${fmtCost(GEN_COST)}`}
-          </button>
+          <span className={s.footBtns}>
+            {/* 待生成态只有一颗主按钮：那时「取消」和右上角的 ✕ 是同一件事，
+                摆两个出口反而要人挑。已生成态才给「取消」——那一栏此刻是
+                「要不要花 ✦6 覆盖现有提示词」，需要一个明确的「不」。 */}
+            {revealed && (
+              <button className={ui.btn} onClick={close}>
+                取消
+              </button>
+            )}
+            <button
+              className={[ui.btn, ui.btnPrimary].join(' ')}
+              disabled={generating}
+              onClick={() => setRunning(true)}
+            >
+              {generating && <span className={s.spin} />}
+              {revealed ? `确认并重新生成 · ${fmtCost(GEN_COST)}` : `生成 · ${fmtCost(GEN_COST)}`}
+            </button>
+          </span>
         )}
       </div>
     </Dialog>

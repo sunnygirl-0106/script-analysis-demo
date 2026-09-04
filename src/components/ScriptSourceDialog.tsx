@@ -20,6 +20,8 @@ type Mode = 'first' | 'supplement'
 
 const COPY: Record<Mode, {
   title: string
+  /** 标题下那一句说明，最多两行。 */
+  desc: string
   file: string
   paste: string
   foot?: string
@@ -27,15 +29,17 @@ const COPY: Record<Mode, {
 }> = {
   first: {
     title: '上传剧本',
+    desc: '支持 txt、docx、fdx。上传后自动分集分场。',
     file: '最后的尊严-剧本.docx',
     paste: '粘贴剧本全文…',
     cta: '开始整理',
   },
   supplement: {
     title: '上传文件 · 解析新集',
+    desc: '支持 txt、docx、fdx。新集接在现有剧集之后。',
     file: '续集-第3集.docx',
     paste: '粘贴新集剧本…',
-    foot: '新的集会接在现有剧集之后，整理完成后再提取资产。',
+    foot: '整理完成后再提取资产。',
     cta: '解析新集',
   },
 }
@@ -78,22 +82,23 @@ export function ScriptSourceDialog({ mode, onClose }: { mode: Mode; onClose: () 
       {running ? (
         <>
           <div className={d.title}>正在整理新集</div>
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 16 }}>
             <TaskProgress phases={PHASES.appendParse} durationMs={ORGANIZE_MS} onDone={supplementDone} />
           </div>
         </>
       ) : (
         <>
           <div className={d.title}>{c.title}</div>
-          <div className={rs.tabs}>
+          <div className={d.desc}>{c.desc}</div>
+          <div className={d.seg} style={{ marginTop: 20 }}>
             <button
-              className={[rs.tab, srcTab === 'upload' ? rs.tabOn : ''].join(' ')}
+              className={[d.segBtn, srcTab === 'upload' ? d.segOn : ''].join(' ')}
               onClick={() => setSrcTab('upload')}
             >
               上传文件
             </button>
             <button
-              className={[rs.tab, srcTab === 'paste' ? rs.tabOn : ''].join(' ')}
+              className={[d.segBtn, srcTab === 'paste' ? d.segOn : ''].join(' ')}
               onClick={() => setSrcTab('paste')}
             >
               粘贴文本
@@ -110,10 +115,9 @@ export function ScriptSourceDialog({ mode, onClose }: { mode: Mode; onClose: () 
                   <div className={rs.dropHint}>点击可重新选择</div>
                 </>
               ) : (
-                <>
-                  <div className={rs.dropName}>拖拽剧本文件到此处，或点击选择文件</div>
-                  <div className={rs.dropHint}>支持 txt / docx / fdx</div>
-                </>
+                <div className={rs.dropName}>
+                  拖到这里，或<span className={rs.pick}>选择文件</span>
+                </div>
               )}
             </button>
           ) : (

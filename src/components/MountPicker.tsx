@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore'
 import { placeFlip } from '../services/popover'
 import type { Asset, Look, MountableKind, MountRef } from '../data/types'
 import { lookName } from '../services/looks'
-import { KIND_COLOR, KIND_LABEL } from './entity'
+import { KIND_LABEL } from './entity'
 import s from './MountPicker.module.css'
 import { ic } from './icons'
 
@@ -18,8 +18,8 @@ import { ic } from './icons'
 // 弹层走 portal 挂到 body：分镜表的行是固定高度、overflow 受限的网格单元，
 // 绝对定位的弹层会被祖先裁掉，所以用 fixed 定位 + 实时测算触发器位置。
 
-const POP_W = 260
-const POP_MAX_H = 340
+const POP_W = 380
+const POP_MAX_H = 420
 
 /** 每条候选右侧的说明：着装角色 → 所属角色，场景 → 时段，道具无。 */
 function noteOf(a: Asset, assets: Record<string, Asset>): string {
@@ -138,17 +138,15 @@ export function MountPicker({
             style={{ top: pos.top, left: pos.left, width: POP_W }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className={s.searchBox}>
-              <input
-                className={s.search}
-                placeholder={`搜索${label}…`}
-                value={q}
-                autoFocus
-                onChange={(e) => setQ(e.target.value)}
-              />
-            </div>
+            <input
+              className={s.search}
+              placeholder={`搜索${label}…`}
+              value={q}
+              autoFocus
+              onChange={(e) => setQ(e.target.value)}
+            />
             <div className={s.list}>
-              <div className={s.groupLabel} style={{ color: KIND_COLOR[kind] }}>{label}</div>
+              <div className={s.groupLabel}>{label}</div>
               {options.length === 0 && <div className={s.empty}>没有找到相关{label}</div>}
               {options.map((o) => {
                 const on = mountedIds.has(o.asset.id)
@@ -169,7 +167,6 @@ export function MountPicker({
                 )
               })}
             </div>
-            <div className={s.foot}>点一下加进本镜，再点一下移除</div>
           </div>,
           document.body,
         )}

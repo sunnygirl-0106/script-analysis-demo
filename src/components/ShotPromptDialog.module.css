@@ -1,46 +1,26 @@
 
+/* 镜头提示词弹窗（弹窗 v3）：左右两栏，各一段提示词。
+   壳与标题走 dialog.module.css，这里只写两栏和那套「彩色背板 + 透明 textarea」。 */
 .dialog {
-  width: 1000px;
-  max-width: 94vw;
+  composes: dialog from '../styles/dialog.module.css';
+  --dlg-w: 980px;
+  --dlg-maxw: 94vw;
+  --dlg-p: 32px 36px 28px;
   max-height: 88vh;
-  background: var(--bg2);
-  border: 1px solid var(--line);
-  border-radius: var(--rlg);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 24px 60px rgb(0 0 0 / 0.45);
-  padding: 18px 18px 16px;
 }
 .titleRow {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.title {
-  font-size: 14px;
-  color: var(--t2);
-  font-weight: 600;
-}
-.close {
-  margin-left: auto;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--rpill);
-  color: var(--t4);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: 0.16s;
-}
-.close:hover {
-  background: var(--bg3);
-  color: var(--t1);
+  justify-content: space-between;
+  gap: 20px;
 }
 
 .cols {
   flex: 1;
   min-height: 0;
+  margin-top: 22px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
@@ -56,45 +36,46 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--rlg);
-  background: var(--panel);
+  border: 1px solid var(--dlg-box-line);
+  border-radius: var(--dlg-r-box);
+  background: var(--dlg-inset);
   overflow: hidden;
 }
+/* 段名与「N 字」基线对齐（align-items:baseline），不是居中：
+   14.5px 的段名和 12.5px 的字数居中对齐会显得字数在往上飘。 */
 .h {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 9px;
-  padding: 9px 13px;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--dlg-inset-line);
 }
 .h b {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--t2);
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--dlg-t1);
 }
 .h em {
   font-style: normal;
-  font-size: 12px;
-  color: var(--t5);
+  font-size: 12.5px;
+  color: var(--dlg-t6);
   font-variant-numeric: tabular-nums;
 }
 .copy {
   margin-left: auto;
-  height: 24px;
-  padding: 0 10px;
+  padding: 5px 13px;
   border-radius: var(--rpill);
-  border: 1px solid var(--ctrl);
+  border: 1px solid var(--dlg-btn-line);
   background: transparent;
-  color: var(--t4);
-  font-size: 12px;
+  color: var(--dlg-t3d);
+  font-size: 12.5px;
+  white-space: nowrap;
   cursor: pointer;
   transition: 0.15s;
 }
 .copy:hover {
-  border-color: var(--acc-line);
-  color: var(--acc);
+  border-color: var(--edge);
+  color: var(--dlg-t1);
 }
 /* 彩色背板 + 透明文字 textarea 叠层：查看与编辑都能看见按类目上色的实体名。
    背板渲染彩色文字，textarea 文字透明、只留光标，两者共用同一套版心必须像素对齐。 */
@@ -102,7 +83,7 @@
   position: relative;
   flex: 1;
   min-height: 46vh;
-  background: var(--bg1);
+  background: var(--dlg-inset);
   overflow: hidden;
 }
 .backdrop,
@@ -112,28 +93,28 @@
   margin: 0;
   border: none;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 13.5px;
   line-height: 1.85;
   letter-spacing: normal;
-  padding: 12px 14px;
+  padding: 18px;
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: break-word;
 }
 .backdrop {
-  color: var(--t1);
+  color: var(--dlg-t3);
   overflow: hidden;
   pointer-events: none;
   user-select: none;
 }
 .ph {
-  color: var(--t5);
+  color: var(--dlg-ph);
 }
 .textarea {
   resize: none;
   background: transparent;
   color: transparent;
-  caret-color: var(--t1);
+  caret-color: var(--dlg-t1);
   overflow: auto;
 }
 .textarea:focus {
@@ -144,36 +125,50 @@
   cursor: default;
 }
 
-.foot {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--t5);
+/* 「输入 @ 选择资产 · 自动保存」自成一行，落在两栏与分隔线之间：
+   它说的是上面那两个框怎么用，不是脚栏那颗按钮的附注。 */
+.hint {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--dlg-t6);
 }
+
 .actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 10px;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--dlg-inset-line);
 }
-.spacer {
-  flex: 1;
+/* 脚栏两端：左边「生成模型 + 下拉」，右边「取消 + 主按钮」。 */
+.footBtns {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
 }
 .modelPick {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--t4);
+  gap: 12px;
+  font-size: 13.5px;
+  color: var(--dlg-t4);
+  white-space: nowrap;
+  flex: none;
 }
+/* 模型下拉：和次按钮同一套描边胶囊，只是里面装的是 select。 */
 .modelSelect {
-  background: var(--bg3);
-  border: 1px solid var(--line);
-  border-radius: var(--rsm);
-  padding: 5px 9px;
+  background: transparent;
+  border: 1px solid var(--dlg-btn-line);
+  border-radius: var(--rpill);
+  padding: 8px 16px;
   font: inherit;
-  font-size: 13px;
-  color: var(--t1);
+  font-size: 13.5px;
+  color: var(--dlg-t3);
   outline: none;
+  cursor: pointer;
   transition: 0.16s;
 }
 .modelSelect:hover:not(:disabled) {

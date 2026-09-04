@@ -81,6 +81,10 @@ export function ScriptPanel() {
     )
   }
 
+  // 场 → 集。判据与右边分镜表的场区块头保持一致（Storyboard 里那句 epNo）：
+  // 认 episodes[].sceneIds，而不是 scene.episodeId，两处口径别分叉。
+  const epNoOf = (sc: Scene) => project.episodes.find((e) => e.sceneIds.includes(sc.id))?.no
+
   const shotCount = scenes.reduce((n, sc) => n + sc.shotIds.length, 0)
   const totalSec = scenes.reduce(
     (sum, sc) => sum + sc.shotIds.reduce((n, id) => n + (project.shots[id]?.duration ?? 0), 0),
@@ -110,7 +114,7 @@ export function ScriptPanel() {
       </div>
       <div className={s.script}>
         {scenes.map((sc) => (
-          <SceneScript key={sc.id} scene={sc} assets={assets} />
+          <SceneScript key={sc.id} scene={sc} epNo={epNoOf(sc)} assets={assets} />
         ))}
         {scenes.length === 0 && (
           <div className={s.body}>
@@ -123,13 +127,23 @@ export function ScriptPanel() {
 }
 
 /** 一场原文：小报头 + 连续正文。 */
-function SceneScript({ scene, assets }: { scene: Scene; assets: Record<string, Asset> }) {
+function SceneScript({
+  scene, epNo, assets,
+}: {
+  scene: Scene
+  epNo: number | undefined
+  assets: Record<string, Asset>
+}) {
   const beats = toBeats(scene.rawText)
   return (
     <>
+      {/* 一行报头：集 · 场 · 场名，与右边分镜表的场区块头同一句式。
+          集号必须在——场号是集内编号，跨集会从 1 重来，全剧视图下一屏铺好几集的场，
+          只写「第一场」会直接读串。 */}
       <div className={s.masthead}>
-        <div className={s.eyebrow}>第{cnNum(scene.no)}场</div>
-        <div className={s.title}>{scene.name}</div>
+        <div className={s.title}>
+          {epNo != null && <>第 {epNo} 集 · </>}第{cnNum(scene.no)}场 · {scene.name}
+        </div>
       </div>
       <div className={s.body}>
         {beats.length > 0 ? (

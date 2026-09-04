@@ -8,6 +8,7 @@ import { ResplitSceneDialog } from './ResplitSceneDialog'
 import { ic } from './icons'
 import ui from '../styles/ui.module.css'
 import di from '../styles/dialog.module.css'
+import m from '../styles/menu.module.css'
 import s from './EpisodeTree.module.css'
 
 // 集行右侧不再挂 ⋯ 菜单：追加剧集、替换本集剧本、重新拆分本集镜头都退役了，
@@ -181,29 +182,29 @@ export function EpisodeTree() {
                         ⋯
                       </button>
                       {menuScene === sc.id && menuPos && (
-                        <div className={s.menu} style={{ left: menuPos.x, top: menuPos.y }}>
+                        <div className={s.menuAt} style={{ left: menuPos.x, top: menuPos.y }}>
                           <button
-                            className={s.menuItem}
+                            className={m.item}
                             onClick={() => {
                               startRename(sc.id, sc.name)
                               setMenuScene(null)
                             }}
                           >
-                            <i className={s.mIcon}>{ic.rename}</i>重命名
+                            <i className={m.icon}>{ic.rename}</i>重命名
                           </button>
                           <button
-                            className={s.menuItem}
+                            className={m.item}
                             onClick={() => {
                               selectScene(sc.id)
                               setDialog({ type: 'resplitScene', sceneId: sc.id })
                               setMenuScene(null)
                             }}
                           >
-                            <i className={s.mIcon}>{ic.resplit}</i>重新拆分本场镜头
+                            <i className={m.icon}>{ic.resplit}</i>重新拆分本场镜头
                           </button>
-                          <div className={s.menuSep} />
+                          <div className={m.sep} />
                           <button
-                            className={[s.menuItem, s.menuDanger].join(' ')}
+                            className={[m.item, m.danger].join(' ')}
                             onClick={() => {
                               setMenuScene(null)
                               // 空场无级联（没有镜头就不会有「仅在本场出现」的资产），直接删，不打扰。
@@ -211,7 +212,7 @@ export function EpisodeTree() {
                               else setDialog({ type: 'deleteScene', sceneId: sc.id })
                             }}
                           >
-                            <i className={s.mIcon}>{ic.trash}</i>删除本场
+                            <i className={m.icon}>{ic.trash}</i>删除本场
                           </button>
                         </div>
                       )}
@@ -227,8 +228,8 @@ export function EpisodeTree() {
       {/* 集级弹窗 */}
       {dialog?.type === 'delete' && delEp && delStat && (
         <Dialog onClose={() => setDialog(null)} className={di.dialog}>
-          <div className={di.title}>删除第 {delEp.no} 集？</div>
-          <div className={di.danger}>
+          <div className={di.title}>删除第 {delEp.no} 集</div>
+          <div className={di.desc}>
             将同时删除本集的 {delStat.scenes} 场 {delStat.shots} 个镜头。本集独有的 {delStat.onlyInEp} 项角色、服装、场景和道具会变为「未引用」，但仍保留在项目资产库中——删除资产的唯一入口是资产库本身。此操作不可撤销。
           </div>
           <div className={di.actions}>
@@ -255,8 +256,8 @@ export function EpisodeTree() {
 
       {dialog?.type === 'deleteScene' && delSc && delScStat && (
         <Dialog onClose={() => setDialog(null)} className={di.dialog}>
-          <div className={di.title}>删除第 {delSc.no} 场「{delSc.name}」？</div>
-          <div className={di.danger}>
+          <div className={di.title}>删除第 {delSc.no} 场「{delSc.name}」</div>
+          <div className={di.desc}>
             将同时删除本场的 {delScStat.shots} 个镜头
             {delScStat.onlyInScene > 0
               ? `，以及仅在本场出现的 ${delScStat.onlyInScene} 项独有资产。其他场仍在使用的内容会保留`

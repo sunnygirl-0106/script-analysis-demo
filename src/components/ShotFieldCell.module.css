@@ -87,35 +87,47 @@
   font-style: italic;
 }
 
-/* ── 就地编辑弹窗（portal 到 body，fixed 定位覆盖单元格）── */
+/* ── 就地编辑弹窗（portal 到 body，fixed 定位覆盖单元格）──
+   面、投影、层级都换到 v3 的浮层这一档；**那圈主色描边保留**——
+   它跟别处的装饰性主色不是一回事：这个浮层是直接盖在被编辑的那一格上面的，
+   一圈青边说的是「焦点在这一格」，去掉之后它就和背后二十几行表格糊成一片。 */
 .popPill,
 .popText {
   position: fixed;
-  z-index: 60;
-  background: var(--bg2);
-  box-shadow: 0 16px 44px rgb(0 0 0 / 0.62);
+  z-index: var(--z-pop);
+  background: var(--pop-surface);
+  box-shadow: var(--pop-sh);
 }
 .popPill {
   border: 1px solid rgb(var(--acc-rgb) / 0.45);
-  border-radius: 12px;
-  padding: 10px;
+  border-radius: var(--dlg-r-field);
+  padding: 12px;
 }
 .popText {
   border: 1px solid rgb(var(--acc-rgb) / 0.5);
-  border-radius: 10px;
-  padding: 7px 8px 6px;
+  border-radius: var(--dlg-r-field);
+  padding: 12px 12px 10px;
 }
 
+/* 输入框对齐 dialog.module.css 的 .input：深底 + 中性描边 + 14px 圆角。
+   壳已经用主色边圈出焦点了，里面这一格不必再发一次青。 */
 .input {
   width: 100%;
-  background: var(--bg3);
-  border: 1px solid rgb(var(--acc-rgb) / 0.45);
-  border-radius: 8px;
-  padding: 7px 9px;
+  background: var(--dlg-inset);
+  border: 1px solid var(--dlg-input-line);
+  border-radius: var(--dlg-r-input);
+  padding: 10px 13px;
   font: inherit;
-  font-size: 13px;
-  color: var(--t1);
+  font-size: 13.5px;
+  color: var(--dlg-t1);
   outline: none;
+  transition: border-color 0.14s;
+}
+.input::placeholder {
+  color: var(--dlg-ph);
+}
+.input:focus {
+  border-color: var(--acc-line);
 }
 .textarea {
   width: 100%;
@@ -124,9 +136,9 @@
   border: none;
   padding: 0;
   font: inherit;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--t1);
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--dlg-t1);
   outline: none;
   resize: none;
 }
@@ -146,15 +158,15 @@
   border: none;
   padding: 0;
   font-family: inherit;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 13.5px;
+  line-height: 1.7;
   letter-spacing: normal;
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: break-word;
 }
 .backdrop {
-  color: var(--t1);
+  color: var(--dlg-t1);
   overflow: hidden;
   pointer-events: none;
   user-select: none;
@@ -162,7 +174,7 @@
 .textareaOverlay {
   min-height: 0;
   color: transparent;
-  caret-color: var(--t1);
+  caret-color: var(--dlg-t1);
   background: transparent;
   overflow: auto;
 }
@@ -174,40 +186,40 @@
   gap: 5px;
   margin-top: 9px;
 }
+/* 「→」是这一排里唯一「会改内容」的那颗（把上一格的值推过来），
+   所以留主色；其余预设是中性描边胶囊。 */
 .arrowBtn {
-  padding: 2.5px 10px;
+  padding: 5px 12px;
   border-radius: var(--rpill);
-  border: 1px dashed rgb(var(--acc-rgb) / 0.55);
-  background: rgb(var(--acc-rgb) / 0.1);
-  font-size: 12px;
+  border: 1px solid var(--acc-line);
+  background: transparent;
+  font-size: 12.5px;
   color: var(--acc);
-  transition: border-style 0.14s;
+  transition: 0.16s;
 }
 .arrowBtn:hover {
-  border-style: solid;
+  border-color: var(--acc);
 }
 .preset {
-  padding: 2.5px 9px;
+  padding: 5px 12px;
   border-radius: var(--rpill);
-  border: 1px solid var(--line);
-  background: var(--bg3);
-  font-size: 12px;
-  color: var(--t3);
+  border: 1px solid var(--dlg-btn-line);
+  background: transparent;
+  font-size: 12.5px;
+  color: var(--dlg-t3);
   transition: 0.16s;
 }
 .preset:hover {
-  border-color: var(--acc-line);
-  color: var(--acc);
+  border-color: var(--edge);
+  color: var(--dlg-t1);
 }
 
 .foot {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--t5);
+  composes: popNote from '../styles/dialog.module.css';
+  margin-top: 10px;
 }
 .popText .foot {
-  margin-top: 5px;
-  padding-top: 5px;
-  border-top: 1px solid var(--line2);
-  font-size: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--dlg-inset-line);
 }

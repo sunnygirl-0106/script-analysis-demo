@@ -484,8 +484,8 @@ export const ShotRow = memo(function ShotRow({ shot, startAt, endAt, active, alt
 
       {confirming && (
         <Dialog onClose={() => setConfirming(false)} className={di.dialog}>
-          <div className={di.title}>删除第 {shot.no} 镜？</div>
-          <div className={di.danger}>
+          <div className={di.title}>删除第 {shot.no} 镜</div>
+          <div className={di.desc}>
             本镜的镜头设计、出场的人和物以及已生成的提示词将一并移除。此操作可撤销：删除后可在底部提示条中点「撤销」恢复。
           </div>
           <div className={di.actions}>

@@ -48,20 +48,12 @@
 }
 /* 悬浮说明。系统 title 要等一秒多才出来，一个光秃秃的图标等不起这一秒。 */
 .tip {
+  composes: tip from '../styles/dialog.module.css';
   position: absolute;
   bottom: calc(100% + 8px);
   left: 0;
-  z-index: 20;
-  padding: 4px 9px;
-  white-space: nowrap;
-  font-size: 13px;
-  color: var(--t1);
-  background: var(--panel);
-  border: 1px solid var(--edge);
-  border-radius: var(--rsm);
-  box-shadow: 0 8px 20px rgb(0 0 0 / 0.45);
+  z-index: var(--z-pop);
   opacity: 0;
-  pointer-events: none;
   transition: opacity 0.14s;
 }
 .iconBtn:hover .tip,

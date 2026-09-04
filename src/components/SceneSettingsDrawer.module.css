@@ -1,10 +1,22 @@
+/* 本场设置抽屉（弹窗 v3 第二批 ⑫）：情绪走向 + 配乐建议。
+ *
+ * v3 之前它是一块贴满右边、上下顶到头的深灰板，吃的是页面那套 --bg2/--line 令牌，
+ * 于是它跟背后的分镜表长得一模一样，只是多了一条左边线——读起来不像「浮起来的一层」，
+ * 像分镜表右边又长出一栏。
+ *
+ * 这一版按设计稿改成一张 400 宽的圆角卡：四角都圆（24px，比弹窗的 28px 收一档，
+ * 比浮层的 22px 放一档，正好落在「弹窗 → 抽屉 → 浮层」的中间），四周留白，
+ * 换弹窗那套 --dlg-* 灰阶。它仍然从右边滑进来，但不再顶天立地。
+ */
 .mask {
   position: absolute;
   inset: 0;
   z-index: 40;
-  background: rgb(0 0 0 / 0.42);
+  background: var(--scrim);
   display: flex;
   justify-content: flex-end;
+  align-items: flex-start;
+  padding: 20px;
   animation: fade 0.16s ease;
 }
 @keyframes fade {
@@ -13,15 +25,15 @@
   }
 }
 .drawer {
-  width: 360px;
+  width: 400px;
   max-width: 100%;
-  height: 100%;
-  background: var(--bg2);
-  border-left: 1px solid var(--edge);
-  box-shadow: -14px 0 40px rgb(0 0 0 / 0.4);
-  display: flex;
-  flex-direction: column;
-  padding: 16px 18px;
+  max-height: 100%;
+  overflow: auto;
+  background: var(--dlg-surface);
+  border: 1px solid var(--dlg-line);
+  border-radius: var(--dlg-r-drawer);
+  box-shadow: var(--dlg-sh);
+  padding: 28px 26px;
   animation: slide 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 @keyframes slide {
@@ -30,82 +42,83 @@
     opacity: 0.4;
   }
 }
+
+/* ── 抬头：标题 / 场名 / 一行统计 ──
+   三行一路变弱（t1 → t2 → t6），最后一条分隔线把它们和两个字段隔开。 */
 .head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-.hTitle {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--t1);
-}
-.close {
-  width: 26px;
-  height: 26px;
-  border-radius: var(--rpill);
-  color: var(--t4);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: 0.16s;
-}
-.close:hover {
-  background: var(--bg3);
-  color: var(--t1);
-}
-.sub {
-  margin-top: 6px;
-  font-size: 13px;
-  color: var(--t2);
-}
-.sub2 {
-  margin-top: 2px;
-  font-size: 12px;
-  color: var(--t4);
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--line2);
-}
-.body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding-top: 14px;
-  display: flex;
-  flex-direction: column;
   gap: 16px;
 }
+.hTitle {
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--dlg-t1);
+}
+.sub {
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--dlg-t2);
+}
+.sub2 {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--dlg-t6);
+  font-variant-numeric: tabular-nums;
+}
+.divider {
+  height: 1px;
+  background: var(--dlg-inset-line);
+  margin-top: 20px;
+}
+
+/* ── 两个字段 ──
+   标签与框之间 9px，两个字段之间 18px：靠间距分组，不用分隔线也不用卡片。 */
 .field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: block;
+  margin-top: 18px;
+}
+.field:first-of-type {
+  margin-top: 20px;
 }
 .label {
-  font-size: 13px;
-  color: var(--t3);
-  letter-spacing: 0.3px;
+  display: block;
+  font-size: 13.5px;
+  color: var(--dlg-t4);
 }
 .text {
+  display: block;
   width: 100%;
-  resize: vertical;
-  background: var(--bg1);
-  border: 1px solid var(--line2);
-  border-radius: var(--rlg);
-  padding: 9px 11px;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--t1);
+  min-height: 96px;
+  margin-top: 9px;
+  padding: 14px 16px;
   font-family: inherit;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--dlg-t3);
+  background: var(--dlg-inset);
+  border: 1px solid var(--dlg-input-line);
+  border-radius: var(--dlg-r-field);
+  resize: vertical;
+  outline: none;
   transition: border-color 0.16s;
 }
+.text::placeholder {
+  color: var(--dlg-ph);
+}
 .text:hover:not(:disabled) {
-  border-color: var(--edge);
+  border-color: var(--dlg-btn-line);
 }
 .text:focus {
-  outline: none;
   border-color: var(--acc-line);
 }
 .text:disabled {
-  opacity: 0.7;
   cursor: default;
+  color: var(--dlg-t4);
+}
+.foot {
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: var(--dlg-t6);
 }

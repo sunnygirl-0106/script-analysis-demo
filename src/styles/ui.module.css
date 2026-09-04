@@ -1,48 +1,69 @@
 /* 复用原子：chip / 按钮 / 可编辑字段。多个组件 import 同一模块。 */
 
+/* 按钮 v3（《弹窗改版 v3 深色 · 导出》）：一律胶囊，只有三种。
+ *   .btn          取消 / 次要 —— 透明底 + 一圈描边
+ *   .btnPrimary   确认 —— 主色实心 + 深墨字（一个弹窗里只许有一颗）
+ *   .btnDanger    删除 —— 红色实心 + 白字
+ * 禁用态不再靠 opacity 把主色调淡（淡青按钮看着像「加载中」），
+ * 而是整颗塌成中性灰底：不可按就该长得不像那颗按钮。 */
 .btn {
   background: transparent;
-  border: 1px solid var(--line);
-  color: var(--t3);
-  padding: 5px 13px;
+  border: 1px solid var(--dlg-btn-line);
+  color: var(--dlg-t3);
+  padding: 11px 24px;
   border-radius: var(--rpill);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1;
+  white-space: nowrap;
   transition: 0.24s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-.btn:hover {
+.btn:hover:not(:disabled) {
   border-color: var(--edge);
   color: var(--t1);
-  background: var(--bg3);
-  transform: translateY(-1px);
 }
 .btn:disabled {
-  opacity: 0.45;
+  opacity: 0.5;
   cursor: not-allowed;
   transform: none;
 }
 .btnPrimary {
-  background: transparent;
-  border: 1px solid var(--acc-line);
-  color: var(--acc);
-  font-weight: 600;
+  background: var(--acc);
+  border-color: transparent;
+  color: var(--on-acc);
+  font-weight: 500;
 }
 .btnPrimary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 22px rgb(var(--acc-rgb) / 0.22);
-  background: var(--acc-bg);
-  border-color: var(--acc);
-  color: var(--acc-hi);
+  background: var(--acc);
+  border-color: transparent;
+  color: var(--on-acc);
+  filter: brightness(1.06);
+  box-shadow: 0 8px 22px rgb(var(--acc-rgb) / 0.18);
 }
 .btnDanger {
-  background: var(--prop-bg);
-  border-color: var(--prop);
-  color: var(--prop);
-  font-weight: 700;
+  background: var(--dlg-danger);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 500;
 }
 .btnDanger:hover:not(:disabled) {
-  filter: brightness(1.08);
-  background: var(--prop-bg);
-  color: var(--prop);
+  background: var(--dlg-danger);
+  border-color: transparent;
+  color: #fff;
+  filter: brightness(1.1);
+}
+.btnPrimary:disabled,
+.btnDanger:disabled {
+  opacity: 1;
+  background: var(--dlg-btn-off);
+  border-color: transparent;
+  color: var(--dlg-ph);
+  box-shadow: none;
+  filter: none;
+}
+/* 弹窗标题栏右侧那颗小胶囊（AI 补全一类）：同一套描边语言，尺寸压一档。 */
+.btnSm {
+  padding: 7px 16px;
+  font-size: 13.5px;
 }
 
 /* 实体 chip：中性胶囊底 + 同色圆点（对齐参考稿）。 */

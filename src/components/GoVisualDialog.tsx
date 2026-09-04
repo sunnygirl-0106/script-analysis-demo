@@ -2,8 +2,8 @@ import { useStore } from '../store/useStore'
 import { Dialog } from './Dialog'
 import { costShotPrompts, fmtCost } from '../services/cost'
 import ui from '../styles/ui.module.css'
+import d from '../styles/dialog.module.css'
 import s from './GoVisualDialog.module.css'
-import { ic } from './icons'
 
 // 「现在去生图？」软提醒（v2.6 §6.2）。
 //
@@ -33,24 +33,23 @@ export function GoVisualDialog({
       onClose={onClose}
       className={s.dialog}
     >
-      <div className={s.title}>现在去生图？</div>
-      <div className={s.body}>
-        还有 {n} 个镜头没有生成提示词。先把提示词生全，再去资产库生图、生视频，
-        角色和场景的一致性会更好，也省得回头补。
+      <div className={d.title}>现在去生图？</div>
+      <div className={d.desc}>
+        还有 {n} 镜没有提示词。先生全再去资产库出图，角色和场景的一致性会更好。
       </div>
-      <div className={s.est}>
-        {ic.spark} 生成剩余 {n} 镜提示词约 {fmtCost(cost)} · 约 {estMinutes(n)} 分钟
-      </div>
-      <div className={s.actions}>
-        <button className={ui.btn} onClick={() => { setStage('visual'); onClose() }}>
-          先去生图
-        </button>
-        <button
-          className={[ui.btn, ui.btnPrimary].join(' ')}
-          onClick={() => { generatePrompts(needIds); onClose() }}
-        >
-          生成全部提示词 · {fmtCost(cost)}
-        </button>
+      <div className={d.footRow}>
+        <span className={d.footNote}>剩余 {n} 镜约 {fmtCost(cost)} · {estMinutes(n)} 分钟</span>
+        <span className={d.footBtns}>
+          <button className={ui.btn} onClick={() => { setStage('visual'); onClose() }}>
+            先去生图
+          </button>
+          <button
+            className={[ui.btn, ui.btnPrimary].join(' ')}
+            onClick={() => { generatePrompts(needIds); onClose() }}
+          >
+            生成全部提示词
+          </button>
+        </span>
       </div>
     </Dialog>
   )

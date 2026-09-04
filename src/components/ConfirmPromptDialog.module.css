@@ -1,16 +1,19 @@
-/* 「生成镜头提示词」弹窗。遮罩沿用 公共 dialog.module.css 的 .overlay，容器与内部自成一套。
-   配色严格对齐参考稿：中性描边（--line / --line2）、冷灰阶文字（--t1…--t5），
-   主色（天青 --acc）只用于强调点。自定义圆角复选框保留（比参考稿的原生对号更好看）。 */
+/* 「生成镜头提示词」弹窗（弹窗 v3）。全仓库最宽的一个：880，三段式（头 / 清单 / 脚），
+   清单自己滚，头脚钉住。
+
+   v3 相对上一版删掉的东西：标题左边的主色竖条、范围段控的主色选中态、
+   逐镜行的三层底色、手动编辑那条琥珀警示框。这些都是「用装饰讲层级」，
+   而这个弹窗里真正要分出来的层级只有三层——场、镜、当前选择——
+   靠 #141414 的场行、透明的镜行和一条 #212121 的行线就够了。 */
 .dialog {
-  width: 900px;
-  max-width: calc(100vw - 48px);
+  composes: dialog from '../styles/dialog.module.css';
+  --dlg-w: 880px;
+  --dlg-maxw: calc(100vw - 48px);
+  /* 内边距归零：头 / 清单 / 脚各自带 padding，清单还要贴着边滚。 */
+  --dlg-p: 0;
   /* 固定高度：切换范围 / 过滤时整体高度不变，列表内部滚动。 */
   height: 86vh;
   max-height: calc(100vh - 56px);
-  background: var(--bg2);
-  border: 1px solid var(--line);
-  border-radius: var(--rlg);
-  box-shadow: 0 28px 70px rgb(0 0 0 / 0.6);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -22,18 +25,17 @@
   appearance: none;
   -webkit-appearance: none;
   flex: none;
-  width: 16px;
-  height: 16px;
-  border: 1.5px solid #555555;
-  border-radius: 4px;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--dlg-check-line);
+  border-radius: 6px;
   background: transparent;
   cursor: pointer;
   position: relative;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
 }
 .check:hover {
   border-color: var(--acc);
-  background: rgb(var(--acc-rgb) / 0.08);
 }
 .check:checked,
 .check:indeterminate {
@@ -43,124 +45,104 @@
 .check:checked::after {
   content: '';
   position: absolute;
-  left: 4.5px;
-  top: 1.5px;
+  left: 5.5px;
+  top: 2px;
   width: 3px;
-  height: 7px;
-  border: solid var(--bg0);
+  height: 8px;
+  border: solid var(--on-acc);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
 .check:indeterminate::after {
   content: '';
   position: absolute;
-  left: 2.5px;
+  left: 3px;
   top: 7px;
   width: 9px;
-  height: 1.5px;
+  height: 2px;
   border-radius: 1px;
-  background: var(--bg0);
+  background: var(--on-acc);
 }
 .check:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
+/* 镜行的框比场行小一号：同一列上一大一小，读得出主从。 */
+.checkSm {
+  width: 17px;
+  height: 17px;
+  border-radius: 5px;
+}
+.checkSm:checked::after {
+  left: 5px;
+  top: 2px;
+  height: 7.5px;
+}
 
-/* ── 标题栏：左=主色竖条 · 标题 · 帮助；右=已选汇总 + 关闭，其下一条小进度条 ── */
+/* ── 头部 ── */
 .head {
   flex: none;
+  padding: 34px 36px 0;
+}
+.headTop {
   display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 15px 20px 14px;
-  background: linear-gradient(180deg, var(--panel), var(--bg2));
-  border-bottom: 1px solid var(--line2);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
 }
 .headLeft {
   display: inline-flex;
   align-items: center;
   gap: 9px;
 }
-.bar {
-  flex: none;
-  width: 5px;
-  height: 15px;
-  border-radius: var(--rpill);
-  background: var(--acc);
-}
-.title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--t1);
-  white-space: nowrap;
-}
 .help {
   flex: none;
-  width: 15px;
-  height: 15px;
-  border: 1px solid var(--line);
+  width: 17px;
+  height: 17px;
+  border: 1px solid var(--dlg-check-line);
   border-radius: 50%;
-  color: var(--t4);
-  font-size: 12px;
+  color: var(--dlg-t5);
+  font-size: 11px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: help;
-  transition: all 0.14s ease;
   background: transparent;
+  transition: 0.14s;
 }
 .help:hover {
   color: var(--acc);
   border-color: var(--acc-line);
 }
 .headRight {
-  margin-left: auto;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+}
+.headMeta {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 9px;
 }
-.headMetaRow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.headMeta {
-  font-size: 13px;
-  color: var(--t3);
-  font-variant-numeric: tabular-nums;
+.headCount {
+  font-size: 13.5px;
+  color: var(--dlg-t5);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
-.headMeta b {
-  color: var(--acc);
-  font-weight: 600;
+.headCount b {
   font-size: 15px;
+  font-weight: 500;
+  color: #fff;
 }
-.close {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--rsm);
-  color: var(--t4);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.14s ease;
-  padding: 0;
-}
-.close:hover {
-  background: var(--bg3);
-  color: var(--t1);
-}
-/* 小进度条：168px 胶囊轨 + 主色填充，宽度 = 已选/总数。 */
+/* 已选比例条：150×2 的一根线，不是进度——它说的是「这一屏里你勾了多少」。 */
 .progress {
-  width: 168px;
-  height: 3px;
-  background: var(--bg3);
+  width: 150px;
+  height: 2px;
+  background: var(--dlg-seg-on);
   border-radius: var(--rpill);
   overflow: hidden;
 }
@@ -168,96 +150,57 @@
   display: block;
   height: 100%;
   background: var(--acc);
-  border-radius: var(--rpill);
   transition: width 0.2s;
 }
-
 /* ── 范围段控 · 汇总 · 状态过滤 ── */
 .scopeBar {
-  flex: none;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 11px 20px;
-  border-bottom: 1px solid var(--line2);
-}
-.scopeSeg {
-  display: inline-flex;
-  padding: 3px;
-  border: 1px solid var(--line);
-  border-radius: var(--rpill);
-  background: var(--bg1);
-  flex: none;
-}
-.segBtn {
-  padding: 5px 20px;
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--t3);
-  border: none;
-  border-radius: var(--rpill);
-  white-space: nowrap;
-  flex: none;
-  transition: 0.14s;
-  cursor: pointer;
-  background: transparent;
-}
-.segBtn:hover:not(.segOn) {
-  color: var(--t2);
-}
-.segOn {
-  color: var(--acc);
-  font-weight: 600;
-  background: var(--acc-bg);
-  box-shadow: inset 0 0 0 1px var(--acc-line);
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 22px;
 }
 .scopeRight {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 18px;
+  flex: none;
 }
 .summary {
-  font-size: 12px;
-  color: var(--t4);
+  font-size: 13px;
+  color: var(--dlg-t6);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  flex: none;
 }
 .filterSep {
   width: 1px;
-  height: 12px;
-  background: var(--line2);
+  height: 14px;
+  background: var(--dlg-input-line);
   flex: none;
 }
 .filters {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  flex: none;
+  gap: 16px;
 }
-/* 状态过滤：纯文字按钮，选中态 = 一条中性下划线。 */
+/* 状态过滤是「换个看法」，不是「做选择」：纯文字 + 一道主色贴底线，不给底色。 */
 .filterBtn {
-  padding: 2px 0;
-  font-size: 13px;
-  color: var(--t4);
-  border-bottom: 1px solid transparent;
+  padding: 0 0 3px;
+  font-size: 13.5px;
+  color: var(--dlg-t5);
+  background: none;
+  border: none;
+  box-shadow: inset 0 -1px 0 transparent;
   cursor: pointer;
   transition: 0.14s;
   white-space: nowrap;
-  flex: none;
-  background: none;
-  border-top: none;
-  border-left: none;
-  border-right: none;
 }
 .filterBtn:hover {
-  color: var(--t2);
+  color: var(--dlg-t2);
 }
 .filterOn {
-  color: var(--t2);
-  border-bottom-color: var(--t3);
+  color: #fff;
+  box-shadow: inset 0 -1px 0 var(--acc);
 }
 
 /* ── 逐镜清单：滚动区 ── */
@@ -265,11 +208,11 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 8px 12px 14px;
+  margin-top: 20px;
+  padding: 0 36px 8px;
 }
 .list::-webkit-scrollbar {
   width: 5px;
-  height: 5px;
 }
 .list::-webkit-scrollbar-track {
   background: transparent;
@@ -279,21 +222,22 @@
   border-radius: 999px;
 }
 .list:hover::-webkit-scrollbar-thumb {
-  background: var(--edge);
+  background: var(--dlg-btn-line);
 }
 
-/* 按场分组：标题行是一条 --bg1 分隔带 + --line2 描边，吸顶。 */
+/* 场：展开的那一组标题吸顶，折叠的几组之间留 8px —— 折叠时它们是一叠卡片，
+   展开时它是一段内容的抬头，两种读法用同一块底就够。 */
 .group {
   margin-bottom: 8px;
 }
 .groupHead {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 12px;
-  border-radius: var(--rsm);
-  background: var(--bg1);
-  border: 1px solid var(--line2);
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--dlg-inset);
+  border: 1px solid var(--dlg-inset-line);
+  border-radius: var(--dlg-r-input);
   cursor: pointer;
   position: sticky;
   top: 0;
@@ -302,259 +246,191 @@
 .groupTitle {
   min-width: 0;
   flex: 1;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--t1);
+  font-size: 14.5px;
+  color: var(--dlg-t2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.groupOpen .groupTitle {
+  font-weight: 500;
+  color: var(--dlg-t1);
+}
 .groupCount {
   flex: none;
-  font-size: 13px;
-  color: var(--t4);
+  font-size: 13.5px;
+  color: var(--dlg-t5);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .caret {
   flex: none;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--rsm);
-  color: var(--t4);
-  font-size: 14px;
+  font-size: 12px;
+  color: var(--dlg-t5);
   transition: 0.2s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-.caret:hover {
-  background: var(--bg3);
-  color: var(--t1);
+  width: 14px;
 }
 .caretOpen {
   transform: rotate(90deg);
 }
 
-/* 镜头行：透明 → 勾选 --bg1 → 展开 --row-on-bg（描边同步）。 */
+/* 镜行：无底色、无描边，只有一条行线。勾选与否靠左边那个方框说，不靠底色。 */
+.shots {
+  padding: 2px 0 0 12px;
+}
 .shotRow {
-  border-radius: var(--rsm);
-  border: 1px solid transparent;
-  margin: 3px 0 0;
-  transition: 0.16s;
-  overflow: hidden;
-  background: transparent;
+  border-bottom: 1px solid var(--dlg-row-line);
 }
-.shotRow:hover {
-  background: var(--bg1);
-}
-.shotChecked {
-  background: var(--bg1);
-}
-.shotExpanded {
-  background: var(--row-on-bg);
-  border-color: var(--row-on-line);
+.shotRow:last-child {
+  border-bottom: none;
 }
 .shotTop {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
+  gap: 12px;
+  padding: 12px 4px;
   cursor: pointer;
-  transition: 0.16s;
 }
-/* 展开时整行顶对齐，复选框 / 镜号 / 时长 / 折叠角标钉在首行，正文向下续排。 */
+/* 展开时整行顶对齐：复选框 / 镜号 / 时长钉在首行，正文向下续排。 */
 .shotExpanded .shotTop {
   align-items: flex-start;
-  padding-bottom: 14px;
 }
 .mno {
   flex: none;
-  font-size: 13px;
-  color: var(--t3);
+  font-size: 13.5px;
+  color: #fff;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .mdur {
   flex: none;
-  font-size: 12px;
-  color: var(--t5);
+  font-size: 12.5px;
+  color: var(--dlg-t5);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .mprev {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--t3);
+  font-size: 13.5px;
+  color: var(--dlg-t3d);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.shotChecked .mprev,
-.shotExpanded .mprev {
-  color: var(--t2);
 }
 /* 展开：同一段文字就地续排（首行截断处往下接着显示），不再另起一段重复。 */
 .mprevOpen {
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
-  line-height: 1.7;
-  padding-top: 1px;
+  line-height: 1.75;
 }
 .editTag {
   flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 12px;
-  color: var(--amber);
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--dlg-t5);
   white-space: nowrap;
   cursor: default;
 }
 .rowCaret {
   flex: none;
-  width: 22px;
-  text-align: center;
-  color: var(--t4);
-  font-size: 13px;
+  width: 12px;
+  font-size: 12px;
+  color: var(--dlg-ph);
   transition: 0.16s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  line-height: 1;
 }
+/* 「重新生成会覆盖手改」以前是一整条琥珀框，现在是行内一句灰字：
+   它对每一个手改过又被勾上的镜都成立，二十行里出现五条彩色框只会让人不再看它。 */
 .warnRow {
-  margin: 0 12px 12px 40px;
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: 0 4px 12px 41px;
+  font-size: 12.5px;
   line-height: 1.6;
-  color: var(--amber);
-  background: var(--amber-bg);
-  border: 1px solid var(--amber-line);
-  border-radius: 7px;
-  animation: slideIn 0.2s ease;
+  color: var(--dlg-t6);
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ── 底栏：全选 · 模型 · 提示 · 合成模式 · 费用 · 确认 ── */
+/* ── 底栏 ── */
 .foot {
   flex: none;
+  padding: 20px 36px 26px;
+  border-top: 1px solid var(--dlg-inset-line);
+}
+.footRow {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 20px;
-  border-top: 1px solid var(--line2);
-  background: var(--panel);
+  justify-content: space-between;
+  gap: 20px;
+}
+.footLeft {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
 }
 .all {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 13px;
-  color: var(--t2);
+  gap: 9px;
+  font-size: 13.5px;
+  color: var(--dlg-t2);
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
   flex: none;
 }
-/* 模型胶囊：位置由用户放在「全选」右侧，这里只对齐参考稿的中性配色。 */
-.model svg {
-  width: 12px;
-  height: 12px;
-  color: var(--t4);
-}
 .model {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  color: var(--t3);
-  padding: 4px 10px;
-  border: 1px solid var(--line);
+  gap: 5px;
+  font-size: 13.5px;
+  color: var(--dlg-t3);
+  padding: 8px 16px;
+  border: 1px solid var(--dlg-btn-line);
   border-radius: var(--rpill);
-  background: var(--bg3);
+  background: transparent;
   white-space: nowrap;
   cursor: pointer;
   flex: none;
 }
-.hint {
-  font-size: 12px;
-  color: var(--t4);
-  white-space: nowrap;
-  flex: none;
+.model svg {
+  width: 12px;
+  height: 12px;
+  color: var(--dlg-t5);
 }
 .footRight {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: 14px;
-}
-.modes {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-}
-.modes label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 13px;
-  color: var(--t4);
-  cursor: pointer;
-  transition: color 0.16s;
-  white-space: nowrap;
+  gap: 16px;
   flex: none;
 }
-.modes label.modeOn {
-  color: var(--t2);
+/* 合成模式换成段控：两个单选圆点在一堆胶囊里格格不入，而它就是个二选一。 */
+.modes {
+  flex: none;
 }
-.modes input {
-  accent-color: var(--acc);
-  cursor: pointer;
+.modeBtn {
+  padding: 6px 15px;
+  font-size: 13px;
 }
 .cost {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--acc);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   flex: none;
 }
-
-/* 确认按钮：参考稿的描边胶囊——透明底、主色描边/文字，hover 上浮发光。 */
-.cta {
-  flex: none;
-  border: 1px solid var(--acc-line);
-  color: var(--acc);
-  font-weight: 600;
-  background: transparent;
-  padding: 6px 16px;
-  border-radius: var(--rpill);
-  font-size: 13px;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: 0.24s cubic-bezier(0.22, 0.61, 0.36, 1);
+.hint {
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: var(--dlg-t6);
 }
-.cta:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 22px rgb(var(--acc-rgb) / 0.22);
-  background: var(--acc-bg);
-  border-color: var(--acc);
-  color: var(--acc-hi);
-}
-.cta:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+.running {
+  flex: 1;
+  min-width: 260px;
 }

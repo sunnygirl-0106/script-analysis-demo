@@ -1,117 +1,112 @@
-/* 提示词浮层（v2.3 §3.4）：居中盖在数据区上方，固定尺寸不随内容变。 */
-@keyframes cpFade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+/* 资产提示词浮层（v2.3 §3.4 / 弹窗 v3）：居中盖在数据区上方，固定尺寸不随内容变。
+   壳 / 标题 / 说明 / 脚栏走 dialog.module.css，这里只写标题行和那块文本框。 */
 @keyframes cpIn {
-  from { opacity: 0; transform: translateY(-6px) scale(0.985); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .pop {
-  width: 560px;
-  max-width: 100%;
-  background: var(--bg2);
-  border: 1px solid var(--edge);
-  border-radius: var(--rlg);
-  box-shadow: 0 24px 60px rgb(0 0 0 / 0.5);
-  display: flex;
-  flex-direction: column;
+  composes: dialog from '../styles/dialog.module.css';
+  --dlg-w: 600px;
   animation: cpIn 0.18s ease;
 }
 
+/* 标题行：左「名字（+ 只读徽章）」，右「AI 补全小胶囊 + 关闭 ✕」。
+   补全是这个弹窗里的第二动作，放在标题右边（而不是脚栏左边）——
+   它作用于上面那块文本，不是这次编辑的结论。 */
 .head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.headLeft {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
   gap: 10px;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--line2);
 }
 .headName {
-  flex: 1;
   min-width: 0;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--t1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.close {
-  appearance: none;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: var(--t4);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border-radius: var(--rsm);
-}
-.close:hover {
-  color: var(--t1);
-  background: var(--raise);
-}
-
-.textarea {
-  margin: 14px 16px 4px;
-  height: 200px;
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--t1);
-  background: var(--bg1);
-  border: 1px solid var(--line2);
-  border-radius: var(--rsm);
-  padding: 12px 14px;
-  resize: none;
-  outline: none;
-}
-.textarea:focus {
-  border-color: var(--acc-line);
-}
-.textarea[readonly] {
-  color: var(--t2);
-  cursor: default;
-}
-
-.foot {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px 14px;
-}
-.footLeft {
-  flex: 1;
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-}
-.footRight {
-  display: inline-flex;
-  gap: 8px;
-}
-.completeBtn {
-  appearance: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--acc);
-  background: var(--acc-bg);
-  border: 1px solid var(--acc-line);
+/* 「已入库 · 只读」：描边小胶囊，不给底色也不给主色——它是一句状态陈述，
+   不是一个可按的东西，更不是一条警告。 */
+.roTag {
+  flex: none;
+  padding: 3px 10px;
+  border: 1px solid var(--dlg-btn-line);
   border-radius: var(--rpill);
-  padding: 4px 12px;
-  transition: 0.16s;
+  font-size: 12px;
+  color: var(--dlg-t4);
+  white-space: nowrap;
+}
+.headSlot {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
 }
 .completeBtn svg {
   width: 12px;
   height: 12px;
+  margin-right: 5px;
+  vertical-align: -1px;
 }
-.completeBtn:hover {
-  color: var(--acc-hi);
-  border-color: var(--acc);
+
+/* 文本框：高度写死，切换资产时框不跳；行高 1.85 是给长段提示词读的。
+   可编辑时 150（上面没有说明行，省下的高度不必都给文本框）；
+   只读时 190——那一段是既成事实的长文，给它多两行读。 */
+.textarea {
+  display: block;
+  width: 100%;
+  height: 150px;
+  margin-top: 20px;
+  padding: 18px 20px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--dlg-t3);
+  background: var(--dlg-inset);
+  border: 1px solid var(--dlg-input-line);
+  border-radius: var(--dlg-r-box);
+  resize: none;
+  outline: none;
+  transition: border-color 0.16s;
+}
+.textarea::placeholder {
+  color: var(--dlg-ph);
+}
+.textarea:focus {
+  border-color: var(--acc-line);
+}
+/* 只读态整块塌下去一档：底更暗、描边更浅、字更弱。
+   「不能改」要靠这块东西自己长得不像输入框来说，而不是靠上面那句说明。 */
+.textarea[readonly] {
+  height: 190px;
+  cursor: default;
+  background: var(--dlg-card);
+  border-color: var(--dlg-line);
+  color: var(--dlg-t4);
+}
+
+/* 只读时不需要分隔线：那一栏没有「消耗多少」要交代，只有一句状态说明。 */
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 22px;
+}
+/* 只读态脚栏只剩一颗「取消」，space-between 会把它留在左边。
+   最后一项恒推到右端：两态下按钮组都贴右，切换只读时按钮不横跳。 */
+.foot > :last-child {
+  margin-left: auto;
 }

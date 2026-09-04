@@ -31,6 +31,8 @@
 .line:last-child {
   margin-bottom: 0;
 }
+/* 类型徽章：台词紫 / 旁白青。表格里挤在 13px 正文旁边，压到 11px 带描边；
+   浮层里是一行的抬头，走 .typeLg 放到 12px 的实底胶囊（设计稿 ⑬）。 */
 .type {
   flex: none;
   font-size: 11px;
@@ -45,6 +47,20 @@
   background: rgb(var(--acc-rgb) / 0.13);
   color: var(--acc);
   border-color: var(--acc-line);
+}
+.typeLg {
+  margin-top: 0;
+  padding: 3px 9px;
+  border: none;
+  border-radius: var(--rpill);
+  font-size: 12px;
+  white-space: nowrap;
+  background: var(--dlg-tag-role-bg);
+  color: var(--dlg-tag-role-fg);
+}
+.typeLg.typeVo {
+  background: var(--dlg-card-on);
+  color: var(--dlg-acc-dim);
 }
 .text {
   color: var(--t2);
@@ -69,43 +85,37 @@
   cursor: help;
 }
 
-/* ── 编辑 popover（portal 到 body）── */
-/* 描边 / 圆角 / 阴影对齐 ShotFieldCell 的就地弹窗（景别 · 镜头设计），保持整套一致的主色轮廓。 */
+/* ── 编辑 popover（portal 到 body）· 浮层 v3 ⑬ ──
+   壳走 dialog.module.css 的 .pop（面 #1c1c1c / 22px 圆角 / 短投影）。
+   上一版给它描了一圈主色边——主色在 v3 里只落在「确认」和「选中」两件事上，
+   一个还没做任何选择的浮层不该整圈发青，所以换回中性描边。 */
 .pop {
+  composes: pop from '../styles/dialog.module.css';
   position: fixed;
   z-index: 60;
-  background: var(--bg2);
-  border: 1px solid var(--acc-line);
-  border-radius: var(--rlg);
-  box-shadow: 0 16px 44px rgb(0 0 0 / 0.62);
-  padding: 15px 16px 13px;
-}
-.head {
-  font-size: 13px;
-  color: var(--t5);
-  margin-bottom: 11px;
-  font-weight: 500;
-  letter-spacing: 0.3px;
+  padding: 22px 24px;
 }
 
 .editList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-height: 320px;
+  gap: 12px;
+  margin-top: 16px;
+  max-height: 46vh;
   overflow-y: auto;
 }
+/* 每一句是一块内嵌深底：浮层面 #1c1c1c 上再压一档 #141414，
+   一眼数得出这里有几句话。 */
 .item {
-  background: var(--bg3);
-  border: 1px solid var(--line);
-  border-radius: var(--rsm);
-  padding: 11px 11px 10px;
+  background: var(--dlg-inset);
+  border: 1px solid var(--dlg-input-line);
+  border-radius: var(--dlg-r-field);
+  padding: 14px 16px;
 }
 .itemHead {
   display: flex;
-  gap: 6px;
+  gap: 10px;
   align-items: center;
-  margin-bottom: 8px;
 }
 
 /* ── 说话人：按钮 / 行内自填框 ── */
@@ -113,18 +123,19 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  max-width: 260px;
-  background: var(--bg2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 3px 8px;
+  max-width: 240px;
+  background: transparent;
+  border: 1px solid var(--dlg-btn-line);
+  border-radius: var(--rpill);
+  padding: 5px 13px;
   font: inherit;
-  font-size: 12px;
-  color: var(--t1);
-  transition: border-color 0.16s;
+  font-size: 13.5px;
+  color: var(--dlg-t2);
+  transition: border-color 0.16s, color 0.16s;
 }
 .spkBtn:hover {
   border-color: var(--edge);
+  color: var(--dlg-t1);
 }
 .spkBtn span {
   overflow: hidden;
@@ -134,7 +145,7 @@
 .spkBtn i {
   flex: none;
   display: inline-flex;
-  color: var(--t4);
+  color: var(--dlg-t5);
 }
 /* 下拉箭头：原来是 ▾ 字符，换成描边 chevron（ic.caretDown），压到 11px 才不抢文字。 */
 .spkBtn i svg {
@@ -142,28 +153,33 @@
   height: 11px;
 }
 .spkBtnBlank {
-  color: var(--t4);
+  color: var(--dlg-t5);
 }
 .spkInput {
-  width: 260px;
-  background: var(--bg2);
+  width: 240px;
+  background: var(--dlg-surface);
   border: 1px solid var(--acc-line);
-  border-radius: 6px;
-  padding: 3px 8px;
+  border-radius: var(--rpill);
+  padding: 5px 13px;
   font: inherit;
-  font-size: 12px;
-  color: var(--t1);
+  font-size: 13.5px;
+  color: var(--dlg-t1);
   outline: none;
 }
 .spkInput::placeholder {
-  color: var(--t4);
+  color: var(--dlg-ph);
 }
 
+/* 删除 ✕ 靠 .spacer 推到最右，不用 margin-left:auto —— 说话人自填框会撑满，
+   auto 会被它吃掉。 */
+.spacer {
+  flex: 1;
+}
 .del {
-  margin-left: auto;
+  flex: none;
   display: inline-flex;
   align-items: center;
-  color: var(--t4);
+  color: var(--dlg-t5);
   transition: color 0.16s;
 }
 .del svg {
@@ -171,45 +187,46 @@
   height: 14px;
 }
 .del:hover {
-  color: var(--danger);
+  color: var(--dlg-danger-fg);
 }
+/* 正文：无框无底，直接躺在这块内嵌底上。这一句本身就是内容，
+   再套一个输入框等于在框里画框。 */
 .textarea {
+  display: block;
   width: 100%;
-  min-height: 66px;
-  background: var(--bg2);
-  border: 1px solid var(--line);
-  border-radius: var(--rsm);
-  padding: 9px 11px;
+  min-height: 62px;
+  margin-top: 12px;
+  background: transparent;
+  border: none;
+  padding: 0;
   font: inherit;
-  font-size: 13px;
-  color: var(--t1);
+  font-size: 14px;
+  color: var(--dlg-t3);
   outline: none;
-  line-height: 1.65;
+  line-height: 1.75;
   resize: vertical;
 }
-.textarea:focus {
-  border-color: var(--acc-line);
-}
 .textarea::placeholder {
-  color: var(--t4);
+  color: var(--dlg-ph);
 }
 
 .addRow {
   display: flex;
-  gap: 7px;
-  margin-top: 9px;
+  gap: 10px;
+  margin-top: 12px;
 }
 .addBtn {
   flex: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 6px;
-  border: 1px dashed var(--line);
-  border-radius: var(--rsm);
-  font-size: 13px;
-  color: var(--t3);
+  gap: 5px;
+  padding: 10px 0;
+  border: 1px solid var(--dlg-btn-line);
+  border-radius: var(--rpill);
+  font-size: 13.5px;
+  color: var(--dlg-t3);
+  white-space: nowrap;
   transition: 0.16s;
 }
 .addBtn svg {
@@ -217,55 +234,56 @@
   height: 13px;
 }
 .addBtn:hover {
-  border-color: var(--acc-line);
-  color: var(--acc);
-  background: var(--acc-bg);
+  border-color: var(--edge);
+  color: var(--dlg-t1);
 }
 
 .tiny {
-  font-size: 12px;
-  color: var(--t4);
+  font-size: 13px;
+  color: var(--dlg-t5);
 }
-/* 底部「自动保存」提示，与 ShotFieldCell 一致的口径 */
+/* 底部提示：一句灰字，不给分隔线——上面 .item 已经是成块的，再画一条线就成了栅栏。 */
 .foot {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line2);
-  font-size: 12px;
-  color: var(--t5);
+  composes: popNote from '../styles/dialog.module.css';
+  margin-top: 14px;
 }
 
 /* ── 说话人浮层（portal 到 body）：下拉 与 联想 共用 ── */
+/* 这一层浮在 .pop 之上，两者同为 --pop-surface：描边提一档（#343434），
+   否则两块同色的面叠在一起，只剩一道几乎看不见的 #2e2e2e 缝。 */
 .spkPop {
+  composes: pop from '../styles/dialog.module.css';
   position: fixed;
-  z-index: 70;
-  background: var(--bg2);
-  border: 1px solid var(--edge);
-  border-radius: var(--rsm);
-  box-shadow: 0 14px 40px rgb(0 0 0 / 0.62);
-  padding: 5px;
+  z-index: var(--z-pop);
+  border-color: var(--dlg-btn-line);
+  border-radius: var(--dlg-r-field);
+  padding: 6px;
   max-height: 240px;
   overflow-y: auto;
 }
+/* 选项：上一轮只把壳换成了 .pop，里面这些还留着 --t2 / --line2 / 6px 圆角，
+   于是同一块面板里 --dlg-seg-on 和 --t2 并排。这里按 v3 补齐。 */
 .spkOpt {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 9px;
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--t2);
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: var(--dlg-r-input);
+  font-size: 13.5px;
+  color: var(--dlg-t2);
   cursor: pointer;
+  transition: background 0.14s, color 0.14s;
 }
 .spkOpt:hover {
-  background: var(--raise);
+  background: var(--dlg-seg-on);
+  color: var(--dlg-t1);
 }
 .spkOptOn {
-  background: rgb(var(--acc-rgb) / 0.13);
+  background: var(--dlg-card-on);
   color: var(--acc);
 }
 .spkOptAct {
-  color: var(--t3);
+  color: var(--dlg-t3);
 }
 .spkOptAct:hover {
   color: var(--acc);
@@ -284,12 +302,12 @@
   min-width: 0;
 }
 .spkOtherTitle {
-  color: var(--t2);
+  color: var(--dlg-t2);
 }
 .spkOtherDesc {
-  font-size: 12px;
-  color: var(--t5);
-  line-height: 1.4;
+  font-size: 12.5px;
+  color: var(--dlg-t6);
+  line-height: 1.55;
 }
 .spkOptOther .qm {
   margin-top: 3px;
@@ -304,17 +322,17 @@
 }
 /* 「其他」用灰点，与角色的紫点区分 */
 .spkDotOther {
-  background: var(--t4);
+  background: var(--dlg-t5);
 }
 .spkTail {
   margin-left: auto;
-  font-size: 11px;
-  color: var(--t4);
+  font-size: 11.5px;
+  color: var(--dlg-t6);
 }
 .spkSep {
   height: 1px;
-  background: var(--line2);
-  margin: 4px 8px;
+  background: var(--dlg-inset-line);
+  margin: 5px 8px;
 }
 
 /* 问号 + 悬停/点击说明 */
@@ -324,8 +342,8 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 1px solid var(--line);
-  color: var(--t5);
+  border: 1px solid var(--dlg-check-line);
+  color: var(--dlg-t5);
   font-size: 11px;
   display: flex;
   align-items: center;
@@ -337,16 +355,11 @@
   border-color: var(--acc-line);
   color: var(--acc);
 }
-/* 问号说明浮层：portal 到 body，fixed 定位到问号右下方 */
+/* 问号说明浮层：portal 到 body，fixed 定位到问号右下方。
+   长相走公共 .tip，这里只说定位——它要盖在说话人下拉之上，所以 +1。 */
 .tip {
+  composes: tip tipWrap from '../styles/dialog.module.css';
   position: fixed;
-  z-index: 80;
-  padding: 9px 11px;
-  background: var(--bg0);
-  border: 1px solid var(--edge);
-  border-radius: var(--rsm);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--t3);
+  z-index: calc(var(--z-pop) + 1);
+  max-width: 280px;
 }

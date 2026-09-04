@@ -11,6 +11,7 @@ import {
   usedSpeakers,
   type DlgLine,
 } from '../services/dialogue'
+import d from '../styles/dialog.module.css'
 import s from './DialogueCell.module.css'
 import { ic } from './icons'
 
@@ -20,7 +21,7 @@ import { ic } from './icons'
 const TIP_OTHER =
   '用于标注无法关联至具体角色的声音，如广播或系统播报。该信息不创建角色资产，也不参与角色形象生成。'
 
-const POP_W = 500
+const POP_W = 460
 const POP_MAX_H = 360
 const SPK_W = 240
 const TIP_W = 244
@@ -282,7 +283,7 @@ export function DialogueCell({ shotId, value, readOnly }: Props) {
             style={{ top: pos.top, left: pos.left, width: POP_W }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className={s.head}>对白 · 旁白</div>
+            <div className={d.popTitle}>对白 · 旁白</div>
 
             <div className={s.editList}>
               {lines.length === 0 ? (
@@ -293,7 +294,9 @@ export function DialogueCell({ shotId, value, readOnly }: Props) {
                 lines.map((l, i) => (
                   <div className={s.item} key={i}>
                     <div className={s.itemHead}>
-                      <span className={[s.type, l.type === '旁白' ? s.typeVo : ''].join(' ')}>{l.type}</span>
+                      <span className={[s.type, s.typeLg, l.type === '旁白' ? s.typeVo : ''].join(' ')}>
+                        {l.type}
+                      </span>
 
                       {l.type === '台词' &&
                         (freeIdx === i ? (
@@ -352,6 +355,7 @@ export function DialogueCell({ shotId, value, readOnly }: Props) {
                           </button>
                         ))}
 
+                      <span className={s.spacer} />
                       <button
                         className={s.del}
                         title="删除这一句"
@@ -411,7 +415,7 @@ export function DialogueCell({ shotId, value, readOnly }: Props) {
               </button>
             </div>
 
-            <div className={s.foot}>说话人可留空；未填写时仅保留台词内容 · 自动保存</div>
+            <div className={s.foot}>自动保存</div>
           </div>,
           document.body,
         )}

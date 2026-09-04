@@ -159,7 +159,9 @@ export function ShotFieldCell({
 
   const empty = !value.trim()
   // pill 变体（景别 / 镜头设计）整格内容居中；text 变体保持左对齐。
-  const cellCls = [s.cell, variant === 'pill' ? s.cellPill : '', readOnly ? s.ro : s.editable, open ? s.cellOpen : ''].join(' ')
+  // 可编辑态不用单开一个类：.cell 本身就是 cursor: text，只读时由 .ro 覆盖成 default。
+  // （原来这里写的 s.editable 在本文件的 css 里没有对应规则，往 class 列表里落了一个字面的 "undefined"。）
+  const cellCls = [s.cell, variant === 'pill' ? s.cellPill : '', readOnly ? s.ro : '', open ? s.cellOpen : ''].join(' ')
 
   return (
     <div

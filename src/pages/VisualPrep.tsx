@@ -80,8 +80,8 @@ export function VisualPrep() {
 
       {confirm && (
         <Dialog onClose={() => setConfirm(null)} className={di.dialog}>
-          <div className={di.title}>从项目资产库删除「{confirm.name}」？</div>
-          <div className={di.danger}>
+          <div className={di.title}>从项目资产库删除「{confirm.name}」</div>
+          <div className={di.desc}>
             {notDraft
               ? '该资产已进入出图队列 / 已出图，删除不退还星钻。'
               : '删除后不可恢复。'}

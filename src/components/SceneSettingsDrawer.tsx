@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useStore } from '../store/useStore'
 import { can } from '../services/capability'
 import { sceneDuration } from '../services/timeline'
+import d from '../styles/dialog.module.css'
 import s from './SceneSettingsDrawer.module.css'
 import { ic } from './icons'
 
@@ -37,7 +38,7 @@ export function SceneSettingsDrawer() {
       <aside className={s.drawer} onClick={(e) => e.stopPropagation()}>
         <div className={s.head}>
           <div className={s.hTitle}>本场设置</div>
-          <button className={s.close} onClick={close} title="关闭（Esc）">
+          <button className={d.close} onClick={close} title="关闭（Esc）">
             {ic.close}
           </button>
         </div>
@@ -47,32 +48,33 @@ export function SceneSettingsDrawer() {
         <div className={s.sub2}>
           {scene.shotIds.length} 镜 · 全场 {fmt(total)}
         </div>
+        <div className={s.divider} />
 
-        <div className={s.body}>
-          <label className={s.field}>
-            <span className={s.label}>情绪走向</span>
-            <textarea
-              className={s.text}
-              rows={3}
-              value={scene.track.mood}
-              disabled={readOnly}
-              placeholder="这一场的情绪走向…"
-              onChange={(e) => updateTrack(scene.id, { mood: e.target.value })}
-            />
-          </label>
+        <label className={s.field}>
+          <span className={s.label}>情绪走向</span>
+          <textarea
+            className={s.text}
+            rows={3}
+            value={scene.track.mood}
+            disabled={readOnly}
+            placeholder="这一场的情绪走向…"
+            onChange={(e) => updateTrack(scene.id, { mood: e.target.value })}
+          />
+        </label>
 
-          <label className={s.field}>
-            <span className={s.label}>配乐建议</span>
-            <textarea
-              className={s.text}
-              rows={3}
-              value={scene.track.bgm}
-              disabled={readOnly}
-              placeholder="这一场的配乐走向…"
-              onChange={(e) => updateTrack(scene.id, { bgm: e.target.value })}
-            />
-          </label>
-        </div>
+        <label className={s.field}>
+          <span className={s.label}>配乐建议</span>
+          <textarea
+            className={s.text}
+            rows={3}
+            value={scene.track.bgm}
+            disabled={readOnly}
+            placeholder="这一场的配乐走向…"
+            onChange={(e) => updateTrack(scene.id, { bgm: e.target.value })}
+          />
+        </label>
+
+        {!readOnly && <div className={s.foot}>自动保存</div>}
       </aside>
     </div>
   )

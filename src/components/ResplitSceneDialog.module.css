@@ -1,148 +1,57 @@
-/* 复用 styles/dialog.module.css 的 overlay / dialog / title / actions；这里只补重拆特有的块。 */
-.sub {
-  font-size: 13px;
-  color: var(--t4);
-  margin-top: -8px;
-  margin-bottom: 14px;
+/* 重拆本场（弹窗 v3）。壳 / 标题 / 说明 / 段控 / 脚栏都在 dialog.module.css，
+   这里只剩「选完之后那两三行小字」和自定义镜头数的输入。
+
+   v3 把原来的四行 radio 列表换成一条段控：四选一本来就是段控该干的事，
+   四个带描边的大方块只是把一次选择摊成了半屏。随之删掉的还有琥珀警示框和
+   带图标的资产说明框——它们说的事都还在，只是降成了估算行下面的灰字。 */
+.dialog {
+  composes: dialog from '../styles/dialog.module.css';
+  --dlg-w: 560px;
 }
-.groupTitle {
-  font-size: 13px;
-  color: var(--t3);
-  letter-spacing: 0.3px;
-  margin-bottom: 9px;
+
+.seg {
+  margin-top: 20px;
 }
-.opts {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-.opt {
+
+/* 指定镜头数：选中「指定镜头数」时才出现，紧贴段控下面。 */
+.customRow {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
-  border: 1px solid var(--line2);
-  border-radius: var(--rlg);
-  background: var(--bg1);
-  cursor: pointer;
-  transition: 0.14s;
-}
-.opt:hover {
-  border-color: var(--edge);
-}
-.optOn {
-  border-color: var(--acc-line);
-  background: var(--acc-bg);
-}
-.optDisabled {
-  opacity: 0.42;
-  cursor: not-allowed;
-}
-.optDisabled:hover {
-  border-color: var(--line2);
-}
-.opt input {
-  flex: none;
-}
-.optLabel {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--t1);
-  min-width: 52px;
-}
-.optCount {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  color: var(--t2);
-  font-variant-numeric: tabular-nums;
-  min-width: 64px;
-}
-.optHint {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  color: var(--t4);
-}
-.badge {
-  padding: 1px 7px;
-  border-radius: var(--rsm);
-  background: var(--acc-bg);
-  color: var(--acc);
-  border: 1px solid var(--acc-line);
-  font-size: 11px;
-  font-weight: 600;
+  margin-top: 16px;
+  font-size: 13.5px;
+  color: var(--dlg-t4);
 }
 .countInput {
-  width: 46px;
-  padding: 2px 6px;
-  border: 1px solid var(--line);
-  border-radius: var(--rsm);
-  background: var(--bg3);
-  color: var(--t1);
-  font-size: 13px;
+  width: 76px;
   font-family: inherit;
+  font-size: 14.5px;
+  color: var(--dlg-t1);
+  background: var(--dlg-inset);
+  border: 1px solid var(--dlg-input-line);
+  border-radius: var(--dlg-r-input);
+  padding: 9px 12px;
+  outline: none;
   text-align: center;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.16s;
 }
-.countInput:disabled {
-  opacity: 0.5;
-}
-.warn {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 8px 12px;
-  border-radius: var(--rsm);
-  background: rgb(var(--gold-rgb) / 0.14);
-  border: 1px solid rgb(var(--gold-rgb) / 0.35);
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--gold);
-}
-.warn svg {
-  flex: none;
-  width: 14px;
-  height: 14px;
-  margin-top: 3px;
-}
-.impact {
-  margin-top: 14px;
-  padding: 11px 13px;
-  border: 1px solid var(--line2);
-  border-radius: var(--rlg);
-  background: var(--bg1);
-  font-size: 13px;
-  line-height: 1.85;
-  color: var(--t3);
-}
-.impactTitle {
-  font-size: 12px;
-  color: var(--t4);
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
+.countInput:focus {
+  border-color: var(--acc-line);
 }
 
-/* v2.4 §7：重拆不再提取资产 —— 原「资产检查」区换成这一行静态灰字。 */
-.assetNote {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 14px 0 0;
-  padding: 9px 12px;
+/* 估算：选择的直接结果，独占一行。 */
+.est {
+  margin-top: 16px;
+  font-size: 13.5px;
+  color: var(--dlg-t4);
+}
+
+/* 附注：资产口径。以前是个带图标的框，现在就是一行灰字——
+   它是「顺带知会」，不是「拦一下」，不该长得比标题还显眼。 */
+.note {
+  margin-top: 10px;
   font-size: 13px;
   line-height: 1.7;
-  color: var(--t4);
-  background: var(--bg1);
-  border: 1px solid var(--line2);
-  border-radius: var(--rsm);
-}
-.assetNote svg {
-  flex: none;
-  width: 14px;
-  height: 14px;
-  margin-top: 3px;
+  color: var(--dlg-t6);
 }
